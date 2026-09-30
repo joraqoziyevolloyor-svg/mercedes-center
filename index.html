@@ -83,6 +83,9 @@ h2{font-size:26px;text-transform:uppercase}
 .carpick button:hover,.carpick button.on{border-color:var(--accent)}
 .carpick button.on{background:var(--accent);color:var(--accent-ink)}
 .carpick button.on span{color:var(--accent-ink)}
+.brandline{display:none;font-family:var(--f-display);font-size:22px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;line-height:1}
+.brandline span{display:block;margin-top:4px;font-family:var(--f-body);font-size:12px;font-weight:600;letter-spacing:.12em;color:var(--accent)}
+@media (max-width:720px){.brandline{display:block}}
 .eyebrow{font-size:12.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);font-weight:600}
 .bigsearch{display:flex;gap:8px;max-width:720px;min-width:0;width:100%;box-sizing:border-box}
 @media (max-width:420px){.bigsearch button{padding:0 14px}}
@@ -307,8 +310,8 @@ function urlFor(s){
   return location.pathname+location.search;
 }
 function fromUrl(){
-  const h=decodeURIComponent(location.hash.slice(1)); let m;
-  if ((m=h.match(/^p\/(.+)$/)) && byId[m[1]]) return {view:'product',id:m[1]};
+  let h=location.hash.slice(1), m; try { h=decodeURIComponent(h); } catch(e) {}
+  if ((m=h.match(/^p\/(.+)$/))) return {view:'product',id:m[1]};
   if (h==='c' || h.startsWith('c?')){ const u=new URLSearchParams(location.hash.slice(location.hash.indexOf('?')+1)); return {view:'catalog',q:u.get('q')||'',car:u.get('car')||'',cat:u.get('cat')||'',brand:u.get('brand')||'',stock:u.get('stock')==='1',photo:u.get('photo')==='1'}; }
   if (h==='quick'||h==='cart') return {view:h};
   return {view:'home'};
@@ -373,6 +376,7 @@ function home(){
   const catN = {}; P.forEach(p=>{ if (!myCar || p.car===myCar) catN[p.cat]=(catN[p.cat]||0)+1; });
   const secs = myCar ? [myCar] : ['Porter 2','Bongo 3','Sprinter'];
   return `<section class="hero"><div class="wrap">
+      <div class="brandline full">Mercedes Center <span>Avtozapchastlar</span></div>
       <div><div class="eyebrow">Ulgurji savdo · do'konlar va ustalar uchun</div>
       <h1>OEM yoki kod bo'yicha <em>tez toping</em></h1></div>
       <div class="stats"><div><b>${P.length.toLocaleString('ru')}</b>mahsulot</div><div><b>${P.filter(p=>p.stock).length.toLocaleString('ru')}</b>omborda bor</div><div><b>${BRANDS.length}+</b>brend</div></div>
@@ -412,7 +416,8 @@ function catalog(){
 }
 
 function product(){
-  const p = byId[state.id]; if (!p) return catalog();
+  const p = byId[state.id]; if (!p) return `<div class="wrap"><div class="crumbs"><button class="back" data-back="1">← Orqaga</button><button data-go="home">Bosh sahifa</button></div>
+    <div class="empty" style="margin-block:20px 40px"><b>Tovar topilmadi</b>${state.id?` (kod ${esc(state.id)})`:''}. Havola eskirgan yoki kod xato bo'lishi mumkin.<br><br><button class="big" data-go="catalog">Katalogga o'tish</button></div></div>`;
   const same = p.oem ? P.filter(x=>x.id!==p.id && x.oem && norm(x.oem)===norm(p.oem)) : [];
   const pair = p.side ? P.filter(x=>x.id!==p.id && x.sideKey===p.sideKey && x.side!==p.side) : [];
   const alike = P.filter(x=>x.id!==p.id && x.cat===p.cat && x.car===p.car && !same.includes(x) && !pair.includes(x)).sort((a,b)=>(!a.img)-(!b.img)).slice(0,8);

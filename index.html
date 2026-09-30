@@ -32,7 +32,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.wrap{max-width:1180px;margin:0 auto;padding-inline:16px}
+.wrap{max-width:1760px;margin:0 auto;padding-inline:16px}
+@media (min-width:1024px){.wrap{padding-inline:28px}}
 .proto{background:var(--accent);color:var(--accent-ink);font-size:12.5px;font-weight:600;text-align:center;padding:6px 16px}
 header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--steel);color:#fff}
 .top .row{display:flex;align-items:center;gap:14px;padding-block:10px}
@@ -63,23 +64,25 @@ h2{font-size:26px;text-transform:uppercase}
 .link{background:none;border:0;color:var(--ink);font-weight:600;text-decoration:underline;text-underline-offset:3px;padding:0}
 
 /* hero */
-.hero{background:var(--steel);color:#fff;padding-block:28px 30px;position:relative;overflow:hidden}
+.hero{background:var(--steel);color:#fff;padding-block:18px 22px;position:relative;overflow:hidden}
 .hero::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,transparent 0 22px,rgba(255,255,255,.035) 22px 23px);pointer-events:none}
-.hero .wrap{position:relative;z-index:1;display:grid;gap:18px}
-.hero h1{font-size:clamp(32px,6vw,54px);line-height:.98;text-transform:uppercase;max-width:16ch}
+.hero .wrap{position:relative;z-index:1;display:grid;gap:14px}
+@media (min-width:900px){.hero .wrap{grid-template-columns:minmax(0,1fr) auto;align-items:end}.hero .wrap>.full{grid-column:1/-1}}
+.hero h1{font-size:clamp(26px,3.2vw,40px);line-height:1;text-transform:uppercase}
 .hero h1 em{font-style:normal;color:var(--accent)}
 .hero p{margin:0;color:#c3ceda;max-width:52ch}
 .stats{display:flex;flex-wrap:wrap;gap:22px}
+@media (max-width:720px){.stats{display:none}.hero .eyebrow{font-size:11px}}
 .stats div{font-size:12.5px;color:#9fb0bf;text-transform:uppercase;letter-spacing:.08em}
-.stats b{display:block;font-family:var(--f-display);font-size:28px;color:#fff;letter-spacing:0;font-variant-numeric:tabular-nums}
+.stats b{display:block;font-family:var(--f-display);font-size:26px;color:#fff;letter-spacing:0;font-variant-numeric:tabular-nums}
 .carpick{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+@media (min-width:721px){.carpick{flex-wrap:wrap;overflow:visible}}
 .carpick::-webkit-scrollbar{display:none}
 .carpick button{flex-shrink:0;border:1px solid #3d4f60;background:var(--steel-2);color:#fff;border-radius:99px;padding:8px 14px;font-weight:500;font-size:14px}
 .carpick button span{color:#9fb0bf;font-size:12px;margin-left:6px;font-variant-numeric:tabular-nums}
 .carpick button:hover,.carpick button.on{border-color:var(--accent)}
 .carpick button.on{background:var(--accent);color:var(--accent-ink)}
 .carpick button.on span{color:var(--accent-ink)}
-.onhome header.top .search{display:none}
 .eyebrow{font-size:12.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);font-weight:600}
 .bigsearch{display:flex;gap:8px;max-width:720px;min-width:0;width:100%;box-sizing:border-box}
 @media (max-width:420px){.bigsearch button{padding:0 14px}}
@@ -89,7 +92,7 @@ h2{font-size:26px;text-transform:uppercase}
 .heroact{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
 .heroact span{color:#c3ceda;font-size:13.5px;max-width:40ch}
 .big.ghost{background:transparent;color:#fff;border:1.5px solid #5b6d7e}
-.quickbtn{background:none;border:1.5px solid #3d4f60;color:#fff;border-radius:8px;height:42px;padding:0 12px;font-weight:600;flex-shrink:0}
+.quickbtn{margin-left:auto;background:none;border:1.5px solid #3d4f60;color:#fff;border-radius:8px;height:42px;padding:0 12px;font-weight:600;flex-shrink:0}
 @media (max-width:720px){.quickbtn{display:none}}
 .qo textarea{width:100%;min-height:180px;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:12px;font-family:var(--f-mono);font-size:14.5px;color:var(--ink);resize:vertical}
 .qo .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px}
@@ -169,9 +172,14 @@ h2{font-size:26px;text-transform:uppercase}
 .empty{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:30px;text-align:center;color:var(--muted)}
 
 /* product */
-.crumbs{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px;padding-block:16px 4px}
+.crumbs{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding-block:14px 4px}
+.crumbs .back{text-decoration:none;background:var(--steel);color:#fff;border-radius:8px;padding:7px 12px;font-weight:600;font-size:13.5px;margin-right:6px}
+.catbar{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-top:12px}.catbar::-webkit-scrollbar{display:none}
+.catbar button{flex-shrink:0;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:99px;padding:6px 12px;font-size:13px;font-weight:500}
+.catbar button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+@media (min-width:1024px){.catbar{flex-wrap:wrap;overflow:visible}}
 .crumbs button{background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;text-underline-offset:2px}
-.pd{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;padding-block:14px 10px}
+.pd{display:grid;grid-template-columns:minmax(0,520px) minmax(0,1fr);gap:28px;padding-block:14px 10px}
 @media (max-width:800px){.pd{grid-template-columns:minmax(0,1fr);gap:16px}}
 .pd .ph{background:#fff;border:1px solid var(--line);border-radius:var(--r);aspect-ratio:1/1;position:relative;max-width:100%}
 .pd .ph img{width:100%;height:100%;object-fit:contain;padding:18px}
@@ -241,7 +249,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
     </button>
     <div class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="q" type="search" placeholder="Nomi yoki OEM raqami: 54300-4F000" autocomplete="off">
+      <input id="q" type="search" placeholder="OEM, kod yoki nomi" autocomplete="off">
     </div>
     <button class="quickbtn" data-go="quick">Ro'yxat bo'yicha buyurtma</button>
     <button class="cartbtn" id="cartTop"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h2l2.4 11h10.8L21 7H6.2"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg>Savat <span class="n" id="cartN">0</span></button>
@@ -285,7 +293,18 @@ function toast(t){ const el=$('#toast'); el.textContent=t; el.hidden=false; clea
 let myCar=''; try { myCar = localStorage.getItem('mc-car')||''; } catch(e) {}
 const setMyCar = c => { myCar=c; try { c?localStorage.setItem('mc-car',c):localStorage.removeItem('mc-car'); } catch(e) {} };
 let state = { view:'home', q:'', car:myCar, cat:'', brand:'', stock:false, photo:false, sort:'photo', limit:24, id:null };
-function go(view, extra={}){ Object.assign(state, {view, limit:24}, extra); render(); window.scrollTo({top:0}); }
+// Brauzer / telefon "orqaga" tugmasi: har bir ko'rinish tarixga yoziladi
+try { history.scrollRestoration='manual'; } catch(e) {}
+let navigating=false;
+const snap = () => JSON.parse(JSON.stringify({...state, scroll: scrollY}));
+function go(view, extra={}){
+  try { history.replaceState(snap(), ''); } catch(e) {}
+  Object.assign(state, {view, limit:24, depth:(state.depth||0)+1}, extra); navigating=true; render(); navigating=false; window.scrollTo({top:0});
+  try { history.pushState(snap(), '', '#'+view); } catch(e) {}
+}
+window.addEventListener('popstate', e => { if (!e.state) { Object.assign(state,{view:'home',depth:0}); render(); scrollTo(0,0); return; }
+  const s=e.state; Object.assign(state, s); $('#q').value = state.view==='catalog' ? (state.q||'') : $('#q').value; render(); setTimeout(()=>scrollTo(0,s.scroll||0),0); });
+const goBack = () => { if ((state.depth||0)>0) history.back(); else go('home'); };
 
 function photo(p, cls='ph'){
   if (p.img) return `<img src="${p.img}" alt="${esc(p.title)}" loading="lazy">`;
@@ -332,13 +351,12 @@ function home(){
   const catN = {}; P.forEach(p=>{ if (!myCar || p.car===myCar) catN[p.cat]=(catN[p.cat]||0)+1; });
   const secs = myCar ? [myCar] : ['Porter 2','Bongo 3','Sprinter'];
   return `<section class="hero"><div class="wrap">
-      <div class="eyebrow">Ulgurji savdo · do'konlar va ustalar uchun</div>
-      <h1>OEM yoki kod bo'yicha <em>tez toping</em></h1>
-      <form class="bigsearch" id="hs" role="search"><input id="hq" type="search" placeholder="OEM yoki kod" autocomplete="off" aria-label="Qidirish"><button type="submit">Qidirish</button></form>
-      <div class="heroact"><button class="big" data-go="quick">Ro'yxat bo'yicha buyurtma</button><span>OEM raqamlar ro'yxatini tashlang: topilganlari soni bilan savatga tushadi.</span></div>
+      <div><div class="eyebrow">Ulgurji savdo · do'konlar va ustalar uchun</div>
+      <h1>OEM yoki kod bo'yicha <em>tez toping</em></h1></div>
       <div class="stats"><div><b>${P.length.toLocaleString('ru')}</b>mahsulot</div><div><b>${P.filter(p=>p.stock).length.toLocaleString('ru')}</b>omborda bor</div><div><b>${BRANDS.length}+</b>brend</div></div>
-      <div class="pickhead">Mashinangizni tanlang${myCar?` <span>· tanlangan: <b>${esc(myCar)}</b></span>`:''}</div>
-      <div class="carpick">${CARS.map(([c,n])=>`<button data-car="${esc(c)}" class="${c===myCar?'on':''}">${esc(c)}<span>${n}</span></button>`).join('')}</div>
+      <div class="heroact full"><button class="big" data-go="quick">Ro'yxat bo'yicha buyurtma</button><span>Qidiruv yuqorida. OEM ro'yxatini tashlasangiz, topilganlari soni bilan savatga tushadi.</span></div>
+      <div class="pickhead full">Mashinangizni tanlang${myCar?` <span>· tanlangan: <b>${esc(myCar)}</b></span>`:''}</div>
+      <div class="carpick full">${CARS.map(([c,n])=>`<button data-car="${esc(c)}" class="${c===myCar?'on':''}">${esc(c)}<span>${n}</span></button>`).join('')}</div>
     </div></section>
     <section class="sec wrap"><div class="sec-head"><h2>Bo'limlar${myCar?` · ${esc(myCar)}`:''}</h2><button class="link" data-go="catalog">Hammasi</button></div>
       <div class="cats">${CATS.filter(([c])=>catN[c]).map(([c])=>`<button class="cat" data-cat="${esc(c)}"><b>${esc(c)}</b><span>${catN[c]} ta mahsulot</span></button>`).join('')}</div></section>
@@ -350,7 +368,7 @@ function catalog(){
   const r = filtered();
   const chips = [['car',state.car],['cat',state.cat],['brand',state.brand],['q',state.q&&`"${state.q}"`]].filter(x=>x[1]);
   const opt = (arr, v) => arr.map(([k,n])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(k)} (${n})</option>`).join('');
-  return `<div class="wrap"><div class="crumbs"><button data-go="home">Bosh sahifa</button> / <span>Katalog</span></div>
+  return `<div class="wrap"><div class="crumbs"><button class="back" data-back="1">← Orqaga</button><button data-go="home">Bosh sahifa</button> / <span>Katalog</span></div>
   <div class="sec-head" style="margin-top:6px"><h2>${esc(state.cat || (state.car ? state.car+' uchun' : 'Katalog'))}</h2></div>
   <div class="cat-layout">
     <aside class="filters" id="filters">
@@ -376,7 +394,7 @@ function product(){
   const pair = p.side ? P.filter(x=>x.id!==p.id && x.sideKey===p.sideKey && x.side!==p.side) : [];
   const alike = P.filter(x=>x.id!==p.id && x.cat===p.cat && x.car===p.car && !same.includes(x) && !pair.includes(x)).sort((a,b)=>(!a.img)-(!b.img)).slice(0,8);
   const row = (k,v,extra='') => v ? `<div><dt>${k}</dt><dd>${esc(v)}${extra}</dd></div>` : '';
-  return `<div class="wrap"><div class="crumbs"><button data-go="home">Bosh sahifa</button> / <button data-cat="${esc(p.cat)}">${esc(p.cat)}</button> / <span>${esc(p.title)}</span></div>
+  return `<div class="wrap"><div class="crumbs"><button class="back" data-back="1">← Orqaga</button><button data-go="home">Bosh sahifa</button> / <button data-cat="${esc(p.cat)}">${esc(p.cat)}</button> / <span>${esc(p.title)}</span></div>
   <div class="pd">
     <div class="ph ${p.img?'':'none'}">${photo(p)}</div>
     <div class="info">
@@ -439,7 +457,7 @@ function quickView(){
   const r = state.quick||[];
   const found=r.filter(x=>x.ids.length), miss=r.filter(x=>!x.ids.length), zero=found.filter(x=>!(x.qty>0)).length;
   const opt = (x) => x.ids.map(id=>{const p=byId[id];return `<option value="${id}" ${id===x.pick?'selected':''}>${esc(p.title)} · ${esc(p.brand||'')} · ${p.price!=null?money(p.price):'narx?'} · ${p.stock?'Mavjud':'Tugagan'}</option>`}).join('');
-  return `<div class="wrap qo"><div class="crumbs"><button data-go="home">Bosh sahifa</button> / <span>Ro'yxat bo'yicha buyurtma</span></div>
+  return `<div class="wrap qo"><div class="crumbs"><button class="back" data-back="1">← Orqaga</button><button data-go="home">Bosh sahifa</button> / <span>Ro'yxat bo'yicha buyurtma</span></div>
   <div class="sec-head" style="margin-top:6px"><h2>Ro'yxat bo'yicha buyurtma</h2></div>
   <p style="margin:0 0 10px;color:var(--muted);max-width:62ch">Har qatorga bitta OEM raqam yoki kod yozing, kerak bo'lsa oxiriga sonini qo'shing. Excel yoki Telegramdan nusxalab tashlasangiz ham bo'ladi.</p>
   <textarea id="qoText" spellcheck="false" placeholder="54300-4F000 10&#10;58101-4FA00 4&#10;54813-4F000 20&#10;9063230520 2">${esc(state.quickText||'')}</textarea>
@@ -461,11 +479,11 @@ function orderText(o){
 
 function cartView(){
   const ids = cartIds();
-  if (!ids.length) return `<div class="wrap"><div class="crumbs"><button data-go="home">Bosh sahifa</button> / <span>Savat</span></div>
+  if (!ids.length) return `<div class="wrap"><div class="crumbs"><button class="back" data-back="1">← Orqaga</button><button data-go="home">Bosh sahifa</button> / <span>Savat</span></div>
     <div class="empty" style="margin-block:20px 40px">Savat bo'sh. Qismni qidiring yoki OEM ro'yxatini tashlang.<br><br><button class="big dark" data-go="quick">Ro'yxat bo'yicha buyurtma</button> <button class="big" data-go="catalog">Katalog</button></div></div>`;
   const total = ids.reduce((s,id)=>s+(byId[id].price||0)*cart[id],0);
   const noPrice = ids.filter(id=>byId[id].price==null).length;
-  return `<div class="wrap"><div class="crumbs"><button data-go="home">Bosh sahifa</button> / <span>Savat</span></div>
+  return `<div class="wrap"><div class="crumbs"><button class="back" data-back="1">← Orqaga</button><button data-go="home">Bosh sahifa</button> / <span>Savat</span></div>
   <div class="sec-head" style="margin-top:6px"><h2>Savat</h2></div>
   <div class="cart">
     <div class="lines">${ids.map(id=>{const p=byId[id];return `<div class="line">
@@ -495,12 +513,14 @@ function doneView(){
 
 function render(){
   const v = state.view;
-  app.innerHTML = v==='home'?home():v==='catalog'?catalog():v==='product'?product():v==='cart'?cartView():v==='quick'?quickView():doneView();
+  const cb = (v==='catalog'||v==='product'||v==='quick'||v==='cart') ? `<div class="wrap catbar" aria-label="Bo'limlar">${CATS.map(([c])=>`<button data-cat="${esc(c)}" class="${(v==='catalog'&&state.cat===c)||(v==='product'&&byId[state.id]?.cat===c)?'on':''}">${esc(c)}</button>`).join('')}</div>` : '';
+  app.innerHTML = cb + (v==='home'?home():v==='catalog'?catalog():v==='product'?product():v==='cart'?cartView():v==='quick'?quickView():doneView());
   document.body.classList.toggle('onhome', v==='home');
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.go===v || (v==='product'&&b.dataset.go==='catalog')));
   if ($('#q').value !== state.q && v==='catalog') $('#q').value = state.q;
   const cp=$('.carpick'), on=cp&&cp.querySelector('.on'); if (on) cp.scrollLeft = on.offsetLeft - cp.offsetLeft - (cp.clientWidth-on.offsetWidth)/2;
   bind();
+  if (!navigating) try { history.replaceState(snap(), ''); } catch(e) {}
 }
 
 function bind(){
@@ -534,10 +554,11 @@ function bind(){
 document.addEventListener('click', e => {
   const t = e.target.closest('button'); if (!t) return;
   const d = t.dataset;
-  if (d.open) go('product',{id:d.open});
+  if (d.back) goBack();
+  else if (d.open) go('product',{id:d.open});
   else if (d.add){ addToCart(d.add,1); saveCart(); toast("Savatga qo'shildi"); const sy=scrollY; render(); scrollTo(0,sy); }
   else if (d.car!==undefined && t.closest('.carpick,.sec-head')) { if (t.closest('.carpick')) setMyCar(d.car); go('catalog',{car:d.car,cat:'',brand:'',q:''}); }
-  else if (d.cat!==undefined && (t.classList.contains('cat')||t.closest('.crumbs'))) go('catalog',{cat:d.cat,car:myCar,brand:'',q:''});
+  else if (d.cat!==undefined && (t.classList.contains('cat')||t.closest('.crumbs,.catbar'))) go('catalog',{cat:d.cat,car:myCar,brand:'',q:''});
   else if (d.go) go(d.go, d.go==='catalog'&&t.closest('.sec-head,.empty')?{car:myCar,cat:'',brand:'',q:''}:{});
   else if (d.widen){ state.car=''; state.limit=24; render(); }
   else if (d.clear){ if(d.clear==='all') Object.assign(state,{car:'',cat:'',brand:'',q:''}); else state[d.clear]=''; if(d.clear==='car'||d.clear==='all') setMyCar(''); if(d.clear==='q'||d.clear==='all') $('#q').value=''; render(); }
@@ -550,6 +571,7 @@ document.addEventListener('click', e => {
 $('#logo').onclick = () => go('home');
 $('#cartTop').onclick = () => go('cart');
 let qt; $('#q').addEventListener('input', e => { clearTimeout(qt); qt=setTimeout(()=>{ state.q=e.target.value; if(state.view!=='catalog'){ Object.assign(state,{car:myCar,cat:'',brand:''}); go('catalog'); } else { state.limit=24; render(); $('#q').focus(); } },250); });
+try { if (history.state && history.state.view) Object.assign(state, history.state); } catch(e) {}
 updCount(); render();
 </script>
 </body>

@@ -125,6 +125,7 @@ h2{font-size:26px;text-transform:uppercase}
 .card .meta{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .oem{font-family:var(--f-mono);font-size:12px;background:var(--tile);border-radius:4px;padding:1px 6px;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;align-self:flex-start}
 .card .foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;padding-top:4px}
+.pw{display:inline-flex;flex-direction:column;gap:2px}.ptag{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);line-height:1}
 .price{font-family:var(--f-display);font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
 .add{background:var(--steel);color:#fff;border:0;border-radius:8px;height:36px;min-width:36px;padding:0 10px;font-weight:600;display:flex;align-items:center;gap:6px}
 .add svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2}
@@ -230,7 +231,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
 
 </head>
 <body>
-<div class="proto">Narxlar Bitodagi sotuv narxi (USD) · buyurtma bo'yicha sotuvchi qo'ng'iroq qiladi</div>
+<div class="proto">Narxlar optom narxi (USD) · buyurtma bo'yicha sotuvchi qo'ng'iroq qiladi</div>
 <header class="top">
   <div class="wrap row">
     <button class="logo" id="logo" aria-label="Bosh sahifa">
@@ -269,7 +270,7 @@ const CATS = count('cat').filter(([k]) => k !== 'Boshqa');
 const BRANDS = count('brand').filter(([,n]) => n >= 3);
 const ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>';
 const money = n => '$' + (Math.round(n*100)/100).toLocaleString('en-US',{minimumFractionDigits:Number.isInteger(Math.round(n*100)/100)?0:2,maximumFractionDigits:2});
-const priceHtml = (p, cls='price') => p.price!=null ? `<span class="${cls}">${money(p.price)}</span>` : `<span class="ask">Narxini so'rang</span>`;
+const priceHtml = (p, cls='price') => p.price!=null ? `<span class="pw"><small class="ptag">Optom narxi</small><span class="${cls}">${money(p.price)}</span></span>` : `<span class="ask">Narxini so'rang</span>`;
 
 let cart = {};
 try { cart = JSON.parse(localStorage.getItem('mc-cart')||'{}') || {}; } catch(e) {}
@@ -428,8 +429,8 @@ function orderText(o){
   const ids=Object.keys(cart).filter(id=>byId[id]);
   let tot=0, ask=false, n=0;
   const lines=ids.map((id,i)=>{const p=byId[id], q=cart[id]; n+=q; if(p.price==null) ask=true; else tot+=p.price*q;
-    return `${i+1}) ${p.oem||p.size||'-'} | ${p.name} | kod ${p.id} | ${q} dona${p.price!=null?` x ${money(p.price)} = ${money(p.price*q)}`:''}`;});
-  return [`Mercedes Center — buyurtma ${o.no}`, `Mijoz: ${o.name}, ${o.phone}`, o.dlv, o.note?`Izoh: ${o.note}`:'', '', ...lines, '', `Jami: ${n} dona, ${money(tot)}${ask?' + narxi so\'raladiganlar':''}`].filter((x,i,a)=>x!==''||a[i-1]!=='').join('\n');
+    return `${i+1}) ${p.oem||p.size||'-'} | ${p.name} | kod ${p.id} | ${q} dona${p.price!=null?` x ${money(p.price)} (optom) = ${money(p.price*q)}`:''}`;});
+  return [`Mercedes Center — buyurtma ${o.no}`, `Mijoz: ${o.name}, ${o.phone}`, o.dlv, o.note?`Izoh: ${o.note}`:'', '', ...lines, '', `Jami optom narxda: ${n} dona, ${money(tot)}${ask?' + narxi so\'raladiganlar':''}`].filter((x,i,a)=>x!==''||a[i-1]!=='').join('\n');
 }
 
 function cartView(){
@@ -446,7 +447,7 @@ function cartView(){
       <div style="min-width:0"><div class="nm">${esc(p.title)}</div><div class="meta" style="font-size:12px;color:var(--muted)">${esc([p.brand,p.oem].filter(Boolean).join(' · '))}</div><div style="font-size:19px;margin-top:4px">${priceHtml(p)}</div></div>
       <div class="right"><div class="qty"><button data-dec="${id}" aria-label="Kamaytirish">−</button><input class="qtyin" type="number" min="1" value="${cart[id]}" data-cqty="${id}" aria-label="Soni"><button data-inc="${id}" aria-label="Ko'paytirish">+</button></div><button class="rm" data-rm="${id}">O'chirish</button></div></div>`}).join('')}</div>
     <form class="summary" id="order" novalidate>
-      <div class="tot"><span>Jami (${ids.reduce((s,id)=>s+cart[id],0)} dona)</span>${noPrice===ids.length?`<span class="ask">Sotuvchi aytadi</span>`:`<span class="price">${money(total)}${noPrice?'+':''}</span>`}</div>
+      <div class="tot"><span>Jami optom narxda (${ids.reduce((s,id)=>s+cart[id],0)} dona)</span>${noPrice===ids.length?`<span class="ask">Sotuvchi aytadi</span>`:`<span class="price">${money(total)}${noPrice?'+':''}</span>`}</div>
       ${noPrice?`<span style="font-size:13px;color:var(--muted)">${noPrice} ta tovarning narxini sotuvchi qo'ng'iroqda aytadi.</span>`:''}
       <div class="field">Ismingiz<input id="oName" autocomplete="name" placeholder="Masalan, Jasur"><span class="err" id="eName" hidden>Ismingizni yozing</span></div>
       <div class="field">Telefon<input id="oPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+998 90 123 45 67"><span class="err" id="ePhone" hidden>Telefon raqamini to'liq yozing</span></div>

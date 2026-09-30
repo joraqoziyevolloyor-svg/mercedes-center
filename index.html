@@ -47,7 +47,7 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;backgroun
 .search svg{position:absolute;left:12px;top:11px;width:20px;height:20px;stroke:#9fb0bf}
 .cartbtn{display:flex;align-items:center;gap:8px;background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;height:42px;padding:0 14px;font-weight:700;flex-shrink:0}
 .cartbtn .n{background:var(--steel);color:#fff;border-radius:99px;font-size:12px;min-width:22px;height:22px;display:grid;place-items:center;padding:0 6px}
-@media (max-width:720px){.top .row{flex-wrap:wrap}.search{order:3;flex-basis:100%}.cartbtn{display:none}.logo b{font-size:20px}}
+@media (max-width:720px){.top .row{gap:10px;padding-block:8px}.logo span{display:none}.logo .star{width:32px;height:32px}.cartbtn{display:none}}
 
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);display:none;padding-bottom:env(safe-area-inset-bottom,0px)}
 nav.tabs button{flex:1;background:none;border:0;padding:8px 0 10px;font-size:11.5px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;position:relative}
@@ -157,6 +157,8 @@ h2{font-size:26px;text-transform:uppercase}
 @media (max-width:900px){.cat-layout{grid-template-columns:minmax(0,1fr)}}
 .filters{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:16px;position:sticky;top:calc(80px + env(safe-area-inset-top,0px))}
 @media (max-width:900px){.filters{position:static;display:none}.filters.open{display:grid}}
+.toolbar{scroll-margin-top:72px}
+.fclose{display:none}@media (max-width:900px){.fclose{display:block}}
 .filters label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;display:grid;gap:6px}
 .filters select,.filters input[type=text]{height:40px;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:0 10px;text-transform:none;letter-spacing:0;font-weight:400;font-size:14.5px;color:var(--ink);width:100%}
 .chk{display:flex!important;grid-auto-flow:column;align-items:center;gap:8px!important;text-transform:none!important;letter-spacing:0!important;font-size:14px!important;color:var(--ink)!important;font-weight:500!important}
@@ -297,13 +299,33 @@ let state = { view:'home', q:'', car:myCar, cat:'', brand:'', stock:false, photo
 try { history.scrollRestoration='manual'; } catch(e) {}
 let navigating=false;
 const snap = () => JSON.parse(JSON.stringify({...state, scroll: scrollY}));
+// Ulashiladigan havola: #p/1802, #c?q=..&car=..&cat=.., #quick, #cart
+function urlFor(s){
+  if (s.view==='product') return '#p/'+encodeURIComponent(s.id);
+  if (s.view==='catalog'){ const u=new URLSearchParams(); ['q','car','cat','brand'].forEach(k=>{ if(s[k]) u.set(k,s[k]); }); if(s.stock) u.set('stock','1'); if(s.photo) u.set('photo','1'); const x=u.toString(); return '#c'+(x?'?'+x:''); }
+  if (s.view==='quick'||s.view==='cart') return '#'+s.view;
+  return location.pathname+location.search;
+}
+function fromUrl(){
+  const h=decodeURIComponent(location.hash.slice(1)); let m;
+  if ((m=h.match(/^p\/(.+)$/)) && byId[m[1]]) return {view:'product',id:m[1]};
+  if (h==='c' || h.startsWith('c?')){ const u=new URLSearchParams(location.hash.slice(location.hash.indexOf('?')+1)); return {view:'catalog',q:u.get('q')||'',car:u.get('car')||'',cat:u.get('cat')||'',brand:u.get('brand')||'',stock:u.get('stock')==='1',photo:u.get('photo')==='1'}; }
+  if (h==='quick'||h==='cart') return {view:h};
+  return {view:'home'};
+}
 function go(view, extra={}){
   try { history.replaceState(snap(), ''); } catch(e) {}
-  Object.assign(state, {view, limit:24, depth:(state.depth||0)+1}, extra); navigating=true; render(); navigating=false; window.scrollTo({top:0});
-  try { history.pushState(snap(), '', '#'+view); } catch(e) {}
+  Object.assign(state, {view, limit:24, fopen:false, depth:(state.depth||0)+1}, extra);
+  if (view!=='catalog' && view!=='product') state.q='';
+  navigating=true; render(); navigating=false; window.scrollTo({top:0});
+  try { history.pushState(snap(), '', urlFor(state)); } catch(e) {}
 }
-window.addEventListener('popstate', e => { if (!e.state) { Object.assign(state,{view:'home',depth:0}); render(); scrollTo(0,0); return; }
-  const s=e.state; Object.assign(state, s); $('#q').value = state.view==='catalog' ? (state.q||'') : $('#q').value; render(); setTimeout(()=>scrollTo(0,s.scroll||0),0); });
+window.addEventListener('popstate', e => {
+  const s = e.state && e.state.view ? e.state : {...fromUrl(), scroll:0, depth:(state.depth||0)+1, limit:24};
+  Object.assign(state, s); navigating=true; render(); navigating=false;
+  setTimeout(()=>{ scrollTo(0,s.scroll||0); try { history.replaceState(snap(), '', urlFor(state)); } catch(e) {} },0);
+});
+let scT; addEventListener('scroll', () => { clearTimeout(scT); scT=setTimeout(()=>{ if(!navigating) try { history.replaceState(snap(), ''); } catch(e) {} },150); }, {passive:true});
 const goBack = () => { if ((state.depth||0)>0) history.back(); else go('home'); };
 
 function photo(p, cls='ph'){
@@ -366,21 +388,22 @@ function home(){
 
 function catalog(){
   const r = filtered();
-  const chips = [['car',state.car],['cat',state.cat],['brand',state.brand],['q',state.q&&`"${state.q}"`]].filter(x=>x[1]);
+  const chips = [['car',state.car],['cat',state.cat],['brand',state.brand],['q',state.q&&`"${state.q}"`],['stock',state.stock&&'Faqat mavjudlari'],['photo',state.photo&&'Faqat rasmlilari']].filter(x=>x[1]);
   const opt = (arr, v) => arr.map(([k,n])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(k)} (${n})</option>`).join('');
   return `<div class="wrap"><div class="crumbs"><button class="back" data-back="1">← Orqaga</button><button data-go="home">Bosh sahifa</button> / <span>Katalog</span></div>
   <div class="sec-head" style="margin-top:6px"><h2>${esc(state.cat || (state.car ? state.car+' uchun' : 'Katalog'))}</h2></div>
   <div class="cat-layout">
-    <aside class="filters" id="filters">
+    <aside class="filters ${state.fopen?'open':''}" id="filters">
       <label>Mashina<select id="fCar"><option value="">Hammasi</option>${opt(CARS,state.car)}</select></label>
       <label>Bo'lim<select id="fCat"><option value="">Hammasi</option>${opt(CATS,state.cat)}</select></label>
       <label>Brend<select id="fBrand"><option value="">Hammasi</option>${opt(BRANDS,state.brand)}</select></label>
       <label>Nomi yoki OEM<input type="text" id="fQ" value="${esc(state.q)}" placeholder="masalan 58101"></label>
       <label class="chk"><input type="checkbox" id="fStock" ${state.stock?'checked':''}> Faqat mavjudlari</label>
       <label class="chk"><input type="checkbox" id="fPhoto" ${state.photo?'checked':''}> Faqat rasmlilari</label>
+      <button class="big dark fclose" data-fclose="1">Tayyor: ${r.length} ta mahsulotni ko'rsatish</button>
     </aside>
     <div style="min-width:0">
-      <div class="toolbar"><button class="fbtn" id="fToggle">Filtrlar</button><span class="count">${r.length} ta mahsulot</span>
+      <div class="toolbar"><button class="fbtn" id="fToggle" aria-expanded="${state.fopen?'true':'false'}">Saralash va tanlash</button><span class="count">${r.length} ta mahsulot</span>
         <select id="fSort" aria-label="Saralash"><option value="photo" ${state.sort==='photo'?'selected':''}>Avval rasmlilar</option><option value="cheap" ${state.sort==='cheap'?'selected':''}>Arzonidan</option><option value="dear" ${state.sort==='dear'?'selected':''}>Qimmatidan</option><option value="name" ${state.sort==='name'?'selected':''}>Nomi bo'yicha</option></select></div>
       ${chips.length?`<div class="chips">${chips.map(([k,v])=>`<button class="chip" data-clear="${k}">${esc(v)} <span aria-hidden="true">✕</span></button>`).join('')}<button class="link" data-clear="all" style="font-size:13px">Tozalash</button></div>`:''}
       ${r.length?`<div class="grid">${r.slice(0,state.limit).map(card).join('')}</div>${r.length>state.limit?`<button class="more" id="more">Yana ko'rsatish (${r.length-state.limit})</button>`:''}`
@@ -398,7 +421,7 @@ function product(){
   <div class="pd">
     <div class="ph ${p.img?'':'none'}">${photo(p)}</div>
     <div class="info">
-      <span class="pill ${p.stock?'ok':'no'}" style="align-self:flex-start">${p.stock?'Mavjud':'Tugagan'}</span>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="pill ${p.stock?'ok':'no'}">${p.stock?'Mavjud':'Tugagan'}</span><button class="copy" data-copy-link="1" style="margin-left:0">Havolani nusxalash</button></div>
       <h1>${esc(p.title)}</h1>
       <div class="ru">${esc(p.name)}</div>
       <div class="buy">${priceHtml(p)}
@@ -517,10 +540,10 @@ function render(){
   app.innerHTML = cb + (v==='home'?home():v==='catalog'?catalog():v==='product'?product():v==='cart'?cartView():v==='quick'?quickView():doneView());
   document.body.classList.toggle('onhome', v==='home');
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.go===v || (v==='product'&&b.dataset.go==='catalog')));
-  if ($('#q').value !== state.q && v==='catalog') $('#q').value = state.q;
+  const qi=$('#q'); if (v==='catalog') { if (qi.value !== state.q) qi.value = state.q; } else if (document.activeElement!==qi) qi.value='';
   const cp=$('.carpick'), on=cp&&cp.querySelector('.on'); if (on) cp.scrollLeft = on.offsetLeft - cp.offsetLeft - (cp.clientWidth-on.offsetWidth)/2;
   bind();
-  if (!navigating) try { history.replaceState(snap(), ''); } catch(e) {}
+  if (!navigating) try { history.replaceState(snap(), '', urlFor(state)); } catch(e) {}
 }
 
 function bind(){
@@ -528,7 +551,7 @@ function bind(){
   const fc=$('#fCar'); if (fc) fc.onchange = () => { state.car=fc.value; setMyCar(fc.value); state.limit=24; render(); };
   sel('#fCat','cat'); sel('#fBrand','brand'); sel('#fStock','stock'); sel('#fPhoto','photo'); sel('#fSort','sort');
   const fq=$('#fQ'); if (fq) fq.onchange = () => { state.q=fq.value; $('#q').value=fq.value; render(); };
-  const ft=$('#fToggle'); if (ft) ft.onclick = () => $('#filters').classList.toggle('open');
+  const ft=$('#fToggle'); if (ft) ft.onclick = () => { state.fopen=!state.fopen; render(); };
   const more=$('#more'); if (more) more.onclick = () => { state.limit+=24; render(); };
   if (state.view==='product'){
     let n=1; const qv=$('#qv');
@@ -561,17 +584,19 @@ document.addEventListener('click', e => {
   else if (d.cat!==undefined && (t.classList.contains('cat')||t.closest('.crumbs,.catbar'))) go('catalog',{cat:d.cat,car:myCar,brand:'',q:''});
   else if (d.go) go(d.go, d.go==='catalog'&&t.closest('.sec-head,.empty')?{car:myCar,cat:'',brand:'',q:''}:{});
   else if (d.widen){ state.car=''; state.limit=24; render(); }
-  else if (d.clear){ if(d.clear==='all') Object.assign(state,{car:'',cat:'',brand:'',q:''}); else state[d.clear]=''; if(d.clear==='car'||d.clear==='all') setMyCar(''); if(d.clear==='q'||d.clear==='all') $('#q').value=''; render(); }
+  else if (d.fclose){ state.fopen=false; render(); $('.toolbar')?.scrollIntoView({block:'start'}); }
+  else if (d.clear){ if(d.clear==='all') Object.assign(state,{car:'',cat:'',brand:'',q:'',stock:false,photo:false}); else state[d.clear]=''; if(d.clear==='car'||d.clear==='all') setMyCar(''); if(d.clear==='q'||d.clear==='all') $('#q').value=''; render(); }
   else if (d.inc){ cart[d.inc]++; saveCart(); render(); }
   else if (d.dec){ cart[d.dec]--; if(cart[d.dec]<=0) delete cart[d.dec]; saveCart(); render(); }
   else if (d.rm){ delete cart[d.rm]; saveCart(); render(); }
   else if (d.copyOrder){ const ta=$('#ordText'); const txt=ta.value; (navigator.clipboard?.writeText(txt)||Promise.reject()).then(()=>toast('Nusxalandi'),()=>{ ta.select(); toast('Matnni belgilab, nusxalang'); }); }
+  else if (d.copyLink){ const txt=location.href; (navigator.clipboard?.writeText(txt)||Promise.reject()).then(()=>toast('Havola nusxalandi'),()=>toast(txt)); }
   else if (d.copy){ const txt=d.copy; (navigator.clipboard?.writeText(txt)||Promise.reject()).then(()=>toast('OEM nusxalandi'),()=>toast(txt)); }
 });
 $('#logo').onclick = () => go('home');
 $('#cartTop').onclick = () => go('cart');
 let qt; $('#q').addEventListener('input', e => { clearTimeout(qt); qt=setTimeout(()=>{ state.q=e.target.value; if(state.view!=='catalog'){ Object.assign(state,{car:myCar,cat:'',brand:''}); go('catalog'); } else { state.limit=24; render(); $('#q').focus(); } },250); });
-try { if (history.state && history.state.view) Object.assign(state, history.state); } catch(e) {}
+try { if (history.state && history.state.view) Object.assign(state, history.state); else if (location.hash) Object.assign(state, fromUrl()); } catch(e) {}
 updCount(); render();
 </script>
 </body>

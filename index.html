@@ -264,7 +264,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
   </div>
 </header>
 <main id="app"></main>
-<footer><div class="wrap"><span>Mercedes Center · ulgurji avtozapchastlar: do'konlar va ustalar uchun</span><span id="shopContact">Buyurtma bo'yicha: telefon raqami keyin qo'shiladi</span></div></footer>
+<footer><div class="wrap"><span>Mercedes Center · ulgurji avtozapchastlar: do'konlar va ustalar uchun</span><span id="shopContact">Buyurtma: <a href="tel:+998505220008">+998 50 522 00 08</a></span></div></footer>
 <nav class="tabs" id="tabs">
   <button data-go="home"><svg viewBox="0 0 24 24"><path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z"/></svg>Bosh sahifa</button>
   <button data-go="catalog"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Katalog</button>
@@ -524,10 +524,10 @@ function cartView(){
     <form class="summary" id="order" novalidate>
       <div class="tot"><span>Jami optom narxda (${ids.reduce((s,id)=>s+cart[id],0)} dona)</span>${noPrice===ids.length?`<span class="ask">Sotuvchi aytadi</span>`:`<span class="price">${money(total)}${noPrice?'+':''}</span>`}</div>
       ${noPrice?`<span style="font-size:13px;color:var(--muted)">${noPrice} ta tovarning narxini sotuvchi qo'ng'iroqda aytadi.</span>`:''}
-      <div class="field">Ismingiz<input id="oName" autocomplete="name" placeholder="Masalan, Jasur"><span class="err" id="eName" hidden>Ismingizni yozing</span></div>
+      <div class="field">Ismingiz<input id="oName" maxlength="80" autocomplete="name" placeholder="Masalan, Jasur"><span class="err" id="eName" hidden>Ismingizni yozing</span></div>
       <div class="field">Telefon<input id="oPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+998 90 123 45 67"><span class="err" id="ePhone" hidden>Telefon raqamini to'liq yozing</span></div>
       <div class="field">Olib ketish<div class="seg"><label><input type="radio" name="dlv" id="dPick" value="pick" checked> Do'kondan</label><label><input type="radio" name="dlv" id="dSend" value="send"> Yetkazib berish</label></div></div>
-      <div class="field">Izoh (VIN, manzil)<textarea id="oNote" placeholder="Ixtiyoriy"></textarea></div>
+      <div class="field">Izoh (VIN, manzil)<textarea id="oNote" maxlength="500" placeholder="Ixtiyoriy"></textarea></div>
       <button class="big" type="submit">Buyurtma matnini tayyorlash</button>
       <span style="font-size:12px;color:var(--muted)">Tayyor matnni nusxalab sotuvchiga yuborasiz. Sotuvchi narx va mavjudligini tasdiqlaydi.</span>
     </form>
@@ -537,18 +537,22 @@ function cartView(){
 // Do'kon kontakti: raqam tasdiqlangach to'ldiriladi (bo'sh bo'lsa yuborish tugmalari chiqmaydi)
 const SHOP = { phone:'+998505220008', telegram:'', whatsapp:true };
 const MSG_MAX = 3900;  // Telegram bitta xabarga 4096 belgigacha oladi
+const URL_MAX = 3900;  // t.me 4108 belgidan uzun havolani qaytaradi; kodlangan matn shu chegaradan oshmasin
 function orderParts(text){
-  const L=text.split('\n'), first=L.findIndex(l=>/^\d+\) /.test(l)); if (first<0 || text.length<=MSG_MAX) return [text];
-  let last=first; L.forEach((l,i)=>{ if(/^\d+\) /.test(l)) last=i; });
+  const fits=s=>s.length<=MSG_MAX && encodeURIComponent(s).length<=URL_MAX;
+  if (fits(text)) return [text];
+  const L=text.split('\n'), isItem=l=>/^\d+\) /.test(l), first=L.findIndex(isItem); if (first<0) return [text];
+  let last=first; L.forEach((l,i)=>{ if(isItem(l)) last=i; });
   const head=L.slice(0,first), items=L.slice(first,last+1), foot=L.slice(last+1);
+  // 1-qismda to'liq sarlavha (izoh bilan), keyingilarida faqat nom va mijoz
+  const build=(it,i,n,isLast)=>[...(i===0?head:head.slice(0,2)).map((h,j)=>j===0?h+` (${i+1}/${n})`:h), ...(i===0?[]:['']), ...it, ...(isLast?foot:[])].join('\n');
   const parts=[]; let cur=[];
-  const size=a=>head.join('\n').length+a.join('\n').length+40;
-  items.forEach(l=>{ if (cur.length && size(cur.concat(l))>MSG_MAX) { parts.push(cur); cur=[]; } cur.push(l); });
+  items.forEach(l=>{ if (cur.length && !fits(build(cur.concat(l),parts.length,99,true))) { parts.push(cur); cur=[]; } cur.push(l); });
   parts.push(cur);
-  return parts.map((it,i)=>[head[0]+` (${i+1}/${parts.length})`, ...head.slice(1), ...it, ...(i===parts.length-1?foot:[])].join('\n'));
+  return parts.map((it,i)=>build(it,i,parts.length,i===parts.length-1));
 }
-const sendLinks = text => { const ph=SHOP.phone.replace(/\D/g,''), e=encodeURIComponent(text), o=[];
-  if (SHOP.telegram) o.push(['Telegramga yuborish',`https://t.me/${SHOP.telegram.replace(/^@/,'')}?text=${e}`]);
+const sendLinks = text => { const ph=String(SHOP.phone||'').replace(/\D/g,''), tg=String(SHOP.telegram||'').replace(/^@/,''), e=encodeURIComponent(text), o=[];
+  if (tg) o.push(['Telegramga yuborish',`https://t.me/${tg}?text=${e}`]);
   else if (ph) o.push(['Telegramga yuborish',`https://t.me/+${ph}?text=${e}`]);
   if (ph && SHOP.whatsapp) o.push(["WhatsApp'ga yuborish",`https://wa.me/${ph}?text=${e}`]);
   return o; };
@@ -627,12 +631,12 @@ $('#logo').onclick = () => go('home');
 // Admin paneldan o'zgartiriladigan sozlamalar (config.json); yuklanmasa yuqoridagi qiymatlar qoladi
 function applyShop(){
   const d=String(SHOP.phone||'').replace(/\D/g,'');
-  $('#shopContact').innerHTML = d ? `Buyurtma: <a href="tel:+${d}">+${d.replace(/^(998)(\d\d)(\d{3})(\d\d)(\d\d)$/,'$1 $2 $3 $4 $5')}</a>` : "Buyurtma bo'yicha: telefon raqami keyin qo'shiladi";
+  $('#shopContact').innerHTML = d ? `Buyurtma: <a href="tel:+${d}">+${d.replace(/^(998)(\d\d)(\d{3})(\d\d)(\d\d)$/,'$1 $2 $3 $4 $5')}</a>` : '';
   if (typeof SHOP.banner==='string') { $('#banner').textContent=SHOP.banner; $('#banner').hidden=!SHOP.banner.trim(); }
 }
 applyShop();
 fetch('config.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(c=>{ if(!c) return;
-  ['phone','telegram','whatsapp','banner'].forEach(k=>{ if (k in c) SHOP[k]=c[k]; }); applyShop(); if (state.view==='done') render(); }).catch(()=>{});
+  ['phone','telegram','banner'].forEach(k=>{ if (typeof c[k]==='string') SHOP[k]=c[k]; }); if (typeof c.whatsapp==='boolean') SHOP.whatsapp=c.whatsapp; applyShop(); if (state.view==='done') render(); }).catch(()=>{});
 $('#cartTop').onclick = () => go('cart');
 let qt; $('#q').addEventListener('input', e => { clearTimeout(qt); qt=setTimeout(()=>{ state.q=e.target.value; if(state.view!=='catalog'){ Object.assign(state,{car:myCar,cat:'',brand:''}); go('catalog'); } else { state.limit=24; render(); $('#q').focus(); } },250); });
 try { if (history.state && history.state.view) Object.assign(state, history.state); else if (location.hash) Object.assign(state, fromUrl()); } catch(e) {}

@@ -44,7 +44,7 @@ ol a{color:var(--ink)}
     <span class="err" id="ePhone" hidden>Raqamni +998 XX XXX XX XX ko'rinishida yozing</span>
     <label>Telegram username <small>Ixtiyoriy. Bo'lsa, Telegram tugmasi shu username'ga ochiladi (raqamdan ishonchliroq)</small>
       <input type="text" id="telegram" placeholder="@mercedescenter" autocapitalize="off" autocomplete="off"></label>
-    <span class="err" id="eTg" hidden>Username 5–32 ta lotin harf, raqam yoki _ bo'ladi</span>
+    <span class="err" id="eTg" hidden>Username lotin harfi bilan boshlanadi, 5–32 belgi (harf, raqam, _), oxiri _ bo'lmaydi</span>
     <label class="chk"><input type="checkbox" id="whatsapp"> Shu raqamda WhatsApp bor</label>
     <label>Tepadagi sariq yozuv <small>Bo'sh qoldirsangiz, yozuv ko'rinmaydi</small>
       <textarea id="banner"></textarea></label>
@@ -52,13 +52,14 @@ ol a{color:var(--ink)}
       <input type="password" id="token" autocomplete="off" placeholder="github_pat_..."></label>
     <button class="big" type="submit" id="save">Saqlash</button>
     <div class="msg" id="msg" hidden></div>
+    <div class="msg no" id="loadErr" hidden>Joriy sozlamalar yuklanmadi. Barcha maydonlarni tekshirib, keyin saqlang.</div>
     <button class="link" type="button" id="forget" hidden>Kalitni bu brauzerdan o'chirish</button>
   </form>
   <div class="card" id="help">
     <h2>GitHub kalitini olish (bir marta)</h2>
     <ol>
-      <li>GitHub'ga kirgan holda oching: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a></li>
-      <li><b>Token name</b>: sayt-admin. <b>Expiration</b>: eng uzun muddatni tanlang.</li>
+      <li>GitHub'ga kirgan holda oching: <a href="https://github.com/settings/personal-access-tokens/new?name=sayt-admin&amp;target_name=joraqoziyevolloyor-svg&amp;expires_in=90&amp;contents=write" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a> (nom, muddat va ruxsat oldindan to'ldirilgan bo'ladi, tekshirib chiqing)</li>
+      <li><b>Token name</b>: sayt-admin. <b>Expiration</b>: 90 days (yoki Custom, 1 yilgacha). No expiration'ni tanlamang; muddati tugasa, yangisini oling.</li>
       <li><b>Repository access</b>: Only select repositories → <b>mercedes-center</b>.</li>
       <li><b>Permissions</b> → Repository permissions → <b>Contents</b> → Read and write.</li>
       <li><b>Generate token</b> ni bosing, chiqqan kalitni nusxalab, yuqoridagi "GitHub kaliti" maydoniga qo'ying.</li>
@@ -66,40 +67,59 @@ ol a{color:var(--ink)}
   </div>
 </main>
 <script>
-const OWNER='joraqoziyevolloyor-svg', REPO='mercedes-center', FILE='config.json', BRANCHES=['main','gh-pages'];
+// Sozlamalar config.json da. Saqlash: avval gh-pages (sayt shu tarmoqdan chiqadi), keyin main shu commitga suriladi (fast-forward)
+const OWNER='joraqoziyevolloyor-svg', REPO='mercedes-center', FILE='config.json', SITE='gh-pages';
 const $=s=>document.querySelector(s);
 const KEY='mc-admin-token';
 let token=''; try{ token=localStorage.getItem(KEY)||''; }catch(e){}
 const show=(t,ok)=>{ const m=$('#msg'); m.textContent=t; m.className='msg '+(ok?'ok':'no'); m.hidden=false; };
-function fill(c){ $('#phone').value=c.phone||''; $('#telegram').value=c.telegram||''; $('#whatsapp').checked=c.whatsapp!==false; $('#banner').value=c.banner||''; }
+const str=v=>typeof v==='string'?v:'';
+function fill(c){ c=c&&typeof c==='object'?c:{}; $('#phone').value=str(c.phone); $('#telegram').value=str(c.telegram); $('#whatsapp').checked=c.whatsapp!==false; $('#banner').value=str(c.banner); }
 function syncToken(){ $('#token').value=token?'••••••••••••':''; $('#forget').hidden=!token; $('#help').hidden=!!token; }
-syncToken();
-fetch(FILE+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():{}).then(fill).catch(()=>fill({}));
 const b64=s=>btoa(unescape(encodeURIComponent(s)));
+const unb64=s=>decodeURIComponent(escape(atob(String(s).replace(/\s/g,''))));
 async function api(path,opt={}){
-  const r=await fetch('https://api.github.com/repos/'+OWNER+'/'+REPO+path,{...opt,headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28',...(opt.headers||{})}});
+  const r=await fetch('https://api.github.com/repos/'+OWNER+'/'+REPO+path,{cache:'no-store',...opt,headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28',...(opt.headers||{})}});
   if(!r.ok){ const e=new Error('http'); e.status=r.status; throw e; } return r.status===204?null:r.json();
 }
-async function saveTo(branch,content){
-  let sha; try{ sha=(await api('/contents/'+FILE+'?ref='+branch)).sha; }catch(e){ if(e.status!==404) throw e; }
-  await api('/contents/'+FILE,{method:'PUT',body:JSON.stringify({message:'Sayt sozlamalari admin paneldan yangilandi',content:b64(content),branch,...(sha?{sha}:{})})});
+async function load(){
+  $('#loadErr').hidden=true;
+  try{
+    if(token){ const f=await api('/contents/'+FILE+'?ref='+SITE); fill(JSON.parse(unb64(f.content))); return; }
+  }catch(e){ /* kalit bilan o'qib bo'lmasa, saytdagi nusxaga o'tamiz */ }
+  try{ const r=await fetch(FILE+'?t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw 0; fill(await r.json()); }
+  catch(e){ fill({}); $('#loadErr').hidden=false; }
+}
+syncToken(); load();
+async function save(content){
+  let sha; try{ sha=(await api('/contents/'+FILE+'?ref='+SITE)).sha; }catch(e){ if(e.status!==404) throw e; }
+  const res=await api('/contents/'+FILE,{method:'PUT',body:JSON.stringify({message:'Sayt sozlamalari admin paneldan yangilandi',content:b64(content),branch:SITE,...(sha?{sha}:{})})});
+  try{ await api('/git/refs/heads/main',{method:'PATCH',body:JSON.stringify({sha:res.commit.sha,force:false})}); }
+  catch(e){ e.mainOnly=true; throw e; }
 }
 $('#f').onsubmit=async e=>{
   e.preventDefault(); $('#msg').hidden=true;
   const tv=$('#token').value.trim(); if(tv && !tv.startsWith('•')) { token=tv; try{ localStorage.setItem(KEY,token); }catch(e){} }
   const digits=$('#phone').value.replace(/\D/g,''), tg=$('#telegram').value.trim().replace(/^@/,'');
-  const okP=!digits || /^998\d{9}$/.test(digits), okT=!tg || /^[A-Za-z0-9_]{5,32}$/.test(tg);
+  const okP=!digits || /^998\d{9}$/.test(digits), okT=!tg || /^[A-Za-z][A-Za-z0-9_]{3,30}[A-Za-z0-9]$/.test(tg);
   $('#ePhone').hidden=okP; $('#eTg').hidden=okT; if(!okP||!okT) return;
   if(!token){ show("GitHub kalitini kiriting (pastdagi yo'riqnoma bo'yicha).",false); return; }
   const cfg={phone:digits?'+'+digits:'',telegram:tg,whatsapp:$('#whatsapp').checked,banner:$('#banner').value.trim()};
   const content=JSON.stringify(cfg,null,2)+'\n';
   $('#save').disabled=true; $('#save').textContent='Saqlanmoqda...';
   try{
-    for(const br of BRANCHES) await saveTo(br,content);
-    show("Saqlandi. Saytda 1–2 daqiqada yangilanadi.",true);
+    await save(content); $('#loadErr').hidden=true;
+    show("Saqlandi. Saytda odatda 1–2 daqiqada (ba'zan 10 daqiqagacha) yangilanadi; ko'rish uchun sahifani yangilang.",true);
   }catch(err){
     const s=err.status;
-    show(s===401?"Kalit noto'g'ri yoki muddati o'tgan. Yangi kalit oling.":s===403||s===404?"Kalitga mercedes-center uchun «Contents: Read and write» ruxsati berilmagan.":s===409?"Bir vaqtda boshqa o'zgarish bo'ldi, qayta bosing.":"Saqlab bo'lmadi. Internetni tekshirib, qayta bosing.",false);
+    if(err.mainOnly && s===422) show("Sayt yangilandi, lekin main tarmog'ida boshqa o'zgarishlar bor, dasturchiga ayting.",false);
+    else if(err.mainOnly) show("Sayt yangilandi, lekin main tarmog'ini yangilab bo'lmadi, dasturchiga ayting.",false);
+    else show(s===401?"Kalit noto'g'ri yoki muddati o'tgan. Yangi kalit oling."
+      :s===403||s===404?"Kalitga mercedes-center uchun «Contents: Read and write» ruxsati berilmagan."
+      :s===409?"Bir vaqtda boshqa o'zgarish bo'ldi, sahifani yangilab, qayta saqlang."
+      :s===422?"GitHub ma'lumotni qabul qilmadi. Sahifani yangilab, qayta urinib ko'ring; takrorlansa, dasturchiga ayting."
+      :s>=500?"GitHub hozir javob bermayapti. Birozdan keyin qayta bosing."
+      :"Saqlab bo'lmadi. Internetni tekshirib, qayta bosing.",false);
     if(s===401){ token=''; try{ localStorage.removeItem(KEY); }catch(e){} }
   }
   $('#save').disabled=false; $('#save').textContent='Saqlash'; syncToken();

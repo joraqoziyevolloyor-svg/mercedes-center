@@ -248,7 +248,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
 
 </head>
 <body>
-<div class="proto">Narxlar optom narxi (USD) · buyurtma bo'yicha sotuvchi qo'ng'iroq qiladi</div>
+<div class="proto" id="banner">Narxlar optom narxi (USD) · buyurtma bo'yicha sotuvchi qo'ng'iroq qiladi</div>
 <header class="top">
   <div class="wrap row">
     <button class="logo" id="logo" aria-label="Bosh sahifa">
@@ -624,7 +624,15 @@ document.addEventListener('click', e => {
   else if (d.copy){ const txt=d.copy; (navigator.clipboard?.writeText(txt)||Promise.reject()).then(()=>toast('OEM nusxalandi'),()=>toast(txt)); }
 });
 $('#logo').onclick = () => go('home');
-if (SHOP.phone) { const d=SHOP.phone.replace(/\D/g,''); $('#shopContact').innerHTML = `Buyurtma: <a href="tel:+${d}">+${d.replace(/^(998)(\d\d)(\d{3})(\d\d)(\d\d)$/,'$1 $2 $3 $4 $5')}</a>`; }
+// Admin paneldan o'zgartiriladigan sozlamalar (config.json); yuklanmasa yuqoridagi qiymatlar qoladi
+function applyShop(){
+  const d=String(SHOP.phone||'').replace(/\D/g,'');
+  $('#shopContact').innerHTML = d ? `Buyurtma: <a href="tel:+${d}">+${d.replace(/^(998)(\d\d)(\d{3})(\d\d)(\d\d)$/,'$1 $2 $3 $4 $5')}</a>` : "Buyurtma bo'yicha: telefon raqami keyin qo'shiladi";
+  if (typeof SHOP.banner==='string') { $('#banner').textContent=SHOP.banner; $('#banner').hidden=!SHOP.banner.trim(); }
+}
+applyShop();
+fetch('config.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(c=>{ if(!c) return;
+  ['phone','telegram','whatsapp','banner'].forEach(k=>{ if (k in c) SHOP[k]=c[k]; }); applyShop(); if (state.view==='done') render(); }).catch(()=>{});
 $('#cartTop').onclick = () => go('cart');
 let qt; $('#q').addEventListener('input', e => { clearTimeout(qt); qt=setTimeout(()=>{ state.q=e.target.value; if(state.view!=='catalog'){ Object.assign(state,{car:myCar,cat:'',brand:''}); go('catalog'); } else { state.limit=24; render(); $('#q').focus(); } },250); });
 try { if (history.state && history.state.view) Object.assign(state, history.state); else if (location.hash) Object.assign(state, fromUrl()); } catch(e) {}

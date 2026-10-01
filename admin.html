@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Sayt sozlamalari</title>
+<style>
+:root{--bg:#f3f4f6;--surface:#fff;--ink:#131a22;--muted:#5d6874;--line:#dde1e6;--steel:#1d2a36;--accent:#f2a91d;--accent-ink:#1b1300;--ok:#1f8a4c;--ok-bg:#e3f4ea;--no:#b3261e;--no-bg:#fbe7e5}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1418;--surface:#171e24;--ink:#e8ecef;--muted:#9aa5ae;--line:#2a333b;--steel:#0a0f13;--accent:#f5b53a;--ok:#5fd08e;--ok-bg:#15311f;--no:#ff8a80;--no-bg:#3a1917;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1418;--surface:#171e24;--ink:#e8ecef;--muted:#9aa5ae;--line:#2a333b;--steel:#0a0f13;--accent:#f5b53a;--ok:#5fd08e;--ok-bg:#15311f;--no:#ff8a80;--no-bg:#3a1917;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{background:var(--steel);color:#fff;padding:14px 16px}
+header b{font-size:18px;letter-spacing:.02em;text-transform:uppercase}
+header a{color:var(--accent);font-size:14px;margin-left:12px}
+main{max-width:640px;margin:0 auto;padding:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:14px;margin-bottom:16px}
+h2{margin:0;font-size:17px}
+label{display:grid;gap:6px;font-weight:600;font-size:14px}
+label small{font-weight:400;color:var(--muted)}
+input[type=text],input[type=password],input[type=tel],textarea{width:100%;height:44px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);padding:0 12px;font:inherit}
+textarea{height:auto;min-height:64px;padding:10px 12px;resize:vertical}
+.chk{display:flex;align-items:center;gap:10px;font-weight:500}
+.chk input{width:20px;height:20px}
+.err{color:var(--no);font-size:13px;font-weight:500}
+button{font:inherit;cursor:pointer}
+.big{height:48px;border:0;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-weight:700;padding:0 22px;font-size:16px}
+.link{background:none;border:0;color:var(--muted);text-decoration:underline;padding:0;font-size:13.5px}
+.msg{border-radius:8px;padding:10px 12px;font-weight:500}
+.msg.ok{background:var(--ok-bg);color:var(--ok)}.msg.no{background:var(--no-bg);color:var(--no)}
+ol{margin:0;padding-left:20px;display:grid;gap:4px;color:var(--muted);font-size:14px}
+ol a{color:var(--ink)}
+</style>
+</head>
+<body>
+<header><b>Mercedes Center</b> · sayt sozlamalari <a href="./">Saytga qaytish</a></header>
+<main>
+  <form class="card" id="f" novalidate>
+    <h2>Buyurtma qayerga kelsin</h2>
+    <label>Telefon raqami <small>Saytning pastida ko'rinadi, buyurtma shu raqamga Telegram/WhatsApp orqali keladi</small>
+      <input type="tel" id="phone" placeholder="+998 50 522 00 08"></label>
+    <span class="err" id="ePhone" hidden>Raqamni +998 XX XXX XX XX ko'rinishida yozing</span>
+    <label>Telegram username <small>Ixtiyoriy. Bo'lsa, Telegram tugmasi shu username'ga ochiladi (raqamdan ishonchliroq)</small>
+      <input type="text" id="telegram" placeholder="@mercedescenter" autocapitalize="off" autocomplete="off"></label>
+    <span class="err" id="eTg" hidden>Username 5–32 ta lotin harf, raqam yoki _ bo'ladi</span>
+    <label class="chk"><input type="checkbox" id="whatsapp"> Shu raqamda WhatsApp bor</label>
+    <label>Tepadagi sariq yozuv <small>Bo'sh qoldirsangiz, yozuv ko'rinmaydi</small>
+      <textarea id="banner"></textarea></label>
+    <label>GitHub kaliti <small>Bir marta kiritasiz, faqat shu brauzerda saqlanadi. Hech kimga yubormang.</small>
+      <input type="password" id="token" autocomplete="off" placeholder="github_pat_..."></label>
+    <button class="big" type="submit" id="save">Saqlash</button>
+    <div class="msg" id="msg" hidden></div>
+    <button class="link" type="button" id="forget" hidden>Kalitni bu brauzerdan o'chirish</button>
+  </form>
+  <div class="card" id="help">
+    <h2>GitHub kalitini olish (bir marta)</h2>
+    <ol>
+      <li>GitHub'ga kirgan holda oching: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a></li>
+      <li><b>Token name</b>: sayt-admin. <b>Expiration</b>: eng uzun muddatni tanlang.</li>
+      <li><b>Repository access</b>: Only select repositories → <b>mercedes-center</b>.</li>
+      <li><b>Permissions</b> → Repository permissions → <b>Contents</b> → Read and write.</li>
+      <li><b>Generate token</b> ni bosing, chiqqan kalitni nusxalab, yuqoridagi "GitHub kaliti" maydoniga qo'ying.</li>
+    </ol>
+  </div>
+</main>
+<script>
+const OWNER='joraqoziyevolloyor-svg', REPO='mercedes-center', FILE='config.json', BRANCHES=['main','gh-pages'];
+const $=s=>document.querySelector(s);
+const KEY='mc-admin-token';
+let token=''; try{ token=localStorage.getItem(KEY)||''; }catch(e){}
+const show=(t,ok)=>{ const m=$('#msg'); m.textContent=t; m.className='msg '+(ok?'ok':'no'); m.hidden=false; };
+function fill(c){ $('#phone').value=c.phone||''; $('#telegram').value=c.telegram||''; $('#whatsapp').checked=c.whatsapp!==false; $('#banner').value=c.banner||''; }
+function syncToken(){ $('#token').value=token?'••••••••••••':''; $('#forget').hidden=!token; $('#help').hidden=!!token; }
+syncToken();
+fetch(FILE+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():{}).then(fill).catch(()=>fill({}));
+const b64=s=>btoa(unescape(encodeURIComponent(s)));
+async function api(path,opt={}){
+  const r=await fetch('https://api.github.com/repos/'+OWNER+'/'+REPO+path,{...opt,headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28',...(opt.headers||{})}});
+  if(!r.ok){ const e=new Error('http'); e.status=r.status; throw e; } return r.status===204?null:r.json();
+}
+async function saveTo(branch,content){
+  let sha; try{ sha=(await api('/contents/'+FILE+'?ref='+branch)).sha; }catch(e){ if(e.status!==404) throw e; }
+  await api('/contents/'+FILE,{method:'PUT',body:JSON.stringify({message:'Sayt sozlamalari admin paneldan yangilandi',content:b64(content),branch,...(sha?{sha}:{})})});
+}
+$('#f').onsubmit=async e=>{
+  e.preventDefault(); $('#msg').hidden=true;
+  const tv=$('#token').value.trim(); if(tv && !tv.startsWith('•')) { token=tv; try{ localStorage.setItem(KEY,token); }catch(e){} }
+  const digits=$('#phone').value.replace(/\D/g,''), tg=$('#telegram').value.trim().replace(/^@/,'');
+  const okP=!digits || /^998\d{9}$/.test(digits), okT=!tg || /^[A-Za-z0-9_]{5,32}$/.test(tg);
+  $('#ePhone').hidden=okP; $('#eTg').hidden=okT; if(!okP||!okT) return;
+  if(!token){ show("GitHub kalitini kiriting (pastdagi yo'riqnoma bo'yicha).",false); return; }
+  const cfg={phone:digits?'+'+digits:'',telegram:tg,whatsapp:$('#whatsapp').checked,banner:$('#banner').value.trim()};
+  const content=JSON.stringify(cfg,null,2)+'\n';
+  $('#save').disabled=true; $('#save').textContent='Saqlanmoqda...';
+  try{
+    for(const br of BRANCHES) await saveTo(br,content);
+    show("Saqlandi. Saytda 1–2 daqiqada yangilanadi.",true);
+  }catch(err){
+    const s=err.status;
+    show(s===401?"Kalit noto'g'ri yoki muddati o'tgan. Yangi kalit oling.":s===403||s===404?"Kalitga mercedes-center uchun «Contents: Read and write» ruxsati berilmagan.":s===409?"Bir vaqtda boshqa o'zgarish bo'ldi, qayta bosing.":"Saqlab bo'lmadi. Internetni tekshirib, qayta bosing.",false);
+    if(s===401){ token=''; try{ localStorage.removeItem(KEY); }catch(e){} }
+  }
+  $('#save').disabled=false; $('#save').textContent='Saqlash'; syncToken();
+};
+$('#forget').onclick=()=>{ token=''; try{ localStorage.removeItem(KEY); }catch(e){} syncToken(); show("Kalit bu brauzerdan o'chirildi.",true); };
+</script>
+</body>
+</html>

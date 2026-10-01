@@ -514,20 +514,23 @@ function quickView(){
 }
 function orderText(o){
   const ids=cartIds();
-  let tot=0, ask=false, n=0;
-  const lines=ids.map((id,i)=>{const p=byId[id], q=cart[id]; n+=q; if(p.price==null) ask=true; else tot+=p.price*q;
-    return `${i+1}) kod ${p.id} · ${p.oem||p.size||'-'} · ${p.type}${p.brand?' '+p.brand:''} · ${q} dona${p.price!=null?` × ${money(p.price)} = ${money(p.price*q)}`:' · narxi so\'raladi'}`;});
-  return [`Mercedes Center — buyurtma ${o.no}`, `Mijoz: ${o.name}, ${o.phone}`, o.dlv, o.addr?`Manzil: ${o.addr}`:'', o.note?`Izoh: ${o.note}`:'', '', ...lines, '', `Jami optom narxda: ${n} dona, ${money(tot)}${ask?' + narxi so\'raladiganlar':''}`].filter((x,i,a)=>x!==''||a[i-1]!=='').join('\n');
+  let tot=0, ask=false, n=0, out=0;
+  const lines=ids.map((id,i)=>{const p=byId[id], q=cart[id]; n+=q; if(!p.stock) out++; else if(p.price==null) ask=true; else tot+=p.price*q;
+    return `${i+1}) kod ${p.id} · ${p.oem||p.size||'-'} · ${p.type}${p.brand?' '+p.brand:''} · ${q} dona${p.price!=null?` × ${money(p.price)} = ${money(p.price*q)}`:' · narxi so\'raladi'}${p.stock?'':' · TUGAGAN (sotuvchi aniqlaydi)'}`;});
+  return [`Mercedes Center — buyurtma ${o.no}`, `Mijoz: ${o.name}, ${o.phone}`, o.dlv, o.addr?`Manzil: ${o.addr}`:'', o.note?`Izoh: ${o.note}`:'', '', ...lines, '', `Jami optom narxda: ${n} dona, ${money(tot)}${ask?' + narxi so\'raladiganlar':''}${out?` (${out} ta tugagan tovar summaga kirmadi)`:''}`].filter((x,i,a)=>x!==''||a[i-1]!=='').join('\n');
 }
 
 const form = { name:'', phone:'+998 ', note:'', dlv:'pick', addr:'' };
 // Telefon: "+998 " ustiga to'liq raqam yozilsa/qo'yilsa, takror prefiks olib tashlanadi
 const normPhone = v => { let s=String(v); const m=s.match(/^\s*\+?\s*998[\s\-]*(\+?\s*998[\s\-\d()]*)$/);
   if (m && m[1].replace(/\D/g,'').length>=12) s='+'+m[1].replace(/^\+?\s*/,''); return s.slice(0,24); };
-const phoneOk = v => { const s=String(v).trim(), d=s.replace(/\D/g,'');
-  if (/^\+\s*998/.test(s)) return d.length===12;
-  if (d.startsWith('998')) return d.length===12 || d.length===9;
-  return d.length>=9 && d.length<=15; };
+// Telefon bitta ko'rinishga keltiriladi: 9 raqam yoki 998… -> +998…; chet el raqami faqat "+" bilan (10–15 raqam)
+const canonPhone = v => { const s=String(v).trim(), d=s.replace(/\D/g,'');
+  if (/^\+/.test(s)) return d.startsWith('998') ? (d.length===12?'+'+d:'') : (d.length>=10&&d.length<=15?'+'+d:'');
+  if (d.length===9) return '+998'+d;
+  if (d.length===12 && d.startsWith('998')) return '+'+d;
+  return ''; };
+const phoneOk = v => !!canonPhone(v);
 // Izoh: kodlangan uzunligi cheklanadi, shunda sarlavha bitta xabar havolasiga sig'adi
 const NOTE_ENC_MAX = 2400, NOTE_LEN = 400;  // 400 ta kirill harfi = 2400 kodlangan belgi
 const encLen = s => encodeURIComponent(s).replace(/'/g,'%27').length;
@@ -542,20 +545,20 @@ function cartView(){
   const ids = cartIds();
   if (!ids.length) return `<div class="wrap"><div class="crumbs"><button class="back" data-back="1">← Orqaga</button><button data-go="home">Bosh sahifa</button> / <span>Savat</span></div>
     <div class="empty" style="margin-block:20px 40px">Savat bo'sh. Qismni qidiring yoki OEM ro'yxatini tashlang.<br><br><button class="big dark" data-go="quick">Ro'yxat bo'yicha buyurtma</button> <button class="big" data-go="catalog">Katalog</button></div></div>`;
-  const total = ids.reduce((s,id)=>s+(byId[id].price||0)*cart[id],0);
-  const noPrice = ids.filter(id=>byId[id].price==null).length;
+  const total = ids.reduce((s,id)=>s+(byId[id].stock?(byId[id].price||0)*cart[id]:0),0);
+  const noPrice = ids.filter(id=>byId[id].price==null).length, outN = ids.filter(id=>!byId[id].stock).length;
   return `<div class="wrap"><div class="crumbs"><button class="back" data-back="1">← Orqaga</button><button data-go="home">Bosh sahifa</button> / <span>Savat</span></div>
   <div class="sec-head" style="margin-top:6px"><h2>Savat</h2></div>
   <div class="cart">
     <div class="lines">${ids.map(id=>{const p=byId[id];return `<div class="line">
       <div class="th ${p.img?'':'none'}">${p.img?`<img src="${p.img}" alt="">`:ICON}</div>
-      <div style="min-width:0"><div class="nm">${esc(p.title)}</div><div class="meta" style="font-size:12px;color:var(--muted)">${esc([p.brand,p.oem].filter(Boolean).join(' · '))}</div><div style="font-size:19px;margin-top:4px">${priceHtml(p)}</div></div>
+      <div style="min-width:0"><div class="nm">${esc(p.title)}</div>${p.stock?'':'<div class="out" style="font-size:12.5px;font-weight:600;color:var(--no)">Tugagan: sotuvchi aniqlaydi</div>'}<div class="meta" style="font-size:12px;color:var(--muted)">${esc([p.brand,p.oem].filter(Boolean).join(' · '))}</div><div style="font-size:19px;margin-top:4px">${priceHtml(p)}</div></div>
       <div class="right"><div class="qty"><button data-dec="${id}" aria-label="Kamaytirish">−</button><input class="qtyin" type="number" min="1" max="9999" value="${cart[id]}" data-cqty="${id}" aria-label="Soni"><button data-inc="${id}" aria-label="Ko'paytirish">+</button></div><button class="rm" data-rm="${id}">O'chirish</button></div></div>`}).join('')}</div>
     <form class="summary" id="order" novalidate>
       <div class="tot"><span>Jami optom narxda (${ids.reduce((s,id)=>s+cart[id],0)} dona)</span>${noPrice===ids.length?`<span class="ask">Sotuvchi aytadi</span>`:`<span class="price">${money(total)}${noPrice?'+':''}</span>`}</div>
-      ${noPrice?`<span style="font-size:13px;color:var(--muted)">${noPrice} ta tovarning narxini sotuvchi qo'ng'iroqda aytadi.</span>`:''}
+      ${noPrice?`<span style="font-size:13px;color:var(--muted)">${noPrice} ta tovarning narxini sotuvchi qo'ng'iroqda aytadi.</span>`:''}${outN?`<span style="font-size:13px;color:var(--no)">${outN} ta tovar tugagan: jami summaga kirmadi, sotuvchi qo'ng'iroqda aniqlaydi.</span>`:''}
       <div class="field">Ismingiz<input id="oName" maxlength="${BOT()?60:80}" autocomplete="name" placeholder="Masalan, Jasur" value="${esc(form.name)}"><span class="err" id="eName" hidden>Ismingizni yozing</span></div>
-      <div class="field">Telefon<input id="oPhone" maxlength="40" type="tel" inputmode="tel" autocomplete="tel" placeholder="+998 90 123 45 67" value="${esc(form.phone)}"><span class="err" id="ePhone" hidden>Telefon raqamini to'liq yozing</span></div>
+      <div class="field">Telefon<input id="oPhone" maxlength="40" type="tel" inputmode="tel" autocomplete="tel" placeholder="+998 90 123 45 67" value="${esc(form.phone)}"><span class="err" id="ePhone" hidden>Telefon raqamini to'liq yozing: +998 90 123 45 67 (chet el raqami + bilan)</span></div>
       <div class="field">Olish usuli<div class="seg"><label><input type="radio" name="dlv" id="dPick" value="pick" ${form.dlv!=='send'?'checked':''}> Do'kondan</label><label><input type="radio" name="dlv" id="dSend" value="send" ${form.dlv==='send'?'checked':''}> Yetkazib berish</label></div></div>
       ${BOT()&&form.dlv==='send'?`<div class="field">Manzil<input id="oAddr" maxlength="200" autocomplete="street-address" placeholder="Shahar, ko'cha, uy" value="${esc(form.addr)}"><span class="err" id="eAddr" hidden>Yetkazib berish manzilini yozing</span></div>`:''}
       <div class="field">${BOT()?'Izoh (VIN va boshqa)':'Izoh (VIN, manzil)'}<textarea id="oNote" maxlength="${BOT()?300:NOTE_LEN}" placeholder="Ixtiyoriy">${esc(form.note)}</textarea></div>
@@ -575,7 +578,7 @@ const SHOP = { phone:'+998505220008', telegram:'', whatsapp:false };
 const ORDER = { mode:'chat' };
 const BOT = () => ORDER.mode==='bot';
 // Bot uchun telefon: +998 va 9 raqam ("901234567" ham qabul qilinadi)
-const botPhone = v => { const d=String(v).replace(/\D/g,''); return /^998\d{9}$/.test(d) ? '+'+d : /^\d{9}$/.test(d) && !/^\s*\+/.test(v) ? '+998'+d : ''; };
+const botPhone = v => { const c=canonPhone(v); return /^\+998\d{9}$/.test(c) ? c : ''; };
 
 // ---- Bot shartnomasi (hr-bot/buyurtma/SAYT-SHARTNOMA.md, sayt-yuborish.js v1). Faqat ochiq kalit va topic; sir yo'q. ----
 const MC_ORDER = {
@@ -692,7 +695,7 @@ function doneView(){
 
 // "Topolmadingizmi?" so'rovi: mijoz ismi, telefoni, kerakli detal (OEM yoki tavsif) va mashinasi
 const ask = { part:'', car:'', sent:null };
-const PART_MAX = 1200, PART_ENC_MAX = 2600;  // so'rov bitta Telegram havolasiga sig'ishi uchun
+const PART_MAX = 430, PART_ENC_MAX = 2600;  // so'rov bitta Telegram havolasiga sig'ishi uchun; 430 kirill harfi = 2580 kodlangan belgi
 const partMax = () => BOT() ? 300 : PART_MAX;  // botga: 2–300 belgi (shartnoma)
 function askText(a){ return [`Mercedes Center — detal so'rovi`, `Mijoz: ${a.name}, ${a.phone}`, a.car?`Mashina: ${a.car}`:'', '', 'Kerakli detal:', a.part].filter((x,i,arr)=>x!==''||arr[i-1]!=='').join('\n'); }
 function askView(){
@@ -713,7 +716,7 @@ function askView(){
     <div class="field">Kerakli detal${ask.dropped?`<span class="err" style="display:block">${ask.dropped} ta topilmagan qator sig'madi. Ularni keyingi so'rovda yuboring.</span>`:''}<textarea id="aPart" maxlength="${partMax()}" placeholder="Masalan: 9063230520 yoki Sprinter 906 old stabilizator vtulkasi">${esc(ask.part)}</textarea><span class="err" id="ePart" hidden>Qaysi detal kerakligini yozing</span></div>
     <div class="field">Mashina (ixtiyoriy)<input id="aCar" maxlength="${BOT()?100:80}" list="carList" placeholder="Masalan, Sprinter 906, 2012" value="${esc(ask.car)}"><datalist id="carList">${CARS.map(([c])=>`<option value="${esc(c)}">`).join('')}</datalist></div>
     <div class="field">Ismingiz<input id="oName" maxlength="60" autocomplete="name" placeholder="Masalan, Jasur" value="${esc(form.name)}"><span class="err" id="eName" hidden>Ismingizni yozing</span></div>
-    <div class="field">Telefon<input id="oPhone" maxlength="40" type="tel" inputmode="tel" autocomplete="tel" placeholder="+998 90 123 45 67" value="${esc(form.phone)}"><span class="err" id="ePhone" hidden>Telefon raqamini to'liq yozing</span></div>
+    <div class="field">Telefon<input id="oPhone" maxlength="40" type="tel" inputmode="tel" autocomplete="tel" placeholder="+998 90 123 45 67" value="${esc(form.phone)}"><span class="err" id="ePhone" hidden>Telefon raqamini to'liq yozing: +998 90 123 45 67 (chet el raqami + bilan)</span></div>
     ${BOT()?`<button class="big" type="submit" ${state.sending?'disabled':''}>${state.sending?'Yuborilmoqda…':"So'rovni yuborish"}</button>${state.sendErr&&state.sendErr.kind==='req'?failBox(state.sendErr):''}`
       :`<button class="big" type="submit">So'rovni tayyorlash</button>`}
   </form></div>`;
@@ -732,7 +735,7 @@ function openAsk(from){
 const SX_CARS = [];
 const SX_ID = {};  // tovar id -> sxemadagi mashina (faqat sxemada bor detallarga havola)
 let sxLoad=null;
-const sxScripts = () => sxLoad || (sxLoad = ['sxema/sxema-data.js?v=72842c589e','sxema/sxema.js?v=e13a416fe1'].reduce((pr,src)=>pr.then(()=>new Promise((ok,no)=>{ const s=document.createElement('script'); s.src=src; s.onload=ok; s.onerror=()=>{ sxLoad=null; no(); }; document.head.appendChild(s); })), Promise.resolve()));
+const sxScripts = () => sxLoad || (sxLoad = ['sxema/sxema-data.js?v=17d8019035','sxema/sxema.js?v=c64bdac735'].reduce((pr,src)=>pr.then(()=>new Promise((ok,no)=>{ const s=document.createElement('script'); s.src=src; s.onload=ok; s.onerror=()=>{ sxLoad=null; no(); }; document.head.appendChild(s); })), Promise.resolve()));
 function sxemaView(){
   return `<div class="wrap"><div class="crumbs"><button class="back" data-back="1">← Orqaga</button><button data-go="home">Bosh sahifa</button> / <span>Podveska sxemasi</span></div>
   <div class="sec-head" style="margin-top:6px"><h2>Podveska sxemasi</h2></div>
@@ -763,7 +766,7 @@ function render(){
   app.innerHTML = cb + (v==='home'?home():v==='catalog'?catalog():v==='product'?product():v==='cart'?cartView():v==='quick'?quickView():v==='ask'?askView():v==='sxema'?sxemaView():doneView());
   document.body.classList.toggle('onhome', v==='home');
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.go===v || (v==='product'&&b.dataset.go==='catalog')));
-  const qi=$('#q'); if (v==='catalog') { if (qi.value !== state.q) qi.value = state.q; } else if (document.activeElement!==qi) qi.value='';
+  const qi=$('#q'); if (v==='catalog') { if (qi.value !== state.q && document.activeElement!==qi) qi.value = state.q; } else if (document.activeElement!==qi) qi.value='';
   const cp=$('.carpick'), on=cp&&cp.querySelector('.on'); if (on) cp.scrollLeft = on.offsetLeft - cp.offsetLeft - (cp.clientWidth-on.offsetWidth)/2;
   bind();
   if (v==='sxema') mountSx();
@@ -791,14 +794,14 @@ function bind(){
   const f=$('#order'); if (f) f.onsubmit = e => { e.preventDefault();
     try {
     if (state.sending) return;
-    const name=$('#oName').value.trim().slice(0,BOT()?60:80), phone=normPhone($('#oPhone').value).trim(), okP=BOT()?!!botPhone(phone):phoneOk(phone);
+    const name=$('#oName').value.trim().slice(0,BOT()?60:80), phone0=normPhone($('#oPhone').value).trim(), cp=BOT()?botPhone(phone0):canonPhone(phone0), okP=!!cp, phone=fmtTel(cp);
     const send=$('#dSend').checked, addr=BOT()&&send?($('#oAddr')?.value||'').trim().slice(0,200):'';
     if (BOT()) $('#ePhone').textContent="Telefon raqamini to'liq yozing: +998 va 9 raqam";
     $('#eName').hidden=!!name; $('#ePhone').hidden=okP; if ($('#eAddr')) $('#eAddr').hidden=!!addr;
     if(!name||!okP||(BOT()&&send&&!addr)) { (!name?$('#oName'):!okP?$('#oPhone'):$('#oAddr')).focus(); return; }
-    const total=Object.keys(cart).reduce((s,id)=>s+(byId[id]?.price||0)*cart[id],0), anyAsk=Object.keys(cart).some(id=>byId[id]&&byId[id].price==null);
+    const total=Object.keys(cart).reduce((s,id)=>s+(byId[id]?.stock?(byId[id].price||0)*cart[id]:0),0), anyAsk=Object.keys(cart).some(id=>byId[id]&&byId[id].price==null);
     const o={no:'MC-'+String(Date.now()).slice(-6),name,phone,total,anyAsk,dlv:send?'Yetkazib berish':"Do'kondan olib ketish",note:capNote($('#oNote').value).trim()};
-    if (BOT()) { o.note=o.note.slice(0,300).trim(); o.addr=addr; o.phone=botPhone(phone);
+    if (BOT()) { o.note=o.note.slice(0,300).trim(); o.addr=addr; o.phone=cp;
       const data={ t:'order', name, phone:o.phone, delivery:send?'yetkazish':'olib_ketish', address:addr, note:o.note,
         items:cartIds().map(id=>[id, cart[id], byId[id].price==null?0:Math.round(byId[id].price*100)]) };
       botSend('order', data).then(r=>{ if (!r) return; o.no=r.ref||o.no; o.text=orderText(o); state.order=o;
@@ -811,13 +814,13 @@ function bind(){
   const af=$('#askForm'); if (af) af.onsubmit = e => { e.preventDefault();
     try {
     if (state.sending) return;
-    const part=capEnc($('#aPart').value,PART_ENC_MAX).trim().slice(0,partMax()), name=$('#oName').value.trim().slice(0,60), phone=normPhone($('#oPhone').value).trim(), okP=BOT()?!!botPhone(phone):phoneOk(phone);
+    const part=capEnc($('#aPart').value,PART_ENC_MAX).trim().slice(0,partMax()), name=$('#oName').value.trim().slice(0,60), phone0=normPhone($('#oPhone').value).trim(), cp=BOT()?botPhone(phone0):canonPhone(phone0), okP=!!cp, phone=fmtTel(cp);
     if (BOT()) $('#ePhone').textContent="Telefon raqamini to'liq yozing: +998 va 9 raqam";
     $('#ePart').hidden=!!part && (!BOT()||[...part].length>=2); $('#eName').hidden=!!name; $('#ePhone').hidden=okP;
     if (BOT() && part && [...part].length<2) { $('#aPart').focus(); return; }
     if (!part||!name||!okP) { (!part?$('#aPart'):!name?$('#oName'):$('#oPhone')).focus(); return; }
     const a={name,phone,car:$('#aCar').value.trim().slice(0,BOT()?100:80),part};
-    if (BOT()) { a.phone=botPhone(phone);
+    if (BOT()) { a.phone=cp;
       botSend('req', { t:'req', name, phone:a.phone, part, car:a.car, note:'' }).then(r=>{ if (!r) return;
         if (r.ok) { ask.sent={...a, bot:true, ref:r.ref}; ask.dropped=0; ask.part=''; render(); window.scrollTo({top:0}); }
         else { state.sendErr={kind:'req', error:r.error, text:askText(a)}; render(); $('#oFail')?.scrollIntoView({block:'center'}); } });
@@ -826,7 +829,7 @@ function bind(){
     } catch(err) { toast("Xatolik yuz berdi. Matnni tekshirib, qayta bosing yoki qo'ng'iroq qiling: "+fmtTel(SHOP.phone)); } };
   const hs=$('#hs'); if (hs) hs.onsubmit = e => { e.preventDefault(); const v=$('#hq').value.trim(); if(!v) return; state.q=v; $('#q').value=v; go('catalog',{car:myCar,cat:'',brand:''}); };
   document.querySelectorAll('[data-cqty]').forEach(el=>el.onchange=()=>{ const n=capQ(Math.max(1,parseInt(el.value)||1)); cart[el.dataset.cqty]=n; saveCart(); render(); });
-  const qt=$('#qoText'); if (qt) qt.oninput=()=>{ state.quickText=qt.value; };
+  const qt=$('#qoText'); if (qt) qt.oninput=()=>{ state.quickText=qt.value; clearTimeout(qhT); qhT=setTimeout(()=>{ try { history.replaceState(snap(), ''); } catch(e) {} },300); };
   const qr=$('#qoRun'); if (qr){ const run=()=>{ state.quickText=$('#qoText').value; state.quick=parseLines(state.quickText); render(); };
     qr.onclick=run; $('#qoClear').onclick=()=>{ state.quickText=''; state.quick=null; render(); };
     document.querySelectorAll('[data-qpick]').forEach(el=>el.onchange=()=>{ state.quick[+el.dataset.qpick].pick=el.value; });
@@ -868,7 +871,8 @@ applyShop();
 // Narx va mavjudlik: data/narxlar.json (Bito'dan avtomatik yangilanadi). Yuklanmasa, saytga qurilgan qiymatlar qoladi.
 const tashTime = iso => { const d=new Date(iso); if (isNaN(d)) return ''; const f=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Tashkent',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(d), g=k=>f.find(x=>x.type===k)?.value||'';
   return `${g('day')}.${g('month')}.${g('year')} ${g('hour')}:${g('minute')}`; };
-fetch('data/narxlar.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
+let priceAt=0, qhT;
+const loadPrices = () => { priceAt=Date.now(); fetch('data/narxlar.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
   const it=d&&d.items; if (!it||typeof it!=='object'||Array.isArray(it)) return;
   const n=Object.keys(it).length; if (n < P.length*0.5) return;  // chala fayl bo'lsa, eski qiymatlar qoladi
   P.forEach(p=>{ const x=it[p.id];
@@ -876,12 +880,17 @@ fetch('data/narxlar.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json(
     else p.price=null; });  // ro'yxatda yo'q: Bito'da sotuv narxi yo'q, "narxi so'raladi" chiqadi
   const at=tashTime(d.updated); if (at) { $('#priceAt').textContent=`Narxlar yangilangan: ${at} (Toshkent)`; $('#priceAt').hidden=false; }
   const a=document.activeElement, inApp=a && app.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
-  const sel = inApp ? (a.id ? '#'+a.id : a.dataset.cqty ? `[data-cqty="${a.dataset.cqty}"]` : null) : null;
-  if (inApp && !sel) return;  // nomsiz maydon: narxlar keyingi chizishda ko'rinadi
+  const dk = inApp && !a.id ? Object.keys(a.dataset)[0] : null;
+  const sel = inApp ? (a.id ? '#'+CSS.escape(a.id) : dk ? `[data-${dk.replace(/[A-Z]/g,c=>'-'+c.toLowerCase())}="${CSS.escape(a.dataset[dk])}"]` : null) : null;
+  if (inApp && !sel) { a.addEventListener('blur', () => setTimeout(()=>{ if (!app.contains(document.activeElement) || !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) { const y=scrollY; navigating=true; render(); navigating=false; scrollTo(0,y); } },0), {once:true}); return; }  // belgisiz maydon: chiqqanda chiziladi
   const val=inApp?a.value:null, ss=inApp&&a.selectionStart!=null?[a.selectionStart,a.selectionEnd]:null, sy=scrollY;
   navigating=true; render(); navigating=false; scrollTo(0,sy);
   if (sel) { const b=app.querySelector(sel); if (b) { b.value=val; b.focus({preventScroll:true}); if (ss) try { b.setSelectionRange(ss[0],ss[1]); } catch(e) {} } }
-}).catch(()=>{});
+}).catch(()=>{}); };
+loadPrices();
+// Ochiq qolgan sahifa: qaytib kelganda narxlar qayta olinadi (30 daqiqada bir martadan ko'p emas)
+const pricesAgain = () => { if (document.visibilityState==='visible' && Date.now()-priceAt > 30*60*1000) loadPrices(); };
+document.addEventListener('visibilitychange', pricesAgain); addEventListener('focus', pricesAgain);
 fetch('config.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(c=>{ if(!c) return;
   ['phone','telegram','banner'].forEach(k=>{ if (typeof c[k]==='string') SHOP[k]=c[k]; }); if (typeof c.whatsapp==='boolean') SHOP.whatsapp=c.whatsapp; if (c.buyurtma==='bot'||c.buyurtma==='chat') { const was=ORDER.mode; ORDER.mode=c.buyurtma; if (was!==ORDER.mode && (state.view==='cart'||state.view==='ask')) render(); } applyShop(); if (state.view==='done') render(); }).catch(()=>{});
 $('#cartTop').onclick = () => go('cart');

@@ -508,6 +508,7 @@ function orderText(o){
   return [`Mercedes Center — buyurtma ${o.no}`, `Mijoz: ${o.name}, ${o.phone}`, o.dlv, o.note?`Izoh: ${o.note}`:'', '', ...lines, '', `Jami optom narxda: ${n} dona, ${money(tot)}${ask?' + narxi so\'raladiganlar':''}`].filter((x,i,a)=>x!==''||a[i-1]!=='').join('\n');
 }
 
+const form = { name:'', phone:'+998 ', note:'' };
 function cartView(){
   const ids = cartIds();
   if (!ids.length) return `<div class="wrap"><div class="crumbs"><button class="back" data-back="1">← Orqaga</button><button data-go="home">Bosh sahifa</button> / <span>Savat</span></div>
@@ -524,10 +525,10 @@ function cartView(){
     <form class="summary" id="order" novalidate>
       <div class="tot"><span>Jami optom narxda (${ids.reduce((s,id)=>s+cart[id],0)} dona)</span>${noPrice===ids.length?`<span class="ask">Sotuvchi aytadi</span>`:`<span class="price">${money(total)}${noPrice?'+':''}</span>`}</div>
       ${noPrice?`<span style="font-size:13px;color:var(--muted)">${noPrice} ta tovarning narxini sotuvchi qo'ng'iroqda aytadi.</span>`:''}
-      <div class="field">Ismingiz<input id="oName" maxlength="80" autocomplete="name" placeholder="Masalan, Jasur"><span class="err" id="eName" hidden>Ismingizni yozing</span></div>
-      <div class="field">Telefon<input id="oPhone" maxlength="20" type="tel" inputmode="tel" autocomplete="tel" placeholder="+998 90 123 45 67"><span class="err" id="ePhone" hidden>Telefon raqamini to'liq yozing</span></div>
+      <div class="field">Ismingiz<input id="oName" maxlength="80" autocomplete="name" placeholder="Masalan, Jasur" value="${esc(form.name)}"><span class="err" id="eName" hidden>Ismingizni yozing</span></div>
+      <div class="field">Telefon<input id="oPhone" maxlength="20" type="tel" inputmode="tel" autocomplete="tel" placeholder="+998 90 123 45 67" value="${esc(form.phone)}"><span class="err" id="ePhone" hidden>Telefon raqamini to'liq yozing</span></div>
       <div class="field">Olib ketish<div class="seg"><label><input type="radio" name="dlv" id="dPick" value="pick" checked> Do'kondan</label><label><input type="radio" name="dlv" id="dSend" value="send"> Yetkazib berish</label></div></div>
-      <div class="field">Izoh (VIN, manzil)<textarea id="oNote" maxlength="500" placeholder="Ixtiyoriy"></textarea></div>
+      <div class="field">Izoh (VIN, manzil)<textarea id="oNote" maxlength="500" placeholder="Ixtiyoriy">${esc(form.note)}</textarea></div>
       <button class="big" type="submit">Buyurtma matnini tayyorlash</button>
       <span style="font-size:12px;color:var(--muted)">Tayyor matnni nusxalab sotuvchiga yuborasiz. Sotuvchi narx va mavjudligini tasdiqlaydi.</span>
     </form>
@@ -592,6 +593,9 @@ function bind(){
     if (qv){ $('#qm').onclick=()=>{n=Math.max(1,n-1);qv.textContent=n}; $('#qp').onclick=()=>{n++;qv.textContent=n};
       $('#addBig').onclick=()=>{ addToCart(state.id,n); saveCart(); toast(`Savatga qo'shildi: ${n} ta`); }; }
   }
+  // Forma qiymatlari qayta chizilganda yo'qolmaydi; telefon "+998 " bilan boshlanadi, o'chirsa o'chiq qoladi
+  [['#oName','name'],['#oPhone','phone'],['#oNote','note']].forEach(([s,k])=>{ const el=$(s); if (el) el.oninput=()=>{ form[k]=el.value; }; });
+  const op=$('#oPhone'); if (op) op.onfocus=()=>{ if (op.value==='+998 ') setTimeout(()=>{ if (op.value==='+998 ') op.setSelectionRange(5,5); },0); };
   const f=$('#order'); if (f) f.onsubmit = e => { e.preventDefault();
     const name=$('#oName').value.trim(), phone=$('#oPhone').value.trim(), okP=phone.replace(/\D/g,'').length>=9;
     $('#eName').hidden=!!name; $('#ePhone').hidden=okP; if(!name||!okP) return;

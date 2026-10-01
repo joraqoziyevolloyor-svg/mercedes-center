@@ -31,8 +31,16 @@ def payloads(text):
         yield obj
 
 
-def results_from_jsonl(path):
-    """(asbob nomi, sahifa, matn) - chaqiruv va javobini juftlab beradi."""
+def parse_ts(v):
+    try:
+        return datetime.fromisoformat(str(v).replace("Z", "+00:00")).timestamp()
+    except Exception:
+        return None
+
+
+def results_from_jsonl(path, since):
+    """(vaqt, asbob nomi, sahifa, matn) - chaqiruv va javobini juftlab beradi.
+    Faqat o'z vaqti since'dan keyin bo'lgan javoblar olinadi."""
     calls = {}
     for line in open(path, encoding="utf-8", errors="replace"):
         try:
@@ -42,10 +50,13 @@ def results_from_jsonl(path):
         c = (o.get("message") or {}).get("content")
         if not isinstance(c, list):
             continue
+        ts = parse_ts(o.get("timestamp"))
         for b in c:
             if b.get("type") == "tool_use":
                 calls[b.get("id")] = (b.get("name", ""), (b.get("input") or {}).get("page"))
             elif b.get("type") == "tool_result":
+                if ts is None or ts < since:
+                    continue
                 name, page = calls.get(b.get("tool_use_id"), ("", None))
                 cc = b.get("content")
                 parts = [cc] if isinstance(cc, str) else [x.get("text", "") for x in cc or [] if x.get("type") == "text"]
@@ -53,30 +64,32 @@ def results_from_jsonl(path):
                     m = re.search(r"saved to (\S+?\.txt)", t)
                     if m and os.path.exists(m.group(1)):
                         t = open(m.group(1), encoding="utf-8").read()
-                    yield name, page, t
+                    yield ts, name, page, t
 
 
 def collect(since):
     files = glob.glob(os.path.expanduser("~/.claude/projects/**/*.jsonl"), recursive=True)
+    records = []
+    for f in files:
+        if os.path.getmtime(f) >= since:
+            records.extend(results_from_jsonl(f, since))
+    records.sort(key=lambda r: r[0])          # eng yangi javob oxirida yoziladi va yutadi
     products, prices, ptotal, rtotal = {}, {}, None, None
     ok = {"product": set(), "price": set()}
-    for f in files:
-        if os.path.getmtime(f) < since:
-            continue
-        for name, page, t in results_from_jsonl(f):
-            for p in payloads(t):
-                got = None
-                for it in p["data"]:
-                    if not isinstance(it, dict):
-                        continue
-                    if it.get("price_id") == SOTUV_NARXI and isinstance(it.get("product"), dict):
-                        prices[it["product"]["_id"]] = it.get("amount")
-                        rtotal, got = p.get("total", rtotal), "price"
-                    elif "number" in it and "organizations" in it:
-                        products[it["_id"]] = it
-                        ptotal, got = p.get("total", ptotal), "product"
-                if got and page and ("price_items" in name or "product_get_paging" in name):
-                    ok[got].add(page)
+    for _, name, page, t in records:
+        for p in payloads(t):
+            got = None
+            for it in p["data"]:
+                if not isinstance(it, dict):
+                    continue
+                if it.get("price_id") == SOTUV_NARXI and isinstance(it.get("product"), dict):
+                    prices[it["product"]["_id"]] = it.get("amount")
+                    rtotal, got = p.get("total", rtotal), "price"
+                elif "number" in it and "organizations" in it:
+                    products[it["_id"]] = it
+                    ptotal, got = p.get("total", ptotal), "product"
+            if got and page and ("price_items" in name or "product_get_paging" in name):
+                ok[got].add(page)
     return products, prices, ptotal, rtotal, ok
 
 
@@ -105,19 +118,26 @@ def main():
         print(f"narxi topilmagan tovarlar: {len(nop)} ta {nop[:10]}")
     items = {}
     for pid, p in products.items():
-        if pid not in prices or prices[pid] is None:
+        if pid not in prices:
             continue
         qoldiq = sum(o.get("amount") or 0 for o in p.get("organizations", [])
                      if o.get("organization_id") == ORG)
         items[str(p["number"])] = {"price": prices[pid], "stock": qoldiq > 0}
-    # Tekshiruv: saytdagi har bir tovar bo'lishi va narxlar 0 bo'lmasligi kerak
-    if os.path.exists(a.katalog):
-        site = [i["id"] for i in json.load(open(a.katalog, encoding="utf-8"))["items"]]
-        miss = [i for i in site if i not in items]
-        if miss:
-            print(f"XATO: saytdagi {len(miss)} ta tovar yo'q (masalan {miss[:10]}), fayl yozilmadi")
-            return 2
-    zero = [k for k, v in items.items() if not v["price"]]
+    # Tekshiruv: saytdagi har bir tovar bo'lishi va narxlar to'g'ri son bo'lishi kerak
+    if not os.path.exists(a.katalog):
+        print(f"XATO: {a.katalog} topilmadi, saytdagi tovarlarni tekshirib bo'lmaydi, fayl yozilmadi")
+        return 2
+    site = [i["id"] for i in json.load(open(a.katalog, encoding="utf-8"))["items"]]
+    miss = [i for i in site if i not in items]
+    if miss:
+        print(f"XATO: saytdagi {len(miss)} ta tovar yo'q (masalan {miss[:10]}), fayl yozilmadi")
+        return 2
+    bad = [k for k, v in items.items()
+           if isinstance(v["price"], bool) or not isinstance(v["price"], (int, float)) or v["price"] < 0]
+    if bad:
+        print(f"XATO: {len(bad)} ta narx son emas yoki manfiy (masalan {bad[:10]}), fayl yozilmadi")
+        return 2
+    zero = [k for k, v in items.items() if v["price"] == 0]
     if len(zero) > max(20, len(items) // 20):
         print(f"XATO: {len(zero)} ta narx 0, fayl yozilmadi")
         return 2

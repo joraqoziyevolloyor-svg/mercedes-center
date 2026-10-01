@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Joylashuvni yuborish</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root { --bg: var(--tg-theme-bg-color, #fff); --fg: var(--tg-theme-text-color, #1b2429); --muted: var(--tg-theme-hint-color, #6b7780);
+          --btn: var(--tg-theme-button-color, #0f6e8c); --btn-fg: var(--tg-theme-button-text-color, #fff); --bad: #c0392b; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { padding: 24px 16px; display: flex; flex-direction: column; gap: 14px; max-width: 480px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0; }
+  p { margin: 0; }
+  .muted { color: var(--muted); font-size: 14px; }
+  .bad { color: var(--bad); font-weight: 600; }
+  button { appearance: none; border: 0; border-radius: 10px; padding: 14px; font: inherit; font-weight: 600; background: var(--btn); color: var(--btn-fg); }
+  ol { margin: 0; padding-left: 20px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>📍 Joylashuvni yuborish</h1>
+  <p id="status">Joylashuv aniqlanmoqda…</p>
+  <p id="error" class="bad" hidden></p>
+  <button id="retry" hidden>Qaytadan urinish</button>
+  <button id="settings" hidden>Telegram sozlamalarida ruxsat berish</button>
+  <div id="live" hidden>
+    <p>Buning o'rniga jonli joylashuv yuboring:</p>
+    <ol>
+      <li>Bu oynani yoping.</li>
+      <li>Botda 📎 → <b>Joylashuv</b> → <b>Jonli joylashuvni ulashish</b> (15 daqiqa).</li>
+    </ol>
+  </div>
+  <p class="muted">Joylashuv faqat Mercedes Center HR botiga, "Keldim" yoki "Ketdim" uchun yuboriladi.</p>
+</main>
+<script>
+(function () {
+  var tg = window.Telegram && window.Telegram.WebApp;
+  var MAX_ACC = 100; // metr
+  var $ = function (id) { return document.getElementById(id); };
+
+  function fail(msg, opts) {
+    opts = opts || {};
+    $('status').hidden = true;
+    $('error').textContent = msg;
+    $('error').hidden = false;
+    $('retry').hidden = !opts.retry;
+    $('settings').hidden = !opts.settings;
+    $('live').hidden = false;
+  }
+
+  function send(lat, lon, acc, src) {
+    if (!(isFinite(lat) && isFinite(lon))) return fail("Joylashuv noto'g'ri keldi.", { retry: true });
+    if (!isFinite(acc) || acc > MAX_ACC) {
+      return fail('Joylashuv aniqligi past (' + (isFinite(acc) ? Math.round(acc) + ' m' : "noma'lum") +
+        '). Telefon sozlamalarida GPS (Joylashuv xizmatlari) yoqilganini tekshiring, deraza yoki eshik oldiga borib qaytadan urining.', { retry: true });
+    }
+    $('status').textContent = 'Yuborilmoqda…';
+    try {
+      tg.sendData(JSON.stringify({ lat: lat, lon: lon, accuracy: acc, time: Date.now(), src: src }));
+    } catch (e) {
+      fail("Botga yuborib bo'lmadi. Bu oynani botdagi \"📍 Joylashuvni yuborish\" tugmasi orqali oching.", {});
+    }
+  }
+
+  function viaBrowser() {
+    if (!navigator.geolocation) return fail("Bu telefonda joylashuvni aniqlab bo'lmadi.", {});
+    navigator.geolocation.getCurrentPosition(function (p) {
+      send(p.coords.latitude, p.coords.longitude, p.coords.accuracy, 'browser');
+    }, function (e) {
+      if (e.code === 1) fail("Joylashuvga ruxsat berilmadi. Telefon sozlamalarida Telegram'ga joylashuv ruxsatini bering va qaytadan urining.", { retry: true });
+      else if (e.code === 3) fail('Joylashuv vaqtida aniqlanmadi. GPS yoqilganini tekshirib, qaytadan urining.', { retry: true });
+      else fail("Joylashuvni aniqlab bo'lmadi. GPS yoqilganini tekshirib, qaytadan urining.", { retry: true });
+    }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+  }
+
+  function start() {
+    $('status').hidden = false; $('status').textContent = 'Joylashuv aniqlanmoqda…';
+    $('error').hidden = true; $('retry').hidden = true; $('settings').hidden = true; $('live').hidden = true;
+    if (!tg || !tg.initData) return fail("Bu sahifa faqat Telegram'dagi botning \"📍 Joylashuvni yuborish\" tugmasi orqali ishlaydi.", {});
+    var LM = tg.LocationManager;
+    if (!LM || !tg.isVersionAtLeast || !tg.isVersionAtLeast('8.0')) return viaBrowser();
+    LM.init(function () {
+      if (!LM.isLocationAvailable) return viaBrowser();
+      LM.getLocation(function (loc) {
+        if (loc) return send(loc.latitude, loc.longitude, loc.horizontal_accuracy, 'telegram');
+        if (LM.isAccessRequested && !LM.isAccessGranted) {
+          return fail("Telegram'ga joylashuv ruxsati berilmagan. Pastdagi tugma orqali ruxsat bering va qaytadan urining.", { retry: true, settings: true });
+        }
+        viaBrowser();
+      });
+    });
+  }
+
+  $('retry').addEventListener('click', start);
+  $('settings').addEventListener('click', function () { try { tg.LocationManager.openSettings(); } catch (e) {} });
+  if (tg) { tg.ready(); tg.expand(); }
+  start();
+})();
+</script>
+</body>
+</html>

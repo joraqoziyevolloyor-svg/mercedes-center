@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Joylashuvni yuborish</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<!-- Telegram WebApp skriptining shu papkadagi qotirilgan nusxasi (telegram-web-app.js, sha256 TELEGRAM-WEB-APP.md da) -->
+<script src="telegram-web-app.js"></script>
 <style>
   :root { --bg: var(--tg-theme-bg-color, #fff); --fg: var(--tg-theme-text-color, #1b2429); --muted: var(--tg-theme-hint-color, #6b7780);
           --btn: var(--tg-theme-button-color, #0f6e8c); --btn-fg: var(--tg-theme-button-text-color, #fff); --bad: #c0392b; }
@@ -79,7 +80,9 @@
   function start() {
     $('status').hidden = false; $('status').textContent = 'Joylashuv aniqlanmoqda…';
     $('error').hidden = true; $('retry').hidden = true; $('settings').hidden = true; $('live').hidden = true;
-    if (!tg || !tg.initData) return fail("Bu sahifa faqat Telegram'dagi botning \"📍 Joylashuvni yuborish\" tugmasi orqali ishlaydi.", {});
+    // Klaviatura tugmasidan ochilganda initData bo'sh bo'ladi (Telegram hujjati), shuning uchun faqat Telegram yo'qligini tekshiramiz.
+    if (!tg || !tg.platform || tg.platform === 'unknown') return fail("Bu sahifa faqat Telegram'dagi botning \"📍 Joylashuvni yuborish\" tugmasi orqali ishlaydi.", {});
+    if (tg.initDataUnsafe && tg.initDataUnsafe.query_id) return fail("Bu oynani chat pastidagi \"📍 Joylashuvni yuborish\" tugmasi orqali oching.", {});
     var LM = tg.LocationManager;
     if (!LM || !tg.isVersionAtLeast || !tg.isVersionAtLeast('8.0')) return viaBrowser();
     LM.init(function () {

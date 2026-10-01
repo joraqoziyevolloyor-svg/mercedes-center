@@ -44,7 +44,7 @@ ol a{color:var(--ink)}
     <span class="err" id="ePhone" hidden>Raqamni +998 XX XXX XX XX ko'rinishida yozing</span>
     <label>Telegram username <small>Ixtiyoriy. Bo'lsa, Telegram tugmasi shu username'ga ochiladi (raqamdan ishonchliroq)</small>
       <input type="text" id="telegram" placeholder="@mercedescenter" autocapitalize="off" autocomplete="off"></label>
-    <span class="err" id="eTg" hidden>Username lotin harfi bilan boshlanadi, 5–32 belgi (harf, raqam, _), oxiri _ bo'lmaydi</span>
+    <span class="err" id="eTg" hidden>Username lotin harfi bilan boshlanadi, 5–32 belgi (harf, raqam, _), oxiri _ bo'lmaydi, ketma-ket ikki _ bo'lmaydi</span>
     <label class="chk"><input type="checkbox" id="whatsapp"> Shu raqamda WhatsApp bor</label>
     <label>Tepadagi sariq yozuv <small>Bo'sh qoldirsangiz, yozuv ko'rinmaydi</small>
       <textarea id="banner"></textarea></label>
@@ -74,6 +74,7 @@ const KEY='mc-admin-token';
 let token=''; try{ token=localStorage.getItem(KEY)||''; }catch(e){}
 const show=(t,ok)=>{ const m=$('#msg'); m.textContent=t; m.className='msg '+(ok?'ok':'no'); m.hidden=false; };
 const str=v=>typeof v==='string'?v:'';
+const obj=c=>{ if(!c||typeof c!=='object'||Array.isArray(c)) throw 0; return c; };
 function fill(c){ c=c&&typeof c==='object'?c:{}; $('#phone').value=str(c.phone); $('#telegram').value=str(c.telegram); $('#whatsapp').checked=c.whatsapp!==false; $('#banner').value=str(c.banner); }
 function syncToken(){ $('#token').value=token?'••••••••••••':''; $('#forget').hidden=!token; $('#help').hidden=!!token; }
 const b64=s=>btoa(unescape(encodeURIComponent(s)));
@@ -85,15 +86,15 @@ async function api(path,opt={}){
 async function load(){
   $('#loadErr').hidden=true;
   try{
-    if(token){ const f=await api('/contents/'+FILE+'?ref='+SITE); fill(JSON.parse(unb64(f.content))); return; }
+    if(token){ const f=await api('/contents/'+FILE+'?ref='+SITE); fill(obj(JSON.parse(unb64(f.content)))); return; }
   }catch(e){ /* kalit bilan o'qib bo'lmasa, saytdagi nusxaga o'tamiz */ }
-  try{ const r=await fetch(FILE+'?t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw 0; fill(await r.json()); }
+  try{ const r=await fetch(FILE+'?t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw 0; fill(obj(await r.json())); }
   catch(e){ fill({}); $('#loadErr').hidden=false; }
 }
 syncToken(); load();
 async function save(content){
-  let sha; try{ sha=(await api('/contents/'+FILE+'?ref='+SITE)).sha; }catch(e){ if(e.status!==404) throw e; }
-  const res=await api('/contents/'+FILE,{method:'PUT',body:JSON.stringify({message:'Sayt sozlamalari admin paneldan yangilandi',content:b64(content),branch:SITE,...(sha?{sha}:{})})});
+  let sha; try{ sha=(await api('/contents/'+FILE+'?ref='+SITE)).sha; }catch(e){ if(e.status!==404) { e.auth=true; throw e; } }
+  let res; try{ res=await api('/contents/'+FILE,{method:'PUT',body:JSON.stringify({message:'Sayt sozlamalari admin paneldan yangilandi',content:b64(content),branch:SITE,...(sha?{sha}:{})})}); }catch(e){ e.auth=true; throw e; }
   try{ await api('/git/refs/heads/main',{method:'PATCH',body:JSON.stringify({sha:res.commit.sha,force:false})}); }
   catch(e){ e.mainOnly=true; throw e; }
 }
@@ -101,7 +102,7 @@ $('#f').onsubmit=async e=>{
   e.preventDefault(); $('#msg').hidden=true;
   const tv=$('#token').value.trim(); if(tv && !tv.startsWith('•')) { token=tv; try{ localStorage.setItem(KEY,token); }catch(e){} }
   const digits=$('#phone').value.replace(/\D/g,''), tg=$('#telegram').value.trim().replace(/^@/,'');
-  const okP=!digits || /^998\d{9}$/.test(digits), okT=!tg || /^[A-Za-z][A-Za-z0-9_]{3,30}[A-Za-z0-9]$/.test(tg);
+  const okP=!digits || /^998\d{9}$/.test(digits), okT=!tg || /^[A-Za-z][A-Za-z0-9_]{3,30}[A-Za-z0-9]$/.test(tg) && !tg.includes('__');
   $('#ePhone').hidden=okP; $('#eTg').hidden=okT; if(!okP||!okT) return;
   if(!token){ show("GitHub kalitini kiriting (pastdagi yo'riqnoma bo'yicha).",false); return; }
   const cfg={phone:digits?'+'+digits:'',telegram:tg,whatsapp:$('#whatsapp').checked,banner:$('#banner').value.trim()};
@@ -120,7 +121,7 @@ $('#f').onsubmit=async e=>{
       :s===422?"GitHub ma'lumotni qabul qilmadi. Sahifani yangilab, qayta urinib ko'ring; takrorlansa, dasturchiga ayting."
       :s>=500?"GitHub hozir javob bermayapti. Birozdan keyin qayta bosing."
       :"Saqlab bo'lmadi. Internetni tekshirib, qayta bosing.",false);
-    if(s===401){ token=''; try{ localStorage.removeItem(KEY); }catch(e){} }
+    if(s===401 && err.auth){ token=''; try{ localStorage.removeItem(KEY); }catch(e){} }  // faqat GET/PUT dagi 401 kalitni o'chiradi
   }
   $('#save').disabled=false; $('#save').textContent='Saqlash'; syncToken();
 };

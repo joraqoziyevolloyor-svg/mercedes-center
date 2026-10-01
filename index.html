@@ -525,7 +525,7 @@ function cartView(){
       <div class="tot"><span>Jami optom narxda (${ids.reduce((s,id)=>s+cart[id],0)} dona)</span>${noPrice===ids.length?`<span class="ask">Sotuvchi aytadi</span>`:`<span class="price">${money(total)}${noPrice?'+':''}</span>`}</div>
       ${noPrice?`<span style="font-size:13px;color:var(--muted)">${noPrice} ta tovarning narxini sotuvchi qo'ng'iroqda aytadi.</span>`:''}
       <div class="field">Ismingiz<input id="oName" maxlength="80" autocomplete="name" placeholder="Masalan, Jasur"><span class="err" id="eName" hidden>Ismingizni yozing</span></div>
-      <div class="field">Telefon<input id="oPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+998 90 123 45 67"><span class="err" id="ePhone" hidden>Telefon raqamini to'liq yozing</span></div>
+      <div class="field">Telefon<input id="oPhone" maxlength="20" type="tel" inputmode="tel" autocomplete="tel" placeholder="+998 90 123 45 67"><span class="err" id="ePhone" hidden>Telefon raqamini to'liq yozing</span></div>
       <div class="field">Olib ketish<div class="seg"><label><input type="radio" name="dlv" id="dPick" value="pick" checked> Do'kondan</label><label><input type="radio" name="dlv" id="dSend" value="send"> Yetkazib berish</label></div></div>
       <div class="field">Izoh (VIN, manzil)<textarea id="oNote" maxlength="500" placeholder="Ixtiyoriy"></textarea></div>
       <button class="big" type="submit">Buyurtma matnini tayyorlash</button>
@@ -539,7 +539,7 @@ const SHOP = { phone:'+998505220008', telegram:'', whatsapp:true };
 const MSG_MAX = 3900;  // Telegram bitta xabarga 4096 belgigacha oladi
 const URL_MAX = 3900;  // t.me 4108 belgidan uzun havolani qaytaradi; kodlangan matn shu chegaradan oshmasin
 function orderParts(text){
-  const fits=s=>s.length<=MSG_MAX && encodeURIComponent(s).length<=URL_MAX;
+  const fits=s=>s.length<=MSG_MAX && encodeURIComponent(s).replace(/'/g,'%27').length<=URL_MAX;  // brauzer ' ni %27 qiladi
   if (fits(text)) return [text];
   const L=text.split('\n'), isItem=l=>/^\d+\) /.test(l), first=L.findIndex(isItem); if (first<0) return [text];
   let last=first; L.forEach((l,i)=>{ if(isItem(l)) last=i; });

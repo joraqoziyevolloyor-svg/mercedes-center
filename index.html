@@ -83,6 +83,9 @@ h2{font-size:26px;text-transform:uppercase}
 .carpick button:hover,.carpick button.on{border-color:var(--accent)}
 .carpick button.on{background:var(--accent);color:var(--accent-ink)}
 .carpick button.on span{color:var(--accent-ink)}
+.sendbox{display:grid;gap:8px;width:100%}
+a.big{text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+a.big.tg{background:#2aabee;color:#fff}a.big.wa{background:#25d366;color:#08130c}
 .brandline{display:none;font-family:var(--f-display);font-size:22px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;line-height:1}
 .brandline span{display:block;margin-top:4px;font-family:var(--f-body);font-size:12px;font-weight:600;letter-spacing:.12em;color:var(--accent)}
 @media (max-width:720px){.brandline{display:block}}
@@ -261,7 +264,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
   </div>
 </header>
 <main id="app"></main>
-<footer><div class="wrap"><span>Mercedes Center · ulgurji avtozapchastlar: do'konlar va ustalar uchun</span><span>Buyurtma bo'yicha: telefon raqami keyin qo'shiladi</span></div></footer>
+<footer><div class="wrap"><span>Mercedes Center · ulgurji avtozapchastlar: do'konlar va ustalar uchun</span><span id="shopContact">Buyurtma bo'yicha: telefon raqami keyin qo'shiladi</span></div></footer>
 <nav class="tabs" id="tabs">
   <button data-go="home"><svg viewBox="0 0 24 24"><path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z"/></svg>Bosh sahifa</button>
   <button data-go="catalog"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Katalog</button>
@@ -501,7 +504,7 @@ function orderText(o){
   const ids=cartIds();
   let tot=0, ask=false, n=0;
   const lines=ids.map((id,i)=>{const p=byId[id], q=cart[id]; n+=q; if(p.price==null) ask=true; else tot+=p.price*q;
-    return `${i+1}) ${p.oem||p.size||'-'} | ${p.name} | kod ${p.id} | ${q} dona${p.price!=null?` x ${money(p.price)} (optom) = ${money(p.price*q)}`:''}`;});
+    return `${i+1}) kod ${p.id} · ${p.oem||p.size||'-'} · ${p.type}${p.brand?' '+p.brand:''} · ${q} dona${p.price!=null?` × ${money(p.price)} = ${money(p.price*q)}`:' · narxi so\'raladi'}`;});
   return [`Mercedes Center — buyurtma ${o.no}`, `Mijoz: ${o.name}, ${o.phone}`, o.dlv, o.note?`Izoh: ${o.note}`:'', '', ...lines, '', `Jami optom narxda: ${n} dona, ${money(tot)}${ask?' + narxi so\'raladiganlar':''}`].filter((x,i,a)=>x!==''||a[i-1]!=='').join('\n');
 }
 
@@ -531,12 +534,34 @@ function cartView(){
   </div></div>`;
 }
 
+// Do'kon kontakti: raqam tasdiqlangach to'ldiriladi (bo'sh bo'lsa yuborish tugmalari chiqmaydi)
+const SHOP = { phone:'+998505220008', telegram:'', whatsapp:true };
+const MSG_MAX = 3900;  // Telegram bitta xabarga 4096 belgigacha oladi
+function orderParts(text){
+  const L=text.split('\n'), first=L.findIndex(l=>/^\d+\) /.test(l)); if (first<0 || text.length<=MSG_MAX) return [text];
+  let last=first; L.forEach((l,i)=>{ if(/^\d+\) /.test(l)) last=i; });
+  const head=L.slice(0,first), items=L.slice(first,last+1), foot=L.slice(last+1);
+  const parts=[]; let cur=[];
+  const size=a=>head.join('\n').length+a.join('\n').length+40;
+  items.forEach(l=>{ if (cur.length && size(cur.concat(l))>MSG_MAX) { parts.push(cur); cur=[]; } cur.push(l); });
+  parts.push(cur);
+  return parts.map((it,i)=>[head[0]+` (${i+1}/${parts.length})`, ...head.slice(1), ...it, ...(i===parts.length-1?foot:[])].join('\n'));
+}
+const sendLinks = text => { const ph=SHOP.phone.replace(/\D/g,''), e=encodeURIComponent(text), o=[];
+  if (SHOP.telegram) o.push(['Telegramga yuborish',`https://t.me/${SHOP.telegram.replace(/^@/,'')}?text=${e}`]);
+  else if (ph) o.push(['Telegramga yuborish',`https://t.me/+${ph}?text=${e}`]);
+  if (ph && SHOP.whatsapp) o.push(["WhatsApp'ga yuborish",`https://wa.me/${ph}?text=${e}`]);
+  return o; };
 function doneView(){
+  const parts = orderParts(state.order.text), multi = parts.length>1;
+  const send = sendLinks('x').length ? `<div class="sendbox">${multi?`<p style="margin:0 0 8px;color:var(--muted)">Buyurtma uzun, ${parts.length} ta xabarga bo'lindi. Har birini navbat bilan yuboring.</p>`:''}
+    ${parts.map((txt,i)=>`<div class="bar" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">${sendLinks(txt).map(([l,u])=>`<a class="big ${/Whats/.test(l)?'wa':'tg'}" href="${esc(u)}" target="_blank" rel="noopener">${l}${multi?` (${i+1}/${parts.length})`:''}</a>`).join('')}</div>`).join('')}</div>` : '';
   return `<div class="wrap"><div class="done"><div class="ic"><svg viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg></div>
     <h2>Buyurtma matni tayyor</h2><span class="ordno">№ ${esc(state.order.no)}</span>
-    <p style="margin:0;color:var(--muted)">Matnni nusxalab, sotuvchiga Telegram yoki WhatsApp orqali yuboring. Do'kon raqami qo'shilgach, bu tugma o'zi yuboradi.</p>
+    <p style="margin:0;color:var(--muted)">${send?"Tugmani bosing: do'kon chati buyurtma matni bilan ochiladi, faqat «Yuborish»ni bosasiz.":"Matnni nusxalab, sotuvchiga Telegram yoki WhatsApp orqali yuboring."}</p>
+    ${send}
     <textarea class="ordtext" id="ordText" readonly>${esc(state.order.text)}</textarea>
-    <div class="bar" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><button class="big" data-copy-order="1">Matnni nusxalash</button><button class="big dark" data-go="cart">Savatga qaytish</button></div></div></div>`;
+    <div class="bar" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><button class="big ${send?'dark':''}" data-copy-order="1">Matnni nusxalash</button><button class="big dark" data-go="cart">Savatga qaytish</button></div></div></div>`;
 }
 
 function render(){
@@ -599,6 +624,7 @@ document.addEventListener('click', e => {
   else if (d.copy){ const txt=d.copy; (navigator.clipboard?.writeText(txt)||Promise.reject()).then(()=>toast('OEM nusxalandi'),()=>toast(txt)); }
 });
 $('#logo').onclick = () => go('home');
+if (SHOP.phone) { const d=SHOP.phone.replace(/\D/g,''); $('#shopContact').innerHTML = `Buyurtma: <a href="tel:+${d}">+${d.replace(/^(998)(\d\d)(\d{3})(\d\d)(\d\d)$/,'$1 $2 $3 $4 $5')}</a>`; }
 $('#cartTop').onclick = () => go('cart');
 let qt; $('#q').addEventListener('input', e => { clearTimeout(qt); qt=setTimeout(()=>{ state.q=e.target.value; if(state.view!=='catalog'){ Object.assign(state,{car:myCar,cat:'',brand:''}); go('catalog'); } else { state.limit=24; render(); $('#q').focus(); } },250); });
 try { if (history.state && history.state.view) Object.assign(state, history.state); else if (location.hash) Object.assign(state, fromUrl()); } catch(e) {}

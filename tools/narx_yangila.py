@@ -133,9 +133,10 @@ def main():
         print(f"XATO: saytdagi {len(miss)} ta tovar yo'q (masalan {miss[:10]}), fayl yozilmadi")
         return 2
     bad = [k for k, v in items.items()
-           if isinstance(v["price"], bool) or not isinstance(v["price"], (int, float)) or v["price"] < 0]
+           if isinstance(v["price"], bool) or not isinstance(v["price"], (int, float))
+           or not math.isfinite(v["price"]) or v["price"] < 0]
     if bad:
-        print(f"XATO: {len(bad)} ta narx son emas yoki manfiy (masalan {bad[:10]}), fayl yozilmadi")
+        print(f"XATO: {len(bad)} ta narx son emas, cheksiz yoki manfiy (masalan {bad[:10]}), fayl yozilmadi")
         return 2
     zero = [k for k, v in items.items() if v["price"] == 0]
     if len(zero) > max(20, len(items) // 20):

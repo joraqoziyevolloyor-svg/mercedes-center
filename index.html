@@ -747,7 +747,7 @@ function sxemaView(){
 function mountSx(){
   const el=$('#sx'); if (!el) return;
   sxScripts().then(()=>{ if ($('#sx')!==el || !window.MCSxema) return;
-    const sx = state.sx || {}, car = SX_CARS.includes(sx.car) ? sx.car : SX_CARS.includes(state.sxCar) ? state.sxCar : SX_CARS.includes(myCar) ? myCar : undefined;
+    const sx = state.sx || {}, car = SX_CARS.includes(state.sxCar) ? state.sxCar : SX_CARS.includes(sx.car) ? sx.car : SX_CARS.includes(myCar) ? myCar : undefined;
     MCSxema.mount(el, { products:P, car, imgBase:'', href:id=>'#p/'+encodeURIComponent(id),
       onAdd:id=>{ addToCart(id,1); saveCart(); toast("Savatga qo'shildi"); },
       onAsk:(car,part)=>{ ask.sent=null; ask.part=part; ask.car=car||''; go('ask'); } });

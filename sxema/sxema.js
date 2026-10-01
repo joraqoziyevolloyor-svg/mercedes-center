@@ -196,7 +196,7 @@
       if (e.pos === '?') tags.push('<span class="mc-sx-tag">Old/orqa yozilmagan</span>');
       var note = e.note ? '<div class="mc-sx-meta mc-sx-warn">' + esc(e.note) + '</div>' : '';
       tags.push(p.stock ? '<span class="mc-sx-tag ok">Bor</span>' : '<span class="mc-sx-tag no">Tugagan</span>');
-      var img = p.img ? '<img class="mc-sx-ph" loading="lazy" alt="" onerror="this.style.visibility=\'hidden\'" src="' + esc(imgBase + p.img) + '">' : '<div class="mc-sx-ph"></div>';
+      var img = p.img ? '<img class="mc-sx-ph" loading="lazy" alt="" src="' + esc(imgBase + p.img) + '">' : '<div class="mc-sx-ph"></div>';
       var price = p.price != null ? '<span class="mc-sx-price">' + esc(money(p.price)) + '<small>optom</small></span>' : '<span class="mc-sx-price"><small>narxini so\'rang</small></span>';
       var acts = '<a class="mc-sx-btn" href="' + esc(href(p.id)) + '">Ko\'rish</a>' +
         (opt.onAdd && p.stock ? '<button type="button" class="mc-sx-btn pri" data-add="' + esc(p.id) + '">Savatga</button>' : '');
@@ -234,6 +234,10 @@
         html += '<ul class="mc-sx-list">' + list.map(card).join('') + '</ul>';
       }
       P.innerHTML = html;
+      Array.prototype.forEach.call(P.querySelectorAll('img.mc-sx-ph'), function (im) {
+        function hide() { im.style.visibility = 'hidden'; }
+        im.addEventListener('error', hide);
+      });
     }
 
     function select(part, side) {

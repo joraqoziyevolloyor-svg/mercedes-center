@@ -92,10 +92,12 @@ async function load(){
   catch(e){ fill({}); $('#loadErr').hidden=false; }
 }
 syncToken(); load();
-async function save(content){
-  let sha; try{ const cur=await api('/contents/'+FILE+'?ref='+SITE); sha=cur.sha;
-    if (cur.content && unb64(cur.content)===content) return 'same';  // o'zgarish yo'q: bo'sh commit qilinmaydi
+async function save(cfg){
+  let sha, prev={}; try{ const cur=await api('/contents/'+FILE+'?ref='+SITE); sha=cur.sha;
+    try{ prev=obj(JSON.parse(unb64(cur.content))); }catch(e){ prev={}; }  // panelda yo'q sozlamalar (masalan "buyurtma") saqlanib qoladi
+    if (cur.content && unb64(cur.content)===JSON.stringify({...prev,...cfg},null,2)+'\n') return 'same';  // o'zgarish yo'q: bo'sh commit qilinmaydi
   }catch(e){ if(e.status!==404) { e.auth=true; throw e; } }
+  const content=JSON.stringify({...prev,...cfg},null,2)+'\n';
   let res; try{ res=await api('/contents/'+FILE,{method:'PUT',body:JSON.stringify({message:'Sayt sozlamalari admin paneldan yangilandi',content:b64(content),branch:SITE,...(sha?{sha}:{})})}); }catch(e){ e.auth=true; throw e; }
   try{ await api('/git/refs/heads/main',{method:'PATCH',body:JSON.stringify({sha:res.commit.sha,force:false})}); }
   catch(e){ e.mainOnly=true; throw e; }
@@ -108,10 +110,9 @@ $('#f').onsubmit=async e=>{
   $('#ePhone').hidden=okP; $('#eTg').hidden=okT; if(!okP||!okT) return;
   if(!token){ show("GitHub kalitini kiriting (pastdagi yo'riqnoma bo'yicha).",false); return; }
   const cfg={phone:digits?'+'+digits:'',telegram:tg,whatsapp:$('#whatsapp').checked,banner:$('#banner').value.trim()};
-  const content=JSON.stringify(cfg,null,2)+'\n';
   $('#save').disabled=true; $('#save').textContent='Saqlanmoqda...';
   try{
-    const r=await save(content); $('#loadErr').hidden=true;
+    const r=await save(cfg); $('#loadErr').hidden=true;
     if (r==='same') show("O'zgarish yo'q, saytdagi sozlamalar shu holatda.",true); else show("Saqlandi. Saytda odatda 1–2 daqiqada (ba'zan 10 daqiqagacha) yangilanadi; ko'rish uchun sahifani yangilang.",true);
   }catch(err){
     const s=err.status;

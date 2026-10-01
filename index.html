@@ -239,6 +239,7 @@ a.big.tg{background:#2aabee;color:#fff}a.big.wa{background:#25d366;color:#08130c
 .done .ic{width:56px;height:56px;border-radius:50%;background:var(--ok-bg);color:var(--ok);display:grid;place-items:center}
 .done .ic svg{width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:2.5}
 .done h2{font-size:30px}
+.askline{margin:14px 0 0;color:var(--muted);font-size:14px}
 .ordno{font-family:var(--f-mono);font-size:18px;background:var(--tile);padding:4px 12px;border-radius:6px}
 footer{border-top:1px solid var(--line);margin-top:30px;padding-block:22px;color:var(--muted);font-size:13px}
 footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-between}
@@ -309,14 +310,14 @@ const snap = () => JSON.parse(JSON.stringify({...state, scroll: scrollY}));
 function urlFor(s){
   if (s.view==='product') return '#p/'+encodeURIComponent(s.id);
   if (s.view==='catalog'){ const u=new URLSearchParams(); ['q','car','cat','brand'].forEach(k=>{ if(s[k]) u.set(k,s[k]); }); if(s.stock) u.set('stock','1'); if(s.photo) u.set('photo','1'); const x=u.toString(); return '#c'+(x?'?'+x:''); }
-  if (s.view==='quick'||s.view==='cart') return '#'+s.view;
+  if (s.view==='quick'||s.view==='cart'||s.view==='ask') return '#'+s.view;
   return location.pathname+location.search;
 }
 function fromUrl(){
   let h=location.hash.slice(1), m; try { h=decodeURIComponent(h); } catch(e) {}
   if ((m=h.match(/^p\/(.+)$/))) return {view:'product',id:m[1]};
   if (h==='c' || h.startsWith('c?')){ const u=new URLSearchParams(location.hash.slice(location.hash.indexOf('?')+1)); return {view:'catalog',q:u.get('q')||'',car:u.get('car')||'',cat:u.get('cat')||'',brand:u.get('brand')||'',stock:u.get('stock')==='1',photo:u.get('photo')==='1'}; }
-  if (h==='quick'||h==='cart') return {view:h};
+  if (h==='quick'||h==='cart'||h==='ask') return {view:h};
   return {view:'home'};
 }
 function go(view, extra={}){
@@ -414,7 +415,8 @@ function catalog(){
         <select id="fSort" aria-label="Saralash"><option value="photo" ${state.sort==='photo'?'selected':''}>Avval rasmlilar</option><option value="cheap" ${state.sort==='cheap'?'selected':''}>Arzonidan</option><option value="dear" ${state.sort==='dear'?'selected':''}>Qimmatidan</option><option value="name" ${state.sort==='name'?'selected':''}>Nomi bo'yicha</option></select></div>
       ${chips.length?`<div class="chips">${chips.map(([k,v])=>`<button class="chip" data-clear="${k}">${esc(v)} <span aria-hidden="true">✕</span></button>`).join('')}<button class="link" data-clear="all" style="font-size:13px">Tozalash</button></div>`:''}
       ${r.length?`<div class="grid">${r.slice(0,state.limit).map(card).join('')}</div>${r.length>state.limit?`<button class="more" id="more">Yana ko'rsatish (${r.length-state.limit})</button>`:''}`
-        :`<div class="empty">Hech narsa topilmadi. Boshqa so'z yoki OEM raqamini yozib ko'ring.${state.car?`<br><br><button class="link" data-widen="1">Barcha mashinalarda qidirish</button>`:''}</div>`}
+        :`<div class="empty">Hech narsa topilmadi. Boshqa so'z yoki OEM raqamini yozib ko'ring.${state.car?`<br><br><button class="link" data-widen="1">Barcha mashinalarda qidirish</button>`:''}<br><br><button class="big" data-ask="q">Topolmadingizmi? So'rov qoldiring</button></div>`}
+      ${r.length?`<p class="askline">Kerakli detalni topolmadingizmi? <button class="link" data-ask="q">So'rov qoldiring</button>, sotuvchi topib qo'ng'iroq qiladi.</p>`:''}
     </div></div></div>`;
 }
 
@@ -447,6 +449,7 @@ function product(){
       </dl>
       ${p.desc?`<div class="note">${esc(p.desc)}</div>`:''}
       <div class="note"><b>Mosligini tekshiring.</b> Buyurtma berganda mashinangiz VIN raqamini yozsangiz, sotuvchi qism to'g'ri kelishini tekshirib beradi.</div>
+      <p class="askline" style="margin:0">Boshqa detal kerakmi? <button class="link" data-ask="1">So'rov qoldiring</button></p>
     </div></div>
   ${pair.length?`<section class="sec"><div class="sec-head"><h2>${p.side==='LH'?"O'ng tomoni (RH)":'Chap tomoni (LH)'}</h2></div><div class="grid">${pair.map(card).join('')}</div></section>`:''}
   ${same.length?`<section class="sec"><div class="sec-head"><h2>Shu OEM bo'yicha boshqa brendlar</h2></div><div class="grid">${same.map(card).join('')}</div></section>`:''}
@@ -497,7 +500,7 @@ function quickView(){
   <div class="qres">${found.map((x,i)=>`<div class="qrow"><code>${esc(x.code)}</code><div>${x.ids.length>1?`<select data-qpick="${r.indexOf(x)}" aria-label="Variant">${opt(x)}</select>`:`<button class="link" data-open="${x.pick}" style="text-align:left">${esc(byId[x.pick].title)} · ${esc(byId[x.pick].brand||'')}</button> <span style="white-space:nowrap">${priceHtml(byId[x.pick])} <span class="pill ${byId[x.pick].stock?'ok':'no'}">${byId[x.pick].stock?'Mavjud':'Tugagan'}</span></span>`}</div><input type="number" min="0" value="${x.qty}" data-qqty="${r.indexOf(x)}" aria-label="Soni" class="${x.qty>0?'':'zero'}">${x.qty>0?'':`<span class="zmsg">Soni 0: sonini yozing</span>`}</div>`).join('')}
   ${miss.map(x=>`<div class="qrow miss"><code>${esc(x.line)}</code><div class="none">Topilmadi</div><span></span></div>`).join('')}</div>
   <div class="bar" style="margin-top:14px">${found.length?`<button class="big" id="qoAdd">Topilganlarni savatga qo'shish (${found.length-zero})</button>`:''}</div>
-  ${miss.length?`<p style="color:var(--muted);font-size:13.5px">Topilmaganlarni sotuvchiga yuboring, u tekshirib aytadi.</p>`:''}`:''}
+  ${miss.length?`<p style="color:var(--muted);font-size:13.5px">Topilmaganlarni sotuvchiga yuboring, u tekshirib aytadi. <button class="link" data-ask="miss">Topilmaganlar bo'yicha so'rov qoldirish (${miss.length})</button></p>`:''}`:''}
   </div>`;
 }
 function orderText(o){
@@ -578,10 +581,43 @@ function doneView(){
     <div class="bar" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><button class="big ${send?'dark':''}" data-copy-order="1">Matnni nusxalash</button><button class="big dark" data-go="cart">Savatga qaytish</button></div></div></div>`;
 }
 
+// "Topolmadingizmi?" so'rovi: mijoz ismi, telefoni, kerakli detal (OEM yoki tavsif) va mashinasi
+const ask = { part:'', car:'', sent:null };
+const PART_MAX = 400;
+function askText(a){ return [`Mercedes Center — detal so'rovi`, `Mijoz: ${a.name}, ${a.phone}`, a.car?`Mashina: ${a.car}`:'', '', 'Kerakli detal:', a.part].filter((x,i,arr)=>x!==''||arr[i-1]!=='').join('\n'); }
+function askView(){
+  const crumbs = `<div class="crumbs"><button class="back" data-back="1">← Orqaga</button><button data-go="home">Bosh sahifa</button> / <span>Detal so'rovi</span></div>`;
+  if (ask.sent){ const links=sendLinks(ask.sent.text);
+    return `<div class="wrap">${crumbs}<div class="done"><div class="ic"><svg viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg></div>
+    <h2>So'rov tayyor</h2>
+    <p style="margin:0;color:var(--muted)">${links.length?"Tugmani bosing: do'kon chati so'rov matni bilan ochiladi, faqat «Yuborish»ni bosasiz.":"Matnni nusxalab, sotuvchiga yuboring."}</p>
+    ${links.length?`<div class="sendbox"><div class="bar" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">${links.map(([l,u])=>`<a class="big ${/Whats/.test(l)?'wa':'tg'}" href="${esc(u)}" target="_blank" rel="noopener">${l}</a>`).join('')}</div></div>`:''}
+    <textarea class="ordtext" id="ordText" readonly>${esc(ask.sent.text)}</textarea>
+    <p style="margin:0;color:var(--muted);font-size:14px">Yoki qo'ng'iroq qiling: <a href="tel:+${esc(String(SHOP.phone||'').replace(/\D/g,'')||'998505220008')}">${esc(SHOP.phone||'+998505220008')}</a></p>
+    <div class="bar" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><button class="big dark" data-copy-order="1">Matnni nusxalash</button><button class="big" data-ask-new="1">Yana so'rov</button></div></div></div>`; }
+  return `<div class="wrap qo">${crumbs}
+  <div class="sec-head" style="margin-top:6px"><h2>Topolmadingizmi?</h2></div>
+  <p style="margin:0 0 12px;color:var(--muted);max-width:62ch">Kerakli detalni yozing: OEM raqami yoki nomi, qaysi tomoni va boshqa belgilari. Sotuvchi topib, narxini aytish uchun qo'ng'iroq qiladi.</p>
+  <form class="summary" id="askForm" novalidate style="max-width:560px">
+    <div class="field">Kerakli detal<textarea id="aPart" maxlength="${PART_MAX}" placeholder="Masalan: 9063230520 yoki Sprinter 906 old stabilizator vtulkasi">${esc(ask.part)}</textarea><span class="err" id="ePart" hidden>Qaysi detal kerakligini yozing</span></div>
+    <div class="field">Mashina (ixtiyoriy)<input id="aCar" maxlength="80" list="carList" placeholder="Masalan, Sprinter 906, 2012" value="${esc(ask.car)}"><datalist id="carList">${CARS.map(([c])=>`<option value="${esc(c)}">`).join('')}</datalist></div>
+    <div class="field">Ismingiz<input id="oName" maxlength="60" autocomplete="name" placeholder="Masalan, Jasur" value="${esc(form.name)}"><span class="err" id="eName" hidden>Ismingizni yozing</span></div>
+    <div class="field">Telefon<input id="oPhone" maxlength="40" type="tel" inputmode="tel" autocomplete="tel" placeholder="+998 90 123 45 67" value="${esc(form.phone)}"><span class="err" id="ePhone" hidden>Telefon raqamini to'liq yozing</span></div>
+    <button class="big" type="submit">So'rovni tayyorlash</button>
+  </form></div>`;
+}
+function openAsk(from){
+  if (ask.sent) { ask.part=''; ask.car=''; } ask.sent=null;
+  if (from==='q' && state.q) ask.part=state.q;
+  else if (from==='miss' && state.quick) ask.part=state.quick.filter(x=>!x.ids.length).map(x=>x.line).join('\n');
+  ask.part=capNote(ask.part.slice(0,PART_MAX));
+  const c=(state.view==='product'&&byId[state.id]?.car)||state.car||myCar||''; if (c && c!=='Boshqa') ask.car=c;
+  go('ask');
+}
 function render(){
   const v = state.view;
   const cb = (v==='catalog'||v==='product'||v==='quick'||v==='cart') ? `<div class="wrap catbar" aria-label="Bo'limlar">${CATS.map(([c])=>`<button data-cat="${esc(c)}" class="${(v==='catalog'&&state.cat===c)||(v==='product'&&byId[state.id]?.cat===c)?'on':''}">${esc(c)}</button>`).join('')}</div>` : '';
-  app.innerHTML = cb + (v==='home'?home():v==='catalog'?catalog():v==='product'?product():v==='cart'?cartView():v==='quick'?quickView():doneView());
+  app.innerHTML = cb + (v==='home'?home():v==='catalog'?catalog():v==='product'?product():v==='cart'?cartView():v==='quick'?quickView():v==='ask'?askView():doneView());
   document.body.classList.toggle('onhome', v==='home');
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.go===v || (v==='product'&&b.dataset.go==='catalog')));
   const qi=$('#q'); if (v==='catalog') { if (qi.value !== state.q) qi.value = state.q; } else if (document.activeElement!==qi) qi.value='';
@@ -614,6 +650,12 @@ function bind(){
     const total=Object.keys(cart).reduce((s,id)=>s+(byId[id]?.price||0)*cart[id],0), anyAsk=Object.keys(cart).some(id=>byId[id]&&byId[id].price==null);
     const o={no:'MC-'+String(Date.now()).slice(-6),name,phone,total,anyAsk,dlv:$('#dSend').checked?'Yetkazib berish':"Do'kondan olib ketish",note:capNote($('#oNote').value).trim()};
     o.text=orderText(o); state.order=o; go('done'); };
+  [['#aPart','part'],['#aCar','car']].forEach(([s,k])=>{ const el=$(s); if (el) el.oninput=()=>{ let v=el.value; if (k==='part') v=capNote(v); if (v!==el.value) el.value=v; ask[k]=v; }; });
+  const af=$('#askForm'); if (af) af.onsubmit = e => { e.preventDefault();
+    const part=capNote($('#aPart').value).trim(), name=$('#oName').value.trim().slice(0,60), phone=normPhone($('#oPhone').value).trim(), okP=phoneOk(phone);
+    $('#ePart').hidden=!!part; $('#eName').hidden=!!name; $('#ePhone').hidden=okP;
+    if (!part||!name||!okP) { (!part?$('#aPart'):!name?$('#oName'):$('#oPhone')).focus(); return; }
+    const a={name,phone,car:$('#aCar').value.trim().slice(0,80),part}; ask.sent={...a,text:askText(a)}; render(); window.scrollTo({top:0}); };
   const hs=$('#hs'); if (hs) hs.onsubmit = e => { e.preventDefault(); const v=$('#hq').value.trim(); if(!v) return; state.q=v; $('#q').value=v; go('catalog',{car:myCar,cat:'',brand:''}); };
   document.querySelectorAll('[data-cqty]').forEach(el=>el.onchange=()=>{ const n=Math.max(1,parseInt(el.value)||1); cart[el.dataset.cqty]=n; saveCart(); render(); });
   const qr=$('#qoRun'); if (qr){ const run=()=>{ state.quickText=$('#qoText').value; state.quick=parseLines(state.quickText); render(); };
@@ -639,6 +681,8 @@ document.addEventListener('click', e => {
   else if (d.inc){ cart[d.inc]++; saveCart(); render(); }
   else if (d.dec){ cart[d.dec]--; if(cart[d.dec]<=0) delete cart[d.dec]; saveCart(); render(); }
   else if (d.rm){ delete cart[d.rm]; saveCart(); render(); }
+  else if (d.ask) openAsk(d.ask);
+  else if (d.askNew){ ask.part=''; ask.sent=null; render(); }
   else if (d.copyOrder){ const ta=$('#ordText'); const txt=ta.value; (navigator.clipboard?.writeText(txt)||Promise.reject()).then(()=>toast('Nusxalandi'),()=>{ ta.select(); toast('Matnni belgilab, nusxalang'); }); }
   else if (d.copyLink){ const txt=location.href; (navigator.clipboard?.writeText(txt)||Promise.reject()).then(()=>toast('Havola nusxalandi'),()=>toast(txt)); }
   else if (d.copy){ const txt=d.copy; (navigator.clipboard?.writeText(txt)||Promise.reject()).then(()=>toast('OEM nusxalandi'),()=>toast(txt)); }

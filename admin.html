@@ -93,7 +93,9 @@ async function load(){
 }
 syncToken(); load();
 async function save(content){
-  let sha; try{ sha=(await api('/contents/'+FILE+'?ref='+SITE)).sha; }catch(e){ if(e.status!==404) { e.auth=true; throw e; } }
+  let sha; try{ const cur=await api('/contents/'+FILE+'?ref='+SITE); sha=cur.sha;
+    if (cur.content && unb64(cur.content)===content) return 'same';  // o'zgarish yo'q: bo'sh commit qilinmaydi
+  }catch(e){ if(e.status!==404) { e.auth=true; throw e; } }
   let res; try{ res=await api('/contents/'+FILE,{method:'PUT',body:JSON.stringify({message:'Sayt sozlamalari admin paneldan yangilandi',content:b64(content),branch:SITE,...(sha?{sha}:{})})}); }catch(e){ e.auth=true; throw e; }
   try{ await api('/git/refs/heads/main',{method:'PATCH',body:JSON.stringify({sha:res.commit.sha,force:false})}); }
   catch(e){ e.mainOnly=true; throw e; }
@@ -109,8 +111,8 @@ $('#f').onsubmit=async e=>{
   const content=JSON.stringify(cfg,null,2)+'\n';
   $('#save').disabled=true; $('#save').textContent='Saqlanmoqda...';
   try{
-    await save(content); $('#loadErr').hidden=true;
-    show("Saqlandi. Saytda odatda 1–2 daqiqada (ba'zan 10 daqiqagacha) yangilanadi; ko'rish uchun sahifani yangilang.",true);
+    const r=await save(content); $('#loadErr').hidden=true;
+    if (r==='same') show("O'zgarish yo'q, saytdagi sozlamalar shu holatda.",true); else show("Saqlandi. Saytda odatda 1–2 daqiqada (ba'zan 10 daqiqagacha) yangilanadi; ko'rish uchun sahifani yangilang.",true);
   }catch(err){
     const s=err.status;
     if(err.mainOnly && s===422) show("Sayt yangilandi, lekin main tarmog'ida boshqa o'zgarishlar bor, dasturchiga ayting.",false);

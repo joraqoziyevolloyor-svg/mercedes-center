@@ -75,7 +75,7 @@ let token=''; try{ token=localStorage.getItem(KEY)||''; }catch(e){}
 const show=(t,ok)=>{ const m=$('#msg'); m.textContent=t; m.className='msg '+(ok?'ok':'no'); m.hidden=false; };
 const str=v=>typeof v==='string'?v:'';
 const obj=c=>{ if(!c||typeof c!=='object'||Array.isArray(c)) throw 0; return c; };
-function fill(c){ c=c&&typeof c==='object'?c:{}; $('#phone').value=str(c.phone); $('#telegram').value=str(c.telegram); $('#whatsapp').checked=c.whatsapp!==false; $('#banner').value=str(c.banner); }
+function fill(c){ c=c&&typeof c==='object'?c:{}; $('#phone').value=str(c.phone); $('#telegram').value=str(c.telegram); $('#whatsapp').checked=c.whatsapp===true; $('#banner').value=str(c.banner); }
 function syncToken(){ $('#token').value=token?'••••••••••••':''; $('#forget').hidden=!token; $('#help').hidden=!!token; }
 const b64=s=>btoa(unescape(encodeURIComponent(s)));
 const unb64=s=>decodeURIComponent(escape(atob(String(s).replace(/\s/g,''))));

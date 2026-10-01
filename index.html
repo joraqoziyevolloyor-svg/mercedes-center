@@ -536,7 +536,8 @@ const NOTE_ENC_MAX = 2400, NOTE_LEN = 400;  // 400 ta kirill harfi = 2400 kodlan
 const encLen = s => encodeURIComponent(s).replace(/'/g,'%27').length;
 const capEnc = (v, max) => { const a=Array.from(String(v).replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g,''));
   let s=a.join(''); if (encLen(s)<=max) return s; let lo=0, hi=a.length; while (lo<hi){ const mid=(lo+hi+1)>>1; if (encLen(a.slice(0,mid).join(''))<=max) lo=mid; else hi=mid-1; } return a.slice(0,lo).join(''); };
-const capNote = v => capEnc(v, NOTE_ENC_MAX);
+const capNote = v => capEnc(v, BOT() ? 1e9 : NOTE_ENC_MAX);  // botga havola yo'q: faqat belgi soni (300) cheklanadi
+const cpCut = (v, n) => Array.from(String(v)).slice(0, n).join('');  // belgi (code point) bo'yicha kesish
 // Matn qisqartirilsa, maydon ostida ko'rinadi
 const capHint = (el, cut) => { let h=el.parentNode.querySelector('.caphint'); if (!cut) { if (h) h.hidden=true; return; }
   if (!h) { h=document.createElement('span'); h.className='caphint'; h.style.cssText='font-size:12px;color:var(--muted)'; el.parentNode.appendChild(h); }
@@ -697,6 +698,7 @@ function doneView(){
 const ask = { part:'', car:'', sent:null };
 const PART_MAX = 430, PART_ENC_MAX = 2600;  // so'rov bitta Telegram havolasiga sig'ishi uchun; 430 kirill harfi = 2580 kodlangan belgi
 const partMax = () => BOT() ? 300 : PART_MAX;  // botga: 2–300 belgi (shartnoma)
+const partEnc = () => BOT() ? 1e9 : PART_ENC_MAX;
 function askText(a){ return [`Mercedes Center — detal so'rovi`, `Mijoz: ${a.name}, ${a.phone}`, a.car?`Mashina: ${a.car}`:'', '', 'Kerakli detal:', a.part].filter((x,i,arr)=>x!==''||arr[i-1]!=='').join('\n'); }
 function askView(){
   const crumbs = `<div class="crumbs"><button class="back" data-back="1">← Orqaga</button><button data-go="home">Bosh sahifa</button> / <span>Detal so'rovi</span></div>`;
@@ -725,9 +727,9 @@ function openAsk(from){
   if (ask.sent) ask.part=''; ask.sent=null; ask.dropped=0;
   if (from==='q' && state.q) ask.part=state.q;
   else if (from==='miss' && state.quick) { const L=state.quick.filter(x=>!x.ids.length).map(x=>x.line); let k=0;
-    while (k<L.length && L.slice(0,k+1).join('\n').length<=partMax() && encLen(L.slice(0,k+1).join('\n'))<=PART_ENC_MAX) k++;
+    while (k<L.length && L.slice(0,k+1).join('\n').length<=partMax() && encLen(L.slice(0,k+1).join('\n'))<=partEnc()) k++;
     ask.part=L.slice(0,k).join('\n'); ask.dropped=L.length-k; }
-  ask.part=capEnc(ask.part.slice(0,partMax()),PART_ENC_MAX);
+  ask.part=capEnc(cpCut(ask.part,partMax()),partEnc());
   const c=(state.view==='product'&&byId[state.id]&&carsText(byId[state.id]))||state.car||myCar||''; ask.car = c && c!=='Boshqa' ? c : '';
   go('ask');
 }
@@ -801,7 +803,7 @@ function bind(){
     if(!name||!okP||(BOT()&&send&&!addr)) { (!name?$('#oName'):!okP?$('#oPhone'):$('#oAddr')).focus(); return; }
     const total=Object.keys(cart).reduce((s,id)=>s+(byId[id]?.stock?(byId[id].price||0)*cart[id]:0),0), anyAsk=Object.keys(cart).some(id=>byId[id]&&byId[id].price==null);
     const o={no:'MC-'+String(Date.now()).slice(-6),name,phone,total,anyAsk,dlv:send?'Yetkazib berish':"Do'kondan olib ketish",note:capNote($('#oNote').value).trim()};
-    if (BOT()) { o.note=o.note.slice(0,300).trim(); o.addr=addr; o.phone=cp;
+    if (BOT()) { o.note=cpCut(o.note,300).trim(); o.addr=addr; o.phone=cp;
       const data={ t:'order', name, phone:o.phone, delivery:send?'yetkazish':'olib_ketish', address:addr, note:o.note,
         items:cartIds().map(id=>[id, cart[id], byId[id].price==null?0:Math.round(byId[id].price*100)]) };
       botSend('order', data).then(r=>{ if (!r) return; o.no=r.ref||o.no; o.text=orderText(o); state.order=o;
@@ -810,11 +812,11 @@ function bind(){
       return; }
     o.text=orderText(o); state.order=o; go('done');
     } catch(err) { toast("Xatolik yuz berdi. Matnni tekshirib, qayta bosing yoki qo'ng'iroq qiling: "+fmtTel(SHOP.phone)); } };
-  [['#aPart','part'],['#aCar','car']].forEach(([s,k])=>{ const el=$(s); if (el) el.oninput=()=>{ let v=el.value; if (k==='part') { v=capEnc(v,PART_ENC_MAX); capHint(el, v!==el.value); } if (v!==el.value) el.value=v; ask[k]=v; }; });
+  [['#aPart','part'],['#aCar','car']].forEach(([s,k])=>{ const el=$(s); if (el) el.oninput=()=>{ let v=el.value; if (k==='part') { v=capEnc(v,partEnc()); capHint(el, v!==el.value); } if (v!==el.value) el.value=v; ask[k]=v; }; });
   const af=$('#askForm'); if (af) af.onsubmit = e => { e.preventDefault();
     try {
     if (state.sending) return;
-    const part=capEnc($('#aPart').value,PART_ENC_MAX).trim().slice(0,partMax()), name=$('#oName').value.trim().slice(0,60), phone0=normPhone($('#oPhone').value).trim(), cp=BOT()?botPhone(phone0):canonPhone(phone0), okP=!!cp, phone=fmtTel(cp);
+    const part=cpCut(capEnc($('#aPart').value,partEnc()).trim(),partMax()).trim(), name=$('#oName').value.trim().slice(0,60), phone0=normPhone($('#oPhone').value).trim(), cp=BOT()?botPhone(phone0):canonPhone(phone0), okP=!!cp, phone=fmtTel(cp);
     if (BOT()) $('#ePhone').textContent="Telefon raqamini to'liq yozing: +998 va 9 raqam";
     $('#ePart').hidden=!!part && (!BOT()||[...part].length>=2); $('#eName').hidden=!!name; $('#ePhone').hidden=okP;
     if (BOT() && part && [...part].length<2) { $('#aPart').focus(); return; }

@@ -265,7 +265,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-betw
   </div>
 </header>
 <main id="app"></main>
-<footer><div class="wrap"><span>Mercedes Center · ulgurji avtozapchastlar: do'konlar va ustalar uchun</span><span id="shopContact">Buyurtma: <a href="tel:+998505220008">+998 50 522 00 08</a></span></div></footer>
+<footer><div class="wrap"><span>Mercedes Center · ulgurji avtozapchastlar: do'konlar va ustalar uchun</span><span id="priceAt" hidden></span><span id="shopContact">Buyurtma: <a href="tel:+998505220008">+998 50 522 00 08</a></span></div></footer>
 <nav class="tabs" id="tabs">
   <button data-go="home"><svg viewBox="0 0 24 24"><path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z"/></svg>Bosh sahifa</button>
   <button data-go="catalog"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Katalog</button>
@@ -695,6 +695,18 @@ function applyShop(){
   if (typeof SHOP.banner==='string') { $('#banner').textContent=SHOP.banner; $('#banner').hidden=!SHOP.banner.trim(); }
 }
 applyShop();
+// Narx va mavjudlik: data/narxlar.json (Bito'dan avtomatik yangilanadi). Yuklanmasa, saytga qurilgan qiymatlar qoladi.
+const tashTime = iso => { const d=new Date(iso); if (isNaN(d)) return ''; const f=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Tashkent',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(d), g=k=>f.find(x=>x.type===k)?.value||'';
+  return `${g('day')}.${g('month')}.${g('year')} ${g('hour')}:${g('minute')}`; };
+fetch('data/narxlar.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
+  const it=d&&d.items; if (!it||typeof it!=='object'||Array.isArray(it)) return;
+  const n=Object.keys(it).length; if (n < P.length*0.5) return;  // chala fayl bo'lsa, eski qiymatlar qoladi
+  P.forEach(p=>{ const x=it[p.id];
+    if (x && typeof x==='object') { p.price = typeof x.price==='number' && isFinite(x.price) && x.price>0 ? x.price : null; if (typeof x.stock==='boolean') p.stock=x.stock; }
+    else p.price=null; });  // ro'yxatda yo'q: Bito'da sotuv narxi yo'q, "narxi so'raladi" chiqadi
+  const at=tashTime(d.updated); if (at) { $('#priceAt').textContent=`Narxlar yangilangan: ${at} (Toshkent)`; $('#priceAt').hidden=false; }
+  const a=document.activeElement; if (!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) { const sy=scrollY; navigating=true; render(); navigating=false; scrollTo(0,sy); }
+}).catch(()=>{});
 fetch('config.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(c=>{ if(!c) return;
   ['phone','telegram','banner'].forEach(k=>{ if (typeof c[k]==='string') SHOP[k]=c[k]; }); if (typeof c.whatsapp==='boolean') SHOP.whatsapp=c.whatsapp; applyShop(); if (state.view==='done') render(); }).catch(()=>{});
 $('#cartTop').onclick = () => go('cart');

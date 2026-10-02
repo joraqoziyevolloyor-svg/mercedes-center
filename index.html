@@ -27,6 +27,9 @@
   --ok:#5fd08e; --ok-bg:#15311f; --no:#ff8a80; --no-bg:#3a1917; --tile:#1f272e; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+/* qisqa sahifada ham pastki qism ekran tagida turadi */
+body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+body>main#app{flex:1 0 auto}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -804,6 +807,9 @@ nav.tabs .badge,.cartbtn .n{font-weight:600}
 .okbar a.big.dark{background:transparent;color:var(--ink);border:1px solid var(--line-2)}
 .flink:hover{color:var(--ink)}
 @media (max-width:560px){.bizshop{padding:16px}.okbar a.big{width:100%}}
+
+/* wide screens: every section visible, bar wraps instead of cutting off */
+@media (min-width:1024px){.catbar,.catbar[aria-label]{flex-wrap:wrap!important;overflow:visible!important}}
 
 </style>
 

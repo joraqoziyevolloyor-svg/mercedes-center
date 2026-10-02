@@ -7,73 +7,51 @@
 <script>window.__mcHash = String(location.hash || '');</script>
 <!-- Telegram WebApp skriptining shu papkadagi qotirilgan nusxasi (telegram-web-app.js, sha256 TELEGRAM-WEB-APP.md da) -->
 <script src="telegram-web-app.js"></script>
+<link rel="stylesheet" href="sanoat-hr.css">
 <style>
-  :root { --bg: var(--tg-theme-bg-color, #fff); --fg: var(--tg-theme-text-color, #1b2429); --muted: var(--tg-theme-hint-color, #6b7780);
-          --card: var(--tg-theme-secondary-bg-color, #f1f4f6); --btn: var(--tg-theme-button-color, #0f6e8c); --btn-fg: var(--tg-theme-button-text-color, #fff);
-          --bad: #c0392b; --good: #1e8449; --warn: #b9770e; }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  main { padding: 16px; display: flex; flex-direction: column; gap: 14px; max-width: 520px; margin: 0 auto; }
-  h1 { font-size: 20px; margin: 0; }
-  h2 { font-size: 16px; margin: 0 0 8px; }
-  p { margin: 0; }
-  .muted { color: var(--muted); font-size: 13px; }
-  .card { background: var(--card); border-radius: 12px; padding: 12px; }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .stat { background: var(--card); border-radius: 12px; padding: 10px; text-align: center; }
-  .stat b { display: block; font-size: 20px; }
-  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-  th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid color-mix(in srgb, var(--muted) 25%, transparent); }
-  th { font-size: 12px; color: var(--muted); font-weight: 600; }
-  .late { color: var(--warn); font-weight: 600; }
-  .off { color: var(--muted); }
-  .miss { color: var(--bad); }
-  .task { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid color-mix(in srgb, var(--muted) 25%, transparent); }
-  .task:last-child { border-bottom: 0; }
-  .task .txt { flex: 1; }
-  .task.done .txt { color: var(--muted); text-decoration: line-through; }
-  button { appearance: none; border: 0; border-radius: 10px; padding: 8px 12px; font: inherit; font-weight: 600; background: var(--btn); color: var(--btn-fg); white-space: nowrap; }
-  .bad { color: var(--bad); font-weight: 600; }
-  [hidden] { display: none !important; }
+  td.day { width: 72px; white-space: nowrap; }
+  td.day .wd { color: var(--muted); font-family: var(--f-body); font-size: 12px; margin-left: 4px; }
+  td.name { overflow-wrap: break-word; }
+  td.t .tag { display: block; width: max-content; margin-top: 3px; }
 </style>
 </head>
 <body>
+<header class="bar">
+  <h1 id="title">Mening ishim</h1>
+  <div class="meta" id="sub"></div>
+</header>
 <main>
-  <div>
-    <h1 id="title">📊 Mening ishim</h1>
-    <p class="muted" id="sub"></p>
-  </div>
-  <p id="error" class="bad" hidden></p>
+  <p id="error" class="err" hidden></p>
 
   <section id="worker" hidden>
     <div class="stats">
-      <div class="stat"><b id="sDays">0</b><span class="muted">kun keldi</span></div>
-      <div class="stat"><b id="sLate">0</b><span class="muted">daq kechikish</span></div>
-      <div class="stat"><b id="sOpen">0</b><span class="muted">topshiriq</span></div>
+      <div class="stat"><b id="sDays">0</b><span>kun keldi</span></div>
+      <div class="stat"><b id="sLate">0</b><span>daq kechikish</span></div>
+      <div class="stat"><b id="sOpen">0</b><span>ochiq topshiriq</span></div>
     </div>
   </section>
 
-  <section class="card" id="tasksBox" hidden>
-    <h2>📌 Topshiriqlar</h2>
+  <section class="sec" id="tasksBox" hidden>
+    <h2>Topshiriqlar</h2>
     <div id="tasks"></div>
   </section>
 
-  <section class="card" id="monthBox" hidden>
+  <section class="sec" id="monthBox" hidden>
     <h2 id="monthTitle">Oy</h2>
-    <table><thead><tr><th>Kun</th><th>Keldi</th><th>Ketdi</th><th>Kechikish</th></tr></thead><tbody id="days"></tbody></table>
+    <table><thead><tr><th>Kun</th><th class="t">Keldi</th><th class="t">Ketdi</th><th class="r">Holat</th></tr></thead><tbody id="days"></tbody></table>
   </section>
 
-  <section class="card" id="teamBox" hidden>
-    <h2>👥 Bugun</h2>
-    <table><thead><tr><th>Xodim</th><th>Keldi</th><th>Ketdi</th><th>Oy: kun / kech</th></tr></thead><tbody id="team"></tbody></table>
+  <section class="sec" id="teamBox" hidden>
+    <h2>Bugun</h2>
+    <table><thead><tr><th>Xodim</th><th class="t">Keldi</th><th class="t">Ketdi</th><th class="r">Oyda</th></tr></thead><tbody id="team"></tbody></table>
   </section>
 
-  <section class="card" id="teamTasksBox" hidden>
-    <h2>📌 Ochiq topshiriqlar</h2>
+  <section class="sec" id="teamTasksBox" hidden>
+    <h2>Ochiq topshiriqlar <span class="cnt" id="otCnt"></span></h2>
     <div id="teamTasks"></div>
   </section>
 
-  <p class="muted">Ma'lumot bot tugmani oxirgi marta yangilagan paytdagi holat. Yangilash uchun botga /start yozing.</p>
+  <p class="note">Ma'lumot bot tugmani oxirgi marta yangilagan paytdagi holat. Yangilash uchun botga /start yozing.</p>
 </main>
 <script>
 (function () {
@@ -83,14 +61,24 @@
   // Klaviatura tugmasidan ochilganda initData bo'sh bo'ladi (Telegram hujjati), shuning uchun faqat Telegram yo'qligini tekshiramiz.
   var inTg = !!(tg && tg.platform && tg.platform !== 'unknown');
   var inline = !!(inTg && tg.initDataUnsafe && tg.initDataUnsafe.query_id); // inline tugma: sendData ishlamaydi
-  if (tg) { try { tg.ready(); tg.expand(); } catch (e) {} }
+  var MONTHS = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'];
+  if (tg) {
+    try { tg.ready(); tg.expand(); } catch (e) {}
+    // Telegram mavzusi (och/qorong'i) va grafit sarlavha rangi
+    try { if (inTg) document.documentElement.setAttribute('data-theme', tg.colorScheme === 'dark' ? 'dark' : 'light'); } catch (e) {}
+    try { if (inTg && tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) { var dk = tg.colorScheme === 'dark'; tg.setHeaderColor(dk ? '#08090b' : '#171a1e'); tg.setBackgroundColor(dk ? '#0d0f11' : '#f2f3f4'); } } catch (e) {}
+  }
 
   function fail(msg) { $('error').textContent = msg; $('error').hidden = false; }
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function arr(x) { return Array.isArray(x) ? x : null; }
   function num(x) { x = Number(x); return isFinite(x) && x > 0 ? Math.floor(x) : 0; }
-  function str(x) { return x == null ? '' : String(x); }
-  function more(box, n, what) { if (n > 0) box.appendChild(el('p', 'muted', 'yana ' + n + ' ta ' + what + ' sig\'madi')); }
+  function str(x) { return x == null || typeof x === 'object' ? '' : String(x); }
+  function more(box, n, what) { if (n > 0) box.appendChild(el('p', 'more', 'yana ' + n + ' ta ' + what + ' sig\'madi')); }
+  function td(cls, text) { return el('td', cls, text); }
+  function tag(cls, text) { return el('span', 'tag' + (cls ? ' ' + cls : ''), text); }
+  function cell(cls, node) { var c = el('td', cls); c.appendChild(node); return c; }
+  function hideAll() { ['worker', 'tasksBox', 'monthBox', 'teamBox', 'teamTasksBox'].forEach(function (k) { $(k).hidden = true; }); }
   function decode() {
     // Ma'lumot faqat URL'ning # qismida keladi (serverga yuborilmaydi): #d=<base64url(JSON)>.
     // Telegram o'z parametrlarini (& yoki #kb kabi) qo'shishi mumkin; # qismi Telegram skriptidan oldin olib qo'yilgan.
@@ -123,62 +111,75 @@
     txt.appendChild(el('div', 'muted', (who ? who + ' · ' : '') + str(t[2]) + (t[3] ? ' · bajarildi' : '')));
     row.appendChild(txt);
     var id = Number(t[0]);
-    if (canDone && !t[3] && id > 0) { var b = el('button', null, '✅ Bajarildi'); b.onclick = function () { done(id, row, b); }; row.appendChild(b); }
+    if (canDone && !t[3] && Number.isSafeInteger(id) && id > 0) { var b = el('button', null, 'Bajarildi'); b.onclick = function () { done(id, row, b); }; row.appendChild(b); }
     return row;
   }
 
   function render(d) {
-    $('title').textContent = (d.r === 'o' ? '📊 Ish holati' : '📊 Mening ishim');
-    $('sub').textContent = str(d.n) + ' · ' + str(d.m) + (d.h ? ' · ish vaqti ' + str(d.h) : '') + ' · yangilangan ' + str(d.u);
+    $('title').textContent = (d.r === 'o' ? 'Ish holati' : 'Mening ishim');
+    var mm = /^(\d{4})-(\d{2})$/.exec(str(d.m)), y = mm ? +mm[1] : 2000, mo = mm ? +mm[2] : 1;
+    var monthName = mm ? MONTHS[mo - 1] + ' ' + y : str(d.m);
+    var sub = $('sub');
+    sub.appendChild(el('span', null, str(d.n)));
+    if (monthName) sub.appendChild(el('span', null, monthName));
+    if (d.h) { var hs = el('span', null, 'ish vaqti '); hs.appendChild(el('span', 'mono', str(d.h))); sub.appendChild(hs); }
+    var us = el('span', null, 'yangilangan '); us.appendChild(el('span', 'mono', str(d.u))); sub.appendChild(us);
 
     // Xodimning o'z oyi
     var days = arr(d.d), tasks = arr(d.t);
     if (days) {
       days = days.filter(function (r) { return Array.isArray(r) && num(r[0]) >= 1 && num(r[0]) <= 31; }).slice(-31);
-      var lateSum = 0, came = 0;
-      days.forEach(function (r) { if (r[1]) came++; lateSum += num(r[3]); });
+      var lateSum = 0, came = 0, today = 0;
+      days.forEach(function (r) { if (r[1]) came++; lateSum += num(r[3]); today = Math.max(today, num(r[0])); });
       // Bot jami qiymatlarni alohida yuborsa (ro'yxat qisqartirilgan bo'lishi mumkin), o'shalar ishlatiladi
       $('sDays').textContent = d.c != null ? num(d.c) : came;
       $('sLate').textContent = d.l != null ? num(d.l) : lateSum;
       $('sOpen').textContent = d.o != null ? num(d.o) : (tasks || []).filter(function (t) { return Array.isArray(t) && !t[3]; }).length;
       $('worker').hidden = false;
-      var mm = /^(\d{4})-(\d{2})$/.exec(str(d.m)), y = mm ? +mm[1] : 2000, mo = mm ? +mm[2] : 1;
-      $('monthTitle').textContent = '🗓 ' + str(d.m);
+      $('monthTitle').textContent = monthName || 'Oy';
       var tb = $('days');
       days.slice().reverse().forEach(function (r) {
-        var wd = mm ? ' ' + WD[new Date(Date.UTC(y, mo - 1, num(r[0]))).getUTCDay()] : '';
-        var late = num(r[3]);
-        var tr = el('tr', r[4] ? 'off' : (!r[1] ? 'miss' : null));
-        tr.appendChild(el('td', null, num(r[0]) + wd));
-        tr.appendChild(el('td', null, r[1] ? str(r[1]) : (r[4] ? 'dam olish' : '—')));
-        tr.appendChild(el('td', null, r[2] ? str(r[2]) : '—'));
-        tr.appendChild(el('td', late > 0 ? 'late' : null, late > 0 ? late + ' daq' : ''));
+        var dn = num(r[0]), late = num(r[3]);
+        var tr = el('tr', r[4] ? 'off' : null);
+        var dc = td('day t', String(dn));
+        if (mm) dc.appendChild(el('span', 'wd', WD[new Date(Date.UTC(y, mo - 1, dn)).getUTCDay()]));
+        tr.appendChild(dc);
+        tr.appendChild(td('t' + (r[1] ? '' : ' dim'), r[1] ? str(r[1]) : '—'));
+        tr.appendChild(td('t' + (r[2] ? '' : ' dim'), r[2] ? str(r[2]) : '—'));
+        // holat: dam olish (kulrang), kechikish (sariq), o'tgan kunda kelmagan (qizil); bugun hali kelmagan - rangsiz
+        var st = r[4] ? tag(null, 'dam olish') : late > 0 ? tag('warn', '+' + late + ' daq') : (!r[1] && dn < today) ? tag('no', 'kelmagan') : null;
+        tr.appendChild(st ? cell('r', st) : td('r', ''));
         tb.appendChild(tr);
       });
       var dMore = num(d.dn) - days.length;
-      if (dMore > 0) $('monthBox').appendChild(el('p', 'muted', 'yana ' + dMore + ' ta oldingi kun sig\'madi (jami yuqorida hisoblangan)'));
+      if (dMore > 0) $('monthBox').appendChild(el('p', 'more', 'yana ' + dMore + ' ta oldingi kun sig\'madi (jami yuqorida hisoblangan)'));
       $('monthBox').hidden = false;
     }
     if (tasks) {
       var box = $('tasks');
       tasks = tasks.filter(Array.isArray);
-      if (!tasks.length) box.appendChild(el('p', 'muted', "Hozircha topshiriq yo'q."));
+      if (!tasks.length) box.appendChild(el('p', 'empty', "Hozircha topshiriq yo'q."));
       tasks.forEach(function (t) { box.appendChild(taskRow(t, null, true)); });
       more(box, num(d.tn) - tasks.length, 'topshiriq');
       $('tasksBox').hidden = false;
     }
-    // Egasi: hamma xodimlar bugun va oy bo'yicha
+    // Egasi: hamma xodimlar bugun va oy bo'yicha. Hali kelmagan xodim rangsiz (vaqti o'tmagan bo'lishi mumkin).
     var team = arr(d.s);
     if (team) {
       var tt = $('team');
       team.filter(Array.isArray).forEach(function (r) {
         // r = [ism, keldi, ketdi, bugun kechikish, oyda kelgan kun, oyda kechikish daq, bugun dam olish 0/1]
         var late = num(r[3]);
-        var tr = el('tr', r[6] ? 'off' : (!r[1] ? 'miss' : null));
-        tr.appendChild(el('td', null, str(r[0])));
-        tr.appendChild(el('td', late > 0 ? 'late' : null, r[1] ? str(r[1]) + (late > 0 ? ' (+' + late + ')' : '') : (r[6] ? 'dam' : '—')));
-        tr.appendChild(el('td', null, r[2] ? str(r[2]) : '—'));
-        tr.appendChild(el('td', null, num(r[4]) + ' / ' + num(r[5]) + ' daq'));
+        var tr = el('tr', r[6] ? 'off' : null);
+        tr.appendChild(td('name', str(r[0])));
+        var inn;
+        if (r[1]) { inn = el('td', 't', str(r[1])); if (late > 0) { inn.appendChild(document.createTextNode(' ')); inn.appendChild(tag('warn', '+' + late)); } }
+        else inn = r[6] ? cell(null, tag(null, 'dam')) : td('t dim', '—');
+        tr.appendChild(inn);
+        tr.appendChild(td('t' + (r[2] ? '' : ' dim'), r[2] ? str(r[2]) : '—'));
+        var oy = el('td', 'r t', num(r[4]) + ' kun');
+        if (num(r[5]) > 0) oy.appendChild(el('div', 'muted', num(r[5]) + ' daq kech'));
+        tr.appendChild(oy);
         tt.appendChild(tr);
       });
       more($('teamBox'), num(d.sn) - team.length, 'xodim');
@@ -188,7 +189,8 @@
     if (ot) {
       var tbx = $('teamTasks');
       ot = ot.filter(Array.isArray);
-      if (!ot.length) tbx.appendChild(el('p', 'muted', "Ochiq topshiriq yo'q."));
+      $('otCnt').textContent = String(d.on != null ? num(d.on) : ot.length);
+      if (!ot.length) tbx.appendChild(el('p', 'empty', "Ochiq topshiriq yo'q."));
       ot.forEach(function (t) { tbx.appendChild(taskRow([t[0], t[2], t[3], 0], str(t[1]), false)); });
       more(tbx, num(d.on) - ot.length, 'ochiq topshiriq');
       $('teamTasksBox').hidden = false;
@@ -198,7 +200,7 @@
   var d;
   try { d = decode(); } catch (e) { d = null; }
   if (!d || typeof d !== 'object' || d.v !== 1) { fail(inTg ? "Ma'lumot topilmadi. Botga /start yozib, tugmani qayta bosing." : 'Bu sahifa faqat Mercedes Center botidagi "📊 Mening ishim" tugmasidan ochiladi.'); return; }
-  try { render(d); } catch (e) { fail("Ma'lumotni ko'rsatib bo'lmadi. Botga /start yozib, tugmani qayta bosing."); }
+  try { render(d); } catch (e) { hideAll(); fail("Ma'lumotni ko'rsatib bo'lmadi. Botga /start yozib, tugmani qayta bosing."); }
 })();
 </script>
 </body>

@@ -6,35 +6,36 @@
 <title>Joylashuvni yuborish</title>
 <!-- Telegram WebApp skriptining shu papkadagi qotirilgan nusxasi (telegram-web-app.js, sha256 TELEGRAM-WEB-APP.md da) -->
 <script src="telegram-web-app.js"></script>
+<link rel="stylesheet" href="sanoat-hr.css">
 <style>
-  :root { --bg: var(--tg-theme-bg-color, #fff); --fg: var(--tg-theme-text-color, #1b2429); --muted: var(--tg-theme-hint-color, #6b7780);
-          --btn: var(--tg-theme-button-color, #0f6e8c); --btn-fg: var(--tg-theme-button-text-color, #fff); --bad: #c0392b; }
-  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  main { padding: 24px 16px; display: flex; flex-direction: column; gap: 14px; max-width: 480px; margin: 0 auto; }
-  h1 { font-size: 20px; margin: 0; }
-  p { margin: 0; }
-  .muted { color: var(--muted); font-size: 14px; }
-  .bad { color: var(--bad); font-weight: 600; }
-  button { appearance: none; border: 0; border-radius: 10px; padding: 14px; font: inherit; font-weight: 600; background: var(--btn); color: var(--btn-fg); }
-  ol { margin: 0; padding-left: 20px; }
-  [hidden] { display: none !important; }
+  .lead { font-size: 16px; }
+  .steps { margin: 0; padding: 0; list-style: none; counter-reset: s; }
+  .steps li { counter-increment: s; display: flex; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--line); }
+  .steps li::before { content: counter(s); font-family: var(--f-mono); font-weight: 500; color: var(--muted); min-width: 14px; }
+  .steps li:first-child { border-top: 0; }
+  .btns { display: flex; flex-direction: column; gap: 8px; }
 </style>
 </head>
 <body>
+<header class="bar">
+  <h1>Joylashuvni yuborish</h1>
+  <div class="meta"><span>"Keldim" yoki "Ketdim" uchun</span></div>
+</header>
 <main>
-  <h1>📍 Joylashuvni yuborish</h1>
-  <p id="status">Joylashuv aniqlanmoqda…</p>
-  <p id="error" class="bad" hidden></p>
-  <button id="retry" hidden>Qaytadan urinish</button>
-  <button id="settings" hidden>Telegram sozlamalarida ruxsat berish</button>
-  <div id="live" hidden>
-    <p>Buning o'rniga jonli joylashuv yuboring:</p>
-    <ol>
-      <li>Bu oynani yoping.</li>
-      <li>Botda 📎 → <b>Joylashuv</b> → <b>Jonli joylashuvni ulashish</b> (15 daqiqa).</li>
-    </ol>
+  <p id="status" class="lead">Joylashuv aniqlanmoqda…</p>
+  <p id="error" class="err" hidden></p>
+  <div class="btns">
+    <button id="retry" class="wide" hidden>Qaytadan urinish</button>
+    <button id="settings" class="wide ghost" hidden>Telegram sozlamalarida ruxsat berish</button>
   </div>
-  <p class="muted">Joylashuv faqat Mercedes Center HR botiga, "Keldim" yoki "Ketdim" uchun yuboriladi.</p>
+  <section id="live" class="sec" hidden>
+    <h2>Buning o'rniga jonli joylashuv yuboring</h2>
+    <ol class="steps">
+      <li><span>Bu oynani yoping.</span></li>
+      <li><span>Botda 📎 → <b>Joylashuv</b> → <b>Jonli joylashuvni ulashish</b> (15 daqiqa).</span></li>
+    </ol>
+  </section>
+  <p class="note">Joylashuv faqat Mercedes Center HR botiga, "Keldim" yoki "Ketdim" uchun yuboriladi.</p>
 </main>
 <script>
 (function () {
@@ -99,7 +100,12 @@
 
   $('retry').addEventListener('click', start);
   $('settings').addEventListener('click', function () { try { tg.LocationManager.openSettings(); } catch (e) {} });
-  if (tg) { tg.ready(); tg.expand(); }
+  if (tg) {
+    tg.ready(); tg.expand();
+    // Telegram mavzusi (och/qorong'i) va grafit sarlavha rangi
+    try { if (tg.platform && tg.platform !== 'unknown') document.documentElement.setAttribute('data-theme', tg.colorScheme === 'dark' ? 'dark' : 'light'); } catch (e) {}
+    try { if (tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) { var dk = tg.colorScheme === 'dark'; tg.setHeaderColor(dk ? '#08090b' : '#171a1e'); tg.setBackgroundColor(dk ? '#0d0f11' : '#f2f3f4'); } } catch (e) {}
+  }
   start();
 })();
 </script>

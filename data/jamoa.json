@@ -1,0 +1,13 @@
+{
+  "_izoh": "Biz haqimizda bo'limi. Rasmlar img/jamoa/ papkasida (kichik harf, .jpg/.png/.webp). Mutaxassis faqat rasm, ism va soha uchalasi yozilganda ko'rinadi. Shaxsiy telefon raqami yozilmaydi.",
+  "dokon": {
+    "rasm": "",
+    "manzil": "",
+    "moljal": "",
+    "ish_vaqti": "",
+    "matn": ""
+  },
+  "mutaxassislar": [
+    { "ism": "", "soha": "", "rasm": "" }
+  ]
+}

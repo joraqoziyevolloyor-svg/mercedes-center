@@ -267,6 +267,21 @@ a.big.tg{background:#2aabee;color:#fff}a.big.wa{background:#25d366;color:#08130c
 @media (max-width:560px){.okrows div{grid-template-columns:96px 1fr}.okit{grid-template-columns:1fr auto}.okit .q{grid-column:1}.okit .s{grid-row:1/3;grid-column:2;align-self:center}.okbar .big{width:100%}.okhead h2{font-size:22px}}
 footer{border-top:1px solid var(--line);margin-top:30px;padding-block:22px;color:var(--muted);font-size:13px}
 footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-between}
+.flink{background:none;border:0;padding:0;color:inherit;font:inherit;text-decoration:underline;cursor:pointer}
+.biz{display:grid;gap:22px;margin-block:8px 40px}
+.bizshop{display:grid;gap:20px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+@media (min-width:860px){.bizshop{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);align-items:start}}
+.bizimg{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:var(--tile)}
+.bizinfo{display:grid;gap:14px;align-content:start}
+.bizinfo h1{margin:0;font-size:26px}
+.bizlead{margin:0;color:var(--muted)}
+.bizh{margin:8px 0 0}
+.bizteam{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
+.bizp{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.bizp img{width:100%;aspect-ratio:4/5;object-fit:cover;display:block;background:var(--tile)}
+.bizp figcaption{padding:12px 14px;display:grid;gap:2px}
+.bizp span{color:var(--muted);font-size:14px}
+@media (max-width:560px){.bizteam{grid-template-columns:1fr 1fr;gap:10px}.bizp figcaption{padding:10px}}
 .toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--steel);color:#fff;padding:10px 16px;border-radius:8px;font-size:14px;z-index:50;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 @media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}.card:hover{border-color:var(--muted)}}
 
@@ -772,6 +787,19 @@ nav.tabs .badge,.cartbtn .n{font-weight:600}
 @media (max-width:560px){.sendbox a.big{width:100%}}
 #oFail .failref .ordno{font-family:var(--f-mono);font-weight:500;background:var(--surface);border:1px solid var(--line-2);font-size:14px;padding:1px 8px}
 
+/* Biz haqimizda */
+.bizshop{border-top:2px solid var(--rule);padding:24px}
+.bizinfo h1{font-family:var(--f-display);font-weight:600;font-size:28px}
+.bizh{font-family:var(--f-display);font-weight:600;padding-bottom:10px;border-bottom:1px solid var(--rule)}
+.bizp{border-color:var(--line)}
+.bizp img{filter:grayscale(.15)}
+.bizp figcaption b{font-family:var(--f-display);font-weight:600;font-size:16px}
+.bizp figcaption span{font-size:13.5px}
+.okbar a.big{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.okbar a.big.dark{background:transparent;color:var(--ink);border:1px solid var(--line-2)}
+.flink:hover{color:var(--ink)}
+@media (max-width:560px){.bizshop{padding:16px}.okbar a.big{width:100%}}
+
 </style>
 
 </head>
@@ -792,7 +820,7 @@ nav.tabs .badge,.cartbtn .n{font-weight:600}
   </div>
 </header>
 <main id="app"></main>
-<footer><div class="wrap"><span>Mercedes Center · ulgurji avtozapchastlar: do'konlar va ustalar uchun</span><span id="priceAt" hidden></span><span id="shopContact">Buyurtma: <a href="tel:+998505220008">+998 50 522 00 08</a></span></div></footer>
+<footer><div class="wrap"><span>Mercedes Center · ulgurji avtozapchastlar: do'konlar va ustalar uchun</span><span id="priceAt" hidden></span><button class="flink" id="bizLink" data-go="biz" hidden>Biz haqimizda</button><span id="shopContact">Buyurtma: <a href="tel:+998505220008">+998 50 522 00 08</a></span></div></footer>
 <nav class="tabs" id="tabs">
   <button data-go="home"><svg viewBox="0 0 24 24"><path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z"/></svg>Bosh sahifa</button>
   <button data-go="catalog"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Katalog</button>
@@ -844,6 +872,7 @@ function urlFor(s){
   if (s.view==='product') return '#p/'+encodeURIComponent(s.id);
   if (s.view==='catalog'){ const u=new URLSearchParams(); ['q','car','cat','brand'].forEach(k=>{ if(s[k]) u.set(k,s[k]); }); if(s.stock) u.set('stock','1'); if(s.photo) u.set('photo','1'); const x=u.toString(); return '#c'+(x?'?'+x:''); }
   if (s.view==='quick'||s.view==='cart'||s.view==='ask') return '#'+s.view;
+  if (s.view==='biz') return '#biz';
   if (s.view==='sxema') return '#sxema'+(s.sxCar?'?car='+encodeURIComponent(s.sxCar):'');
   return location.pathname+location.search;
 }
@@ -852,6 +881,7 @@ function fromUrl(){
   if ((m=h.match(/^p\/(.+)$/))) return {view:'product',id:m[1]};
   if (h==='c' || h.startsWith('c?')){ const u=new URLSearchParams(location.hash.slice(location.hash.indexOf('?')+1)); return {view:'catalog',q:u.get('q')||'',car:knownCar(u.get('car')||''),cat:u.get('cat')||'',brand:u.get('brand')||'',stock:u.get('stock')==='1',photo:u.get('photo')==='1'}; }
   if (h==='quick'||h==='cart'||h==='ask') return {view:h};
+  if (h==='biz') return {view:'biz'};
   if ((h==='sxema'||h.startsWith('sxema?')) && SX_CARS.length) return {view:'sxema',sxCar:new URLSearchParams(location.hash.slice(location.hash.indexOf('?')+1)).get('car')||''};
   return {view:'home'};
 }
@@ -1293,12 +1323,32 @@ function mountSx(){
       state.sxCar = state.sx.car; try { history.replaceState(snap(), '', urlFor(state)); } catch(e) {} }, 0));
   }).catch(()=>{ if ($('#sx')===el) el.innerHTML=`<div class="empty">Sxemani yuklab bo'lmadi. Internetni tekshirib, sahifani yangilang.</div>`; });
 }
+// "Biz haqimizda": data/jamoa.json dan. Faqat to'liq yozuvlar ko'rinadi (rasm + ism + soha); bo'sh bo'lsa bo'lim yashirin.
+const JAMOA = { dokon:{}, odamlar:[] };
+const imgOk = u => typeof u==='string' && /^img\/jamoa\/[a-z0-9][a-z0-9_-]{0,60}\.(jpe?g|png|webp)$/.test(u) ? u : '';
+const txt = (v,n) => typeof v==='string' ? v.trim().slice(0,n) : '';
+const bizHas = () => { const d=JAMOA.dokon; return !!(JAMOA.odamlar.length || d.rasm || d.manzil || d.matn || d.vaqt || d.xarita); };
+const geoOk = v => { const m=typeof v==='string'&&v.trim().match(/^(-?\d{1,2}\.\d{3,8}),\s*(-?\d{1,3}\.\d{3,8})$/); return m&&Math.abs(+m[1])<=90&&Math.abs(+m[2])<=180 ? m[1]+','+m[2] : ''; };
+function bizView(){
+  const d=JAMOA.dokon, ph=String(SHOP.phone||'').replace(/\D/g,''), tg=String(SHOP.telegram||'').replace(/^@/,'');
+  const crumbs = `<div class="crumbs"><button class="back" data-back="1">← Orqaga</button><button data-go="home">Bosh sahifa</button> / <span>Biz haqimizda</span></div>`;
+  if (!bizHas()) return `<div class="wrap">${crumbs}<div class="empty" style="margin-block:20px 40px">Bo'lim tayyorlanmoqda.</div></div>`;
+  const rows=[['Manzil',d.manzil],['Ish vaqti',d.vaqt],['Mo\'ljal',d.moljal]].filter(r=>r[1]);
+  return `<div class="wrap">${crumbs}<section class="biz">
+    <div class="bizshop">${d.rasm?`<img class="bizimg" src="${esc(d.rasm)}" alt="Mercedes Center do'koni" loading="lazy">`:''}
+      <div class="bizinfo"><h1>Mercedes Center</h1>${d.matn?`<p class="bizlead">${esc(d.matn)}</p>`:''}
+        ${rows.length?`<dl class="okrows">${rows.map(([k,v])=>`<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`:''}
+        <div class="bar okbar">${ph?`<a class="big" href="tel:+${ph}">Qo'ng'iroq qilish</a>`:''}${tg?`<a class="big dark" href="https://t.me/${esc(encodeURIComponent(tg))}" target="_blank" rel="noopener">Telegram</a>`:''}${d.xarita?`<a class="big dark" href="https://www.google.com/maps/search/?api=1&amp;query=${esc(d.xarita)}${d.xid?'&amp;query_place_id='+esc(d.xid):''}" target="_blank" rel="noopener">Xaritada ochish</a>`:''}</div></div></div>
+    ${JAMOA.odamlar.length?`<h2 class="bizh">Mutaxassislarimiz</h2><div class="bizteam">${JAMOA.odamlar.map(o=>`<figure class="bizp"><img src="${esc(o.rasm)}" alt="${esc(o.ism)}" loading="lazy"><figcaption><b>${esc(o.ism)}</b><span>${esc(o.soha)}</span></figcaption></figure>`).join('')}</div>
+      <p class="oknote">Savollar uchun do'kon raqami: ${okTel()}</p>`:''}
+  </section></div>`;
+}
 function render(){
   if (state.car && !knownCar(state.car)) state.car='';           // tarixdagi/havoladagi eski mashina nomi
   if (state.view==='sxema' && !SX_CARS.length) state.view='home';  // sxema hali chiqmagan
   const v = state.view;
   const cb = (v==='catalog'||v==='product'||v==='quick'||v==='cart') ? `<div class="wrap catbar" aria-label="Bo'limlar">${CATS.map(([c])=>`<button data-cat="${esc(c)}" class="${(v==='catalog'&&state.cat===c)||(v==='product'&&byId[state.id]?.cat===c)?'on':''}">${esc(c)}</button>`).join('')}</div>` : '';
-  app.innerHTML = cb + (v==='home'?home():v==='catalog'?catalog():v==='product'?product():v==='cart'?cartView():v==='quick'?quickView():v==='ask'?askView():v==='sxema'?sxemaView():doneView());
+  app.innerHTML = cb + (v==='home'?home():v==='catalog'?catalog():v==='product'?product():v==='cart'?cartView():v==='quick'?quickView():v==='ask'?askView():v==='sxema'?sxemaView():v==='biz'?bizView():doneView());
   document.body.classList.toggle('onhome', v==='home');
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.go===v || (v==='product'&&b.dataset.go==='catalog')));
   const qi=$('#q'); if (v==='catalog') { if (qi.value !== state.q && document.activeElement!==qi) qi.value = state.q; } else if (document.activeElement!==qi) qi.value='';
@@ -1425,6 +1475,11 @@ const loadPrices = () => { priceAt=Date.now(); fetch('data/narxlar.json?t='+Date
   if (sel) { const b=app.querySelector(sel); if (b) { b.value=val; b.focus({preventScroll:true}); if (ss) try { b.setSelectionRange(ss[0],ss[1]); } catch(e) {} } }
 }).catch(()=>{}); };
 loadPrices();
+fetch('data/jamoa.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{ if (!j||typeof j!=='object') return;
+  const d=j.dokon&&typeof j.dokon==='object'?j.dokon:{};
+  JAMOA.dokon={ rasm:imgOk(d.rasm), manzil:txt(d.manzil,160), vaqt:txt(d.ish_vaqti,80), moljal:txt(d.moljal,120), matn:txt(d.matn,400), xarita:geoOk(d.xarita), xid:typeof d.xarita_id==='string'&&/^[A-Za-z0-9_-]{10,80}$/.test(d.xarita_id)?d.xarita_id:'' };
+  JAMOA.odamlar=(Array.isArray(j.mutaxassislar)?j.mutaxassislar:[]).slice(0,12).map(o=>({ rasm:imgOk(o&&o.rasm), ism:txt(o&&o.ism,40), soha:txt(o&&o.soha,80) })).filter(o=>o.rasm&&o.ism&&o.soha);
+  $('#bizLink').hidden=!bizHas(); if (state.view==='biz') render(); }).catch(()=>{});
 // Ochiq qolgan sahifa: qaytib kelganda narxlar qayta olinadi (30 daqiqada bir martadan ko'p emas)
 const pricesAgain = () => { if (document.visibilityState==='visible' && Date.now()-priceAt > 30*60*1000) loadPrices(); };
 document.addEventListener('visibilitychange', pricesAgain); addEventListener('focus', pricesAgain);

@@ -2,6 +2,7 @@
 <html lang="uz">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-9QtWi2wpXSKjJjAbikwOcch4viDnIQCWg1L7VHEesDw='; style-src 'self' 'sha256-xRWYs8buJ2Xk3bL45rT/v3GuiXReEXpB5giZAwgKBvQ='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mening ishim</title>
 <script>window.__mcHash = String(location.hash || '');</script>
@@ -23,6 +24,7 @@
 <main>
   <p id="error" class="err" hidden></p>
 
+  <div class="panel" id="p-mine">
   <section id="worker" hidden>
     <div class="stats">
       <div class="stat"><b id="sDays">0</b><span>kun keldi</span></div>
@@ -40,7 +42,9 @@
     <h2 id="monthTitle">Oy</h2>
     <table><thead><tr><th>Kun</th><th class="t">Keldi</th><th class="t">Ketdi</th><th class="r">Holat</th></tr></thead><tbody id="days"></tbody></table>
   </section>
+  </div>
 
+  <div class="panel" id="p-today">
   <section class="sec" id="teamBox" hidden>
     <h2>Bugun</h2>
     <table><thead><tr><th>Xodim</th><th class="t">Keldi</th><th class="t">Ketdi</th><th class="r">Oyda</th></tr></thead><tbody id="team"></tbody></table>
@@ -50,17 +54,28 @@
     <h2>Ochiq topshiriqlar <span class="cnt" id="otCnt"></span></h2>
     <div id="teamTasks"></div>
   </section>
+  </div>
 
-  <p class="note">Ma'lumot bot tugmani oxirgi marta yangilagan paytdagi holat. Yangilash uchun botga /start yozing.</p>
+  <div class="panel" id="p-orders" hidden></div>
+  <div class="panel" id="p-staff" hidden></div>
+  <div class="panel" id="p-report" hidden></div>
+  <div class="panel" id="p-settings" hidden></div>
+  <div class="panel" id="p-guide" hidden></div>
+
+  <p class="note" id="foot">Ma'lumot bot tugmani oxirgi marta yangilagan paytdagi holat. Yangilash uchun botga /start yozing.</p>
 </main>
+<nav class="tabs" id="tabs" role="tablist" hidden></nav>
 <script>
 (function () {
   var tg = window.Telegram && window.Telegram.WebApp;
   var $ = function (id) { return document.getElementById(id); };
   var WD = ['Ya', 'Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh'];
+  var DAYS = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
   // Klaviatura tugmasidan ochilganda initData bo'sh bo'ladi (Telegram hujjati), shuning uchun faqat Telegram yo'qligini tekshiramiz.
   var inTg = !!(tg && tg.platform && tg.platform !== 'unknown');
   var inline = !!(inTg && tg.initDataUnsafe && tg.initDataUnsafe.query_id); // inline tugma: sendData ishlamaydi
+  // Menyu tugmasidan ochilganda initData bor: v2 amallari shifrlangan holda ntfy orqali botga boradi (shartnoma 2-bo'lim)
+  var INIT = (inTg && typeof tg.initData === 'string') ? tg.initData : '';
   var MONTHS = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'];
   if (tg) {
     try { tg.ready(); tg.expand(); } catch (e) {}
@@ -79,17 +94,45 @@
   function tag(cls, text) { return el('span', 'tag' + (cls ? ' ' + cls : ''), text); }
   function cell(cls, node) { var c = el('td', cls); c.appendChild(node); return c; }
   function hideAll() { ['worker', 'tasksBox', 'monthBox', 'teamBox', 'teamTasksBox'].forEach(function (k) { $(k).hidden = true; }); }
-  function decode() {
-    // Ma'lumot faqat URL'ning # qismida keladi (serverga yuborilmaydi): #d=<base64url(JSON)>.
-    // Telegram o'z parametrlarini (& yoki #kb kabi) qo'shishi mumkin; # qismi Telegram skriptidan oldin olib qo'yilgan.
-    var h = window.__mcHash || String(location.hash || '');
-    var m = h.match(/[#&]d=([A-Za-z0-9_-]+)/);
-    if (!m) return null;
-    var b = m[1].replace(/-/g, '+').replace(/_/g, '/');
+  function b64bytes(s) {
+    var b = s.replace(/-/g, '+').replace(/_/g, '/');
     while (b.length % 4) b += '=';
     var bin = atob(b), bytes = new Uint8Array(bin.length);
     for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return JSON.parse(new TextDecoder().decode(bytes));
+    return bytes;
+  }
+  var MAX_Z = 8000, MAX_OUT = 200000; // bot URL'i 3000 belgigacha; ochilgan JSON 200 KB dan oshmaydi
+  function decode() {
+    // Ma'lumot faqat URL'ning # qismida keladi (serverga yuborilmaydi):
+    // #z=<base64url(deflate-raw(JSON))> (v2, bot v14) yoki eski #d=<base64url(JSON)> (v1, bot v13).
+    // Telegram o'z parametrlarini (& yoki #kb kabi) qo'shishi mumkin; # qismi Telegram skriptidan oldin olib qo'yilgan.
+    var h = window.__mcHash || String(location.hash || '');
+    var z = h.match(/[#&]z=([A-Za-z0-9_-]+)/);
+    if (z) {
+      var ds;
+      try { ds = new DecompressionStream('deflate-raw'); } catch (e) { return Promise.reject({ upd: 1 }); }
+      if (z[1].length > MAX_Z) return Promise.reject(new Error('big'));
+      var bytes = b64bytes(z[1]);
+      // Ochishni bo'laklab o'qiymiz va MAX_OUT dan oshsa darhol to'xtatamiz (siqilgan "bomba" xotirani to'ldirmasin)
+      var reader = new Blob([bytes]).stream().pipeThrough(ds).getReader(), chunks = [], total = 0;
+      var pump = function () {
+        return reader.read().then(function (res) {
+          if (res.done) {
+            var all = new Uint8Array(total), off = 0;
+            chunks.forEach(function (c) { all.set(c, off); off += c.length; });
+            return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(all));
+          }
+          total += res.value.length;
+          if (total > MAX_OUT) { try { reader.cancel().catch(function () {}); } catch (e) {} throw new Error('big'); }
+          chunks.push(res.value);
+          return pump();
+        });
+      };
+      return pump();
+    }
+    var m = h.match(/[#&]d=([A-Za-z0-9_-]+)/);
+    if (!m || m[1].length > MAX_Z) return Promise.resolve(null);
+    try { return Promise.resolve(JSON.parse(new TextDecoder().decode(b64bytes(m[1])))); } catch (e) { return Promise.resolve(null); }
   }
   function done(id, row, btn) {
     if (!inTg) return fail('Bu tugma faqat Telegram\'dagi bot ichida ishlaydi.');
@@ -103,6 +146,7 @@
     }
     row.classList.add('done');
   }
+  var doneFn = done; // v2 ma'lumotida doneV2 bilan almashtiriladi
   function taskRow(t, who, canDone) {
     // t = [id, matn, berilgan sana, bajarilgan 0/1]
     var row = el('div', 'task' + (t[3] ? ' done' : ''));
@@ -111,19 +155,29 @@
     txt.appendChild(el('div', 'muted', (who ? who + ' · ' : '') + str(t[2]) + (t[3] ? ' · bajarildi' : '')));
     row.appendChild(txt);
     var id = Number(t[0]);
-    if (canDone && !t[3] && Number.isSafeInteger(id) && id > 0) { var b = el('button', null, 'Bajarildi'); b.onclick = function () { done(id, row, b); }; row.appendChild(b); }
+    if (canDone && !t[3] && Number.isSafeInteger(id) && id > 0) { var b = el('button', null, 'Bajarildi'); b.type = 'button'; b.addEventListener('click', function () { doneFn(id, row, b, txt); }); row.appendChild(b); }
     return row;
   }
 
-  function render(d) {
-    $('title').textContent = (d.r === 'o' ? 'Ish holati' : 'Mening ishim');
+  function monthInfo(d) {
     var mm = /^(\d{4})-(\d{2})$/.exec(str(d.m)), y = mm ? +mm[1] : 2000, mo = mm ? +mm[2] : 1;
-    var monthName = mm ? MONTHS[mo - 1] + ' ' + y : str(d.m);
+    if (mm && (mo < 1 || mo > 12)) { mm = null; y = 2000; mo = 1; }
+    return { mm: mm, y: y, mo: mo, name: mm ? MONTHS[mo - 1] + ' ' + y : str(d.m) };
+  }
+  function header(d) {
+    $('title').textContent = (d.r === 'o' ? 'Ish holati' : 'Mening ishim');
+    var mi = monthInfo(d);
     var sub = $('sub');
     sub.appendChild(el('span', null, str(d.n)));
-    if (monthName) sub.appendChild(el('span', null, monthName));
+    if (mi.name) sub.appendChild(el('span', null, mi.name));
     if (d.h) { var hs = el('span', null, 'ish vaqti '); hs.appendChild(el('span', 'mono', str(d.h))); sub.appendChild(hs); }
     var us = el('span', null, 'yangilangan '); us.appendChild(el('span', 'mono', str(d.u))); sub.appendChild(us);
+    return mi;
+  }
+
+  // v1 (bot v13) sahifasi va v2 xodimning "Mening ishim" qismi: o'zgarishsiz chizish
+  function render(d) {
+    var mi = header(d), mm = mi.mm, y = mi.y, mo = mi.mo, monthName = mi.name;
 
     // Xodimning o'z oyi
     var days = arr(d.d), tasks = arr(d.t);
@@ -197,10 +251,503 @@
     }
   }
 
-  var d;
-  try { d = decode(); } catch (e) { d = null; }
-  if (!d || typeof d !== 'object' || d.v !== 1) { fail(inTg ? "Ma'lumot topilmadi. Botga /start yozib, tugmani qayta bosing." : 'Bu sahifa faqat Mercedes Center botidagi "📊 Mening ishim" tugmasidan ochiladi.'); return; }
-  try { render(d); } catch (e) { hideAll(); fail("Ma'lumotni ko'rsatib bo'lmadi. Botga /start yozib, tugmani qayta bosing."); }
+  // ======================= v2 (bot v14, ILOVA-V2-SHARTNOMA.md) =======================
+  var KEY = { kty: 'EC', crv: 'P-256', x: 'Foly2aHl4Ysb4fvLycI0rBi9iX2V9kwqUedrzDDL0mc', y: 's-SLlPsoGOOdHOLK6Ng5hDiQpZolYnGSIfklZcj9lLA' };
+  var NO_MENU = 'Bu amal uchun sahifani chat pastidagi menyu tugmasidan oching.';
+  var SENT = 'Yuborildi, bot chatda tasdiqlaydi';
+  var HM = /^([01]\d|2[0-3]):[0-5]\d$/;
+  var V = null; // v2 ma'lumoti
+
+  function b64u(bytes) {
+    var s = ''; for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function pubKey() {
+    // Test kaliti faqat mahalliy testda (127.0.0.1) o'qiladi; boshqa hamma joyda shartnoma kaliti
+    var t = window.__MC_TEST_PUB;
+    return (t && typeof t === 'object' && location.hostname === '127.0.0.1') ? t : KEY;
+  }
+  // ECDH P-256 (bir martalik kalit) + HKDF-SHA256 (bo'sh salt, info mc-app-v1) + AES-256-GCM, iv 12 bayt.
+  // Natija: base64url(eph_pub_raw[65] | iv[12] | ciphertext+tag). Saytdagi mcEncrypt bilan bir xil, faqat info boshqa.
+  async function encrypt(plain) {
+    var subtle = crypto.subtle;
+    var botKey = await subtle.importKey('jwk', pubKey(), { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+    var eph = await subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+    var shared = await subtle.deriveBits({ name: 'ECDH', public: botKey }, eph.privateKey, 256);
+    var hk = await subtle.importKey('raw', shared, 'HKDF', false, ['deriveKey']);
+    var aes = await subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(0), info: new TextEncoder().encode('mc-app-v1') },
+      hk, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    var ct = new Uint8Array(await subtle.encrypt({ name: 'AES-GCM', iv: iv }, aes, new TextEncoder().encode(plain)));
+    var pub = new Uint8Array(await subtle.exportKey('raw', eph.publicKey));
+    var out = new Uint8Array(pub.length + iv.length + ct.length);
+    out.set(pub, 0); out.set(iv, pub.length); out.set(ct, pub.length + iv.length);
+    return b64u(out);
+  }
+  function nonce() { return b64u(crypto.getRandomValues(new Uint8Array(18))); } // 24 belgi
+  // Manzil sahifaga qattiq yozilgan: URL (# qismi) ichidagi topic yoki serverga hech qachon ishonilmaydi (soxta havola amallarni boshqa joyga yubormasin)
+  var ENDPOINT = 'https://ntfy.sh/mc-vnoo2calnbwnobjxncz6hd3y';
+  function endpoint() { return ENDPOINT; }
+  function say(box, text, bad) { if (!box) return; box.textContent = text || ''; box.className = 'amsg' + (bad ? ' bad' : ''); }
+  // Bitta amalni yuborish. ok() - muvaffaqiyatdan keyingi optimistik o'zgarish.
+  async function act(a, btn, box, ok) {
+    say(box, '');
+    if (!INIT) { say(box, NO_MENU, true); return false; }
+    btn.disabled = true;
+    try {
+      var body = 'ma1 ' + await encrypt(JSON.stringify({ v: 1, i: INIT, n: nonce(), a: a }));
+      if (new TextEncoder().encode(body).length >= 4000) throw new Error('xabar juda uzun, matnni qisqartiring');
+      var r = await fetch(endpoint(V), { method: 'POST', body: body, headers: { 'Content-Type': 'text/plain' }, cache: 'no-store', credentials: 'omit' });
+      if (!r.ok) throw new Error('server javobi ' + r.status);
+    } catch (e) {
+      btn.disabled = false;
+      say(box, "Yuborib bo'lmadi: " + str(e && e.message ? e.message : e) + ". Qayta urinib ko'ring.", true);
+      return false;
+    }
+    say(box, SENT);
+    if (ok) try { ok(); } catch (e) {}
+    return true;
+  }
+  function doneV2(id, row, btn, txt) {
+    if (!INIT) return done(id, row, btn); // klaviatura tugmasi: v1 dagidek sendData
+    var box = txt.querySelector('.amsg') || txt.appendChild(el('p', 'amsg'));
+    act({ t: 'done', id: id }, btn, box, function () { row.classList.add('done'); btn.hidden = true; });
+  }
+  function ask(text, cb) {
+    try { if (inTg && tg.isVersionAtLeast && tg.isVersionAtLeast('6.2')) return tg.showConfirm(text, function (y) { cb(!!y); }); } catch (e) {}
+    cb(window.confirm(text));
+  }
+
+  // --- yordamchilar ---
+  function sec(title, cnt) {
+    var s = el('section', 'sec'), h = el('h2', null, title);
+    if (cnt != null) h.appendChild(el('span', 'cnt', cnt));
+    s.appendChild(h); return s;
+  }
+  function btn(text, cls) { var b = el('button', cls || null, text); b.type = 'button'; return b; }
+  function field(label, inp, hint) {
+    var w = el('label', 'fld'); w.appendChild(el('span', 'lbl', label)); w.appendChild(inp);
+    if (hint) w.appendChild(el('span', 'hint', hint));
+    return w;
+  }
+  function input(type, value, attrs) {
+    var i = el('input'); i.type = type; if (value != null) i.value = value;
+    Object.keys(attrs || {}).forEach(function (k) { i.setAttribute(k, attrs[k]); });
+    return i;
+  }
+  // Vaqt maydoni: har doim 24 soatlik SS:DD (input type=time qurilma tiliga qarab AM/PM ko'rsatadi)
+  function timeInput(v) {
+    var i = input('text', hm(v), { inputmode: 'numeric', maxlength: '5', placeholder: 'SS:DD', autocomplete: 'off', 'class': 'tm' });
+    i.addEventListener('input', function () {
+      var dg = i.value.replace(/\D/g, '').slice(0, 4);
+      i.value = dg.length > 2 ? dg.slice(0, 2) + ':' + dg.slice(2) : dg;
+    });
+    i.addEventListener('blur', function () { if (/^\d:\d\d$/.test(i.value)) i.value = '0' + i.value; });
+    return i;
+  }
+  function daySelect(v) {
+    var s = el('select');
+    DAYS.forEach(function (n, i) { var o = el('option', null, n); o.value = String(i); s.appendChild(o); });
+    var o = el('option', null, "Yo'q"); o.value = '-1'; s.appendChild(o);
+    var n = Number(v); s.value = String(Number.isInteger(n) && n >= -1 && n <= 6 ? n : -1);
+    return s;
+  }
+  function hm(x) { x = str(x); return HM.test(x) ? x : ''; }
+  function sid(x) { x = Number(x); return Number.isSafeInteger(x) && x > 0 ? x : 0; }
+  function cap(s, n) { s = str(s).replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
+  function group(v) { return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+  // Narxlar dollarda (Bito "Sotuv narxi", saytdagi "Optom narxi"), sentda keladi: 123456 -> "$1 234.56"
+  function moneyN(c) { var v = Math.round(num(c)); var neg = v < 0 ? '-' : ''; v = Math.abs(v); return neg + '$' + group(Math.floor(v / 100)) + '.' + String(v % 100).padStart(2, '0'); }
+  function money(c) { return moneyN(c); }
+  function phoneFmt(p) {
+    p = str(p).replace(/\D/g, '');
+    if (p.length === 9) p = '998' + p;
+    if (!/^\d{10,15}$/.test(p)) return null;
+    var nice = p.replace(/^(998)(\d\d)(\d{3})(\d\d)(\d\d)$/, '+$1 $2 $3 $4 $5');
+    return { tel: 'tel:+' + p, text: nice.charAt(0) === '+' ? nice : '+' + p };
+  }
+  function staffRows(d) {
+    // [id, name, in, out, lateToday, daysMonth, lateMinMonth, offToday, start, end, dayOff, orderTaker, absentMonth, joined]
+    return (arr(d.s) || []).filter(function (r) { return Array.isArray(r) && sid(r[0]); });
+  }
+
+  // --- egasi: Bugun ---
+  function ownerToday(d) {
+    var team = staffRows(d), tt = $('team');
+    team.forEach(function (r) {
+      var late = num(r[4]);
+      var tr = el('tr', r[7] ? 'off' : null);
+      tr.appendChild(td('name', str(r[1])));
+      var inn;
+      if (r[2]) { inn = el('td', 't', str(r[2])); if (late > 0) { inn.appendChild(document.createTextNode(' ')); inn.appendChild(tag('warn', '+' + late)); } }
+      else inn = r[7] ? cell(null, tag(null, 'dam')) : td('t dim', '—');
+      tr.appendChild(inn);
+      tr.appendChild(td('t' + (r[3] ? '' : ' dim'), r[3] ? str(r[3]) : '—'));
+      var oy = el('td', 'r t', num(r[5]) + ' kun');
+      if (num(r[6]) > 0) oy.appendChild(el('div', 'muted', num(r[6]) + ' daq kech'));
+      tr.appendChild(oy);
+      tt.appendChild(tr);
+    });
+    if (!team.length) $('teamBox').appendChild(el('p', 'empty', "Xodim yo'q."));
+    $('teamBox').hidden = false;
+
+    var ot = (arr(d.ot) || []).filter(Array.isArray), tbx = $('teamTasks');
+    var openN = d.on != null ? num(d.on) : ot.length;
+    $('otCnt').textContent = String(openN);
+    var empty = el('p', 'empty', "Ochiq topshiriq yo'q.");
+    if (!ot.length) tbx.appendChild(empty);
+    ot.forEach(function (t) { tbx.appendChild(taskRow([t[0], t[2], t[3], 0], str(t[1]), true)); });
+    more(tbx, num(d.on) - ot.length, 'ochiq topshiriq');
+    $('teamTasksBox').hidden = false;
+
+    // Topshiriq berish
+    var s = sec('Topshiriq berish'), f = el('div', 'form');
+    var who = el('select');
+    var o0 = el('option', null, 'Xodimni tanlang'); o0.value = ''; who.appendChild(o0);
+    team.forEach(function (r) { var o = el('option', null, str(r[1])); o.value = String(sid(r[0])); who.appendChild(o); });
+    var txt = el('textarea'); txt.maxLength = 500; txt.placeholder = 'Nima qilish kerak';
+    var cnt = el('span', 'hint', '0 / 500');
+    txt.addEventListener('input', function () { cnt.textContent = txt.value.length + ' / 500'; });
+    var b = btn('Topshiriq berish', 'wide'), msg = el('p', 'amsg');
+    var tf = field('Topshiriq', txt); tf.appendChild(cnt);
+    f.appendChild(field('Kimga', who)); f.appendChild(tf); f.appendChild(b); f.appendChild(msg);
+    s.appendChild(f); s.id = 'taskForm'; $('p-today').appendChild(s);
+    b.addEventListener('click', function () {
+      var id = sid(who.value), text = txt.value.trim();
+      if (!id) return say(msg, 'Xodimni tanlang.', true);
+      if (!text) return say(msg, 'Topshiriq matnini yozing.', true);
+      if (text.length > 500) return say(msg, '500 belgidan oshmasin.', true);
+      var name = who.options[who.selectedIndex].textContent;
+      act({ t: 'task', sid: id, text: text }, b, msg, function () {
+        if (empty.parentNode) empty.parentNode.removeChild(empty);
+        tbx.insertBefore(taskRow([0, text, 'hozir yuborildi', 0], name, false), tbx.firstChild);
+        openN++; $('otCnt').textContent = String(openN);
+        txt.value = ''; cnt.textContent = '0 / 500'; who.value = '';
+        b.disabled = false; // forma bo'shatildi, keyingi topshiriqni berish mumkin
+      });
+    });
+  }
+
+  // --- buyurtmalar ---
+  var ST_OPEN = { taken: 1, confirmed: 1, ready: 1 };
+  function statusTag(st, taker) {
+    taker = cap(taker, 24);
+    var w = taker ? ' · ' + taker : '';
+    if (st === 'new') return tag(null, 'Yangi');
+    if (st === 'taken') return tag('in', 'Olindi' + w);
+    if (st === 'confirmed') return tag('in', 'Tasdiqlandi' + w);
+    if (st === 'ready') return tag('in', 'Tayyor' + w);
+    if (st === 'given') return tag('ok', 'Berildi');
+    if (st === 'cancelled') return tag(null, 'Bekor');
+    return tag(null, cap(st, 16) || '—');
+  }
+  function deliveryText(kind, dv) {
+    dv = cap(dv, 300);
+    if (kind === 'req') return dv;
+    if (dv === 'olib_ketish') return "Do'kondan olib ketadi";
+    if (/^yetkazish/.test(dv)) { var ad = dv.replace(/^yetkazish:?\s*/, ''); return 'Yetkazib berish' + (ad ? ': ' + ad : ''); }
+    return dv;
+  }
+  function orderRow(o, d) {
+    // [id, kind, 'DD.MM HH:MM', customerName, status, takerName, total_c, lineCount, phone, delivery, items]
+    var id = sid(o[0]), kind = str(o[1]) === 'req' ? 'req' : 'order';
+    var state = { st: str(o[4]), taker: str(o[5]) };
+    var wrap = el('div', 'ord');
+    var head = btn(null, 'orow'); head.setAttribute('aria-expanded', 'false');
+    var when = str(o[2]).split(' ');
+    head.appendChild(el('span', 'no', '№' + (id || '?')));
+    head.appendChild(el('span', 'cu', cap(o[3], 60) || 'Mijoz'));
+    head.appendChild(el('span', 'sum money', kind === 'req' ? "so'rov" : (num(o[6]) ? money(o[6]) : '—')));
+    head.appendChild(el('span', 'tm', when.length > 1 ? when[1] + ' · ' + when[0] : when[0]));
+    var stBox = el('span', 'st'); head.appendChild(stBox);
+    var lc = num(o[7]);
+    head.appendChild(el('span', 'lc', kind === 'req' ? '' : lc + ' qator'));
+    wrap.appendChild(head);
+
+    var det = el('div', 'odet'); det.hidden = true;
+    var kv = el('dl', 'kv');
+    function kvRow(k, node) { kv.appendChild(el('dt', null, k)); var dd = el('dd'); if (typeof node === 'string') dd.textContent = node; else dd.appendChild(node); kv.appendChild(dd); }
+    var ph = phoneFmt(o[8]);
+    if (ph) { var a = el('a', null, ph.text); a.href = ph.tel; kvRow('Telefon', a); }
+    var dv = deliveryText(kind, o[9]);
+    if (dv) kvRow(kind === 'req' ? 'Kerak' : 'Olish', dv);
+    kvRow('Vaqt', str(o[2]));
+    det.appendChild(kv);
+    var items = (arr(o[10]) || []).filter(Array.isArray).slice(0, 8);
+    if (kind === 'order' || items.length) {
+      var box = el('div', 'items');
+      items.forEach(function (it) {
+        // [name, qty, price_c|null, bitoCode]
+        var q = num(it[1]) || 1, p = it[2] == null ? null : num(it[2]);
+        var r = el('div', 'it'), nm = el('div', 'nm');
+        var code = cap(it[3], 20);
+        if (code) nm.appendChild(el('span', 'code', code));
+        nm.appendChild(document.createTextNode(cap(it[0], 120) || 'Tovar'));
+        r.appendChild(nm);
+        r.appendChild(el('span', 'q', q + ' × ' + (p == null ? "narxi so'raladi" : moneyN(p))));
+        r.appendChild(p == null ? el('span', 's ask', '—') : el('span', 's money', money(p * q)));
+        box.appendChild(r);
+      });
+      if (lc > items.length) box.appendChild(el('div', 'it more', '… yana ' + (lc - items.length) + ' qator'));
+      if (kind === 'order') {
+        var tot = el('div', 'it tot'); tot.appendChild(el('span', null, 'Jami'));
+        tot.appendChild(el('span', 'money', num(o[6]) ? money(o[6]) : '—')); box.appendChild(tot);
+      }
+      det.appendChild(box);
+    }
+    var acts = el('div', 'acts'), msg = el('p', 'amsg');
+    det.appendChild(acts); det.appendChild(msg);
+    wrap.appendChild(det);
+    head.addEventListener('click', function () {
+      det.hidden = !det.hidden; head.setAttribute('aria-expanded', String(!det.hidden)); wrap.classList.toggle('open', !det.hidden);
+    });
+    function paint() {
+      stBox.textContent = ''; stBox.appendChild(statusTag(state.st, state.taker));
+      wrap.classList.toggle('closed', state.st === 'given' || state.st === 'cancelled');
+      wrap.classList.toggle('cancel', state.st === 'cancelled');
+      acts.textContent = '';
+      if (!id) return;
+      if (state.st === 'new') {
+        var b = btn('Men oldim', 'wide');
+        b.addEventListener('click', function () { act({ t: 'otake', id: id }, b, msg, function () { state.st = 'taken'; state.taker = str(d.n); paint(); }); });
+        acts.appendChild(b);
+      } else if (ST_OPEN[state.st]) {
+        [['ready', 'Tayyor', null], ['given', 'Berildi', null], ['cancelled', 'Bekor qilish', 'danger']].forEach(function (x) {
+          if (x[0] === state.st) return;
+          var b = btn(x[1], x[2]);
+          b.addEventListener('click', function () {
+            var go = function () { act({ t: 'ost', id: id, s: x[0] }, b, msg, function () { state.st = x[0]; paint(); }); };
+            if (x[0] === 'cancelled') ask('№' + id + ' buyurtma bekor qilinsinmi?', function (y) { if (y) go(); });
+            else go();
+          });
+          acts.appendChild(b);
+        });
+      }
+    }
+    paint();
+    return wrap;
+  }
+  function ordersPanel(d, list) {
+    var p = $('p-orders'), orders = (arr(list) || []).filter(Array.isArray);
+    var oc = d.oc && typeof d.oc === 'object' ? d.oc : null;
+    if (oc) {
+      var st = el('div', 'stats');
+      [[num(oc.n), 'bugun buyurtma', ''], [moneyN(oc.c), "bugun jami", ' small'], [num(oc.open), 'ochiq', '']].forEach(function (x) {
+        var c = el('div', 'stat' + x[2]); c.appendChild(el('b', null, String(x[0]))); c.appendChild(el('span', null, x[1])); st.appendChild(c);
+      });
+      p.appendChild(st);
+    }
+    var s = sec('Buyurtmalar', String(orders.length));
+    if (!orders.length) s.appendChild(el('p', 'empty', "Hozircha buyurtma yo'q."));
+    orders.forEach(function (o) { s.appendChild(orderRow(o, d)); });
+    s.id = 'orderList'; p.appendChild(s);
+    return orders.filter(function (o) { return str(o[4]) === 'new'; }).length;
+  }
+
+  // --- egasi: Xodimlar ---
+  function staffPanel(d) {
+    var p = $('p-staff'), team = staffRows(d);
+    var s = sec('Xodimlar', String(team.length));
+    if (!team.length) s.appendChild(el('p', 'empty', "Xodim yo'q."));
+    team.forEach(function (r) {
+      var id = sid(r[0]), cur = { st: hm(r[8]), en: hm(r[9]), off: Number(r[10]), ot: r[11] ? 1 : 0 };
+      if (!(Number.isInteger(cur.off) && cur.off >= -1 && cur.off <= 6)) cur.off = -1;
+      var wrap = el('div', 'ord'), head = btn(null, 'srow'); head.setAttribute('aria-expanded', 'false');
+      var hr = el('span', 'hr'), sub = el('span', 'sub');
+      head.appendChild(el('span', 'nm', str(r[1]))); head.appendChild(hr); head.appendChild(sub);
+      function paintHead() {
+        hr.textContent = (cur.st || '—') + '–' + (cur.en || '—');
+        sub.textContent = '';
+        sub.appendChild(el('span', null, cur.off >= 0 ? 'dam: ' + DAYS[cur.off] : "dam kuni yo'q"));
+        if (cur.ot) sub.appendChild(tag('in', 'Buyurtma oladi'));
+        if (!r[13]) sub.appendChild(el('span', null, 'botga kirmagan'));
+      }
+      paintHead();
+      wrap.appendChild(head);
+      var ed = el('div', 'sed'); ed.hidden = true;
+      var f = el('div', 'form');
+      var iSt = timeInput(cur.st), iEn = timeInput(cur.en);
+      var row = el('div', 'row2'); row.appendChild(field('Boshlanishi', iSt)); row.appendChild(field('Tugashi', iEn));
+      var off = daySelect(cur.off);
+      var chk = el('label', 'chk'), cb = input('checkbox'); cb.checked = !!cur.ot; chk.appendChild(cb); chk.appendChild(document.createTextNode('Buyurtma oladi'));
+      var acts = el('div', 'acts'), save = btn('Saqlash'), del = btn("O'chirish", 'danger'), msg = el('p', 'amsg');
+      acts.appendChild(save); acts.appendChild(del);
+      f.appendChild(row); f.appendChild(field('Dam olish kuni', off)); f.appendChild(chk); f.appendChild(acts); f.appendChild(msg);
+      ed.appendChild(f); wrap.appendChild(ed);
+      head.addEventListener('click', function () { ed.hidden = !ed.hidden; head.setAttribute('aria-expanded', String(!ed.hidden)); wrap.classList.toggle('open', !ed.hidden); });
+      save.addEventListener('click', function () {
+        var a = { t: 'sset', sid: id, st: iSt.value, en: iEn.value, off: Number(off.value), ot: cb.checked ? 1 : 0 };
+        if (!HM.test(a.st) || !HM.test(a.en)) return say(msg, "Vaqtni SS:DD ko'rinishida kiriting.", true);
+        if (a.st >= a.en) return say(msg, "Tugash vaqti boshlanishdan keyin bo'lsin.", true);
+        act(a, save, msg, function () { cur = { st: a.st, en: a.en, off: a.off, ot: a.ot }; paintHead(); save.disabled = false; });
+      });
+      del.addEventListener('click', function () {
+        ask(str(r[1]) + " ro'yxatdan o'chirilsinmi?", function (y) {
+          if (!y) return;
+          act({ t: 'sdel', sid: id }, del, msg, function () { wrap.classList.add('gone'); save.disabled = true; });
+        });
+      });
+      s.appendChild(wrap);
+    });
+    s.id = 'staffList'; p.appendChild(s);
+
+    // Xodim qo'shish
+    var a = sec("Xodim qo'shish"), f = el('div', 'form');
+    var iName = input('text', '', { maxlength: '40', autocomplete: 'off' });
+    var iPh = input('tel', '', { maxlength: '20', inputmode: 'numeric', placeholder: '998900000001', autocomplete: 'off' });
+    var iSt = timeInput('09:00'), iEn = timeInput('18:00');
+    var row = el('div', 'row2'); row.appendChild(field('Boshlanishi', iSt)); row.appendChild(field('Tugashi', iEn));
+    var off = daySelect(0), b = btn("Qo'shish", 'wide'), msg = el('p', 'amsg');
+    f.appendChild(field('Ism', iName)); f.appendChild(field('Telefon', iPh, '9–12 raqam'));
+    f.appendChild(row); f.appendChild(field('Dam olish kuni', off)); f.appendChild(b); f.appendChild(msg);
+    a.appendChild(f); a.id = 'addForm'; p.appendChild(a);
+    b.addEventListener('click', function () {
+      var x = { t: 'sadd', name: iName.value.replace(/\s+/g, ' ').trim(), phone: iPh.value.replace(/\D/g, ''), st: iSt.value, en: iEn.value, off: Number(off.value) };
+      if (!x.name) return say(msg, 'Ismni yozing.', true);
+      if (x.name.length > 40) return say(msg, '40 belgidan oshmasin.', true);
+      if (!/^\d{9,12}$/.test(x.phone)) return say(msg, "Telefon 9–12 raqam bo'lsin.", true);
+      if (!HM.test(x.st) || !HM.test(x.en)) return say(msg, "Vaqtni SS:DD ko'rinishida kiriting.", true);
+      if (x.st >= x.en) return say(msg, "Tugash vaqti boshlanishdan keyin bo'lsin.", true);
+      act(x, b, msg, function () {
+        var w = el('div', 'ord'), h = el('div', 'srow');
+        h.appendChild(el('span', 'nm', x.name)); h.appendChild(el('span', 'hr', x.st + '–' + x.en));
+        h.appendChild(el('span', 'sub', 'yuborildi · ' + (x.off >= 0 ? 'dam: ' + DAYS[x.off] : "dam kuni yo'q")));
+        w.appendChild(h); s.appendChild(w);
+        iName.value = ''; iPh.value = ''; b.disabled = false;
+      });
+    });
+  }
+
+  // --- egasi: Hisobot ---
+  function reportPanel(d) {
+    var p = $('p-report'), mi = monthInfo(d), team = staffRows(d);
+    var s = sec('Oy hisoboti', mi.name + (num(d.dn) ? ', 1–' + num(d.dn) : '')); s.firstChild.lastChild.className = 'cnt wide';
+    var t = el('table'), th = el('thead'), tr = el('tr');
+    [['Xodim', null], ['Keldi', 'r nn'], ['Kech', 'r nn'], ['Kelmadi', 'r nn']].forEach(function (x) { tr.appendChild(el('th', x[1], x[0])); });
+    th.appendChild(tr); t.appendChild(th);
+    var tb = el('tbody');
+    team.forEach(function (r) {
+      var row = el('tr');
+      row.appendChild(td('name', str(r[1])));
+      row.appendChild(td('r nn', num(r[5]) + ' kun'));
+      var late = num(r[6]); row.appendChild(late ? cell('r nn', tag('warn', late + ' daq')) : td('r nn dim', '0'));
+      var ab = num(r[12]); row.appendChild(ab ? cell('r nn', tag('no', ab + ' kun')) : td('r nn dim', '0'));
+      tb.appendChild(row);
+    });
+    t.appendChild(tb); s.appendChild(t);
+    if (!team.length) s.appendChild(el('p', 'empty', "Xodim yo'q."));
+    s.id = 'reportTable'; p.appendChild(s);
+
+    var x = sec('Excel'), f = el('div', 'form');
+    var sel = el('select');
+    if (mi.mm) {
+      var py = mi.mo === 1 ? mi.y - 1 : mi.y, pm = mi.mo === 1 ? 12 : mi.mo - 1;
+      [[mi.y, mi.mo], [py, pm]].forEach(function (m) {
+        var o = el('option', null, MONTHS[m[1] - 1] + ' ' + m[0]); o.value = m[0] + '-' + (m[1] < 10 ? '0' : '') + m[1]; sel.appendChild(o);
+      });
+    }
+    var b = btn('Excel yuklab olish', 'wide'), msg = el('p', 'amsg');
+    f.appendChild(field('Oy', sel)); f.appendChild(b);
+    f.appendChild(el('p', 'hint', "Bot oy jadvalini chatga fayl qilib yuboradi (CSV, Excel'da ochiladi)."));
+    f.appendChild(msg); x.appendChild(f); p.appendChild(x);
+    b.addEventListener('click', function () {
+      var m = str(sel.value);
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(m)) return say(msg, 'Oyni tanlang.', true);
+      act({ t: 'xls', m: m }, b, msg);
+    });
+  }
+
+  // --- egasi: Sozlamalar ---
+  function settingsPanel(d) {
+    var p = $('p-settings'), c = d.cfg && typeof d.cfg === 'object' ? d.cfg : {};
+    var s = sec('Sozlamalar'), f = el('div', 'form');
+    var g = input('number', c.g != null ? String(num(c.g)) : '', { min: '0', max: '60', step: '1', inputmode: 'numeric' });
+    var r = input('number', c.r != null ? String(num(c.r)) : '', { min: '50', max: '1000', step: '10', inputmode: 'numeric' });
+    var am = timeInput(hm(c.am));
+    var pm = timeInput(hm(c.pm));
+    var r1 = el('div', 'row2'); r1.appendChild(field('Kechikish chegarasi, daq', g, '0–60')); r1.appendChild(field('Radius, m', r, '50–1000'));
+    var r2 = el('div', 'row2'); r2.appendChild(field('Ertalabki hisobot', am, '06:00–12:00')); r2.appendChild(field('Kechki hisobot', pm, '15:00–23:30'));
+    var b = btn('Saqlash', 'wide'), msg = el('p', 'amsg');
+    f.appendChild(r1); f.appendChild(r2); f.appendChild(b); f.appendChild(msg);
+    f.appendChild(el('p', 'hint', "Do'kon har kuni ishlaydi. Dam olish kuni har bir xodimga alohida: Xodimlar bo'limida."));
+    s.appendChild(f); s.id = 'cfgForm'; p.appendChild(s);
+    b.addEventListener('click', function () {
+      var x = { t: 'cfg', g: Number(g.value), r: Number(r.value), am: am.value, pm: pm.value };
+      if (g.value === '' || !Number.isInteger(x.g) || x.g < 0 || x.g > 60) return say(msg, "Kechikish chegarasi 0–60 daqiqa bo'lsin.", true);
+      if (r.value === '' || !Number.isInteger(x.r) || x.r < 50 || x.r > 1000) return say(msg, "Radius 50–1000 metr bo'lsin.", true);
+      if (!HM.test(x.am) || x.am < '06:00' || x.am > '12:00') return say(msg, "Ertalabki hisobot 06:00–12:00 oralig'ida bo'lsin.", true);
+      if (!HM.test(x.pm) || x.pm < '15:00' || x.pm > '23:30') return say(msg, "Kechki hisobot 15:00–23:30 oralig'ida bo'lsin.", true);
+      act(x, b, msg, function () { b.disabled = false; });
+    });
+  }
+
+  // --- xodim: Yo'riqnoma (statik) ---
+  function guidePanel(d) {
+    var rad = d.cfg && typeof d.cfg === 'object' ? num(d.cfg.r) : 0;
+    var s = sec('Kelish va ketishni belgilash'), ol = el('ol', 'guide');
+    function li(parts) { var l = el('li'); parts.forEach(function (x) { l.appendChild(typeof x === 'string' ? document.createTextNode(x) : x); }); ol.appendChild(l); }
+    li(['Botda ', el('b', null, '✅ Keldim'), ' tugmasini bosing.']);
+    li([el('b', null, '📍 Joylashuvni yuborish'), ' tugmasini bosing (yoki 15 daqiqalik jonli joylashuvni ulashing). ' +
+      (rad ? "Do'kondan " + rad + " m ichida bo'lishingiz kerak." : "Do'kon yonida bo'lishingiz kerak.")]);
+    li(['3 daqiqa ichida dumaloq video xabar yozib yuboring.']);
+    li([el('b', null, '🏁 Ketdim'), ' ham xuddi shunday: tugma, joylashuv, video.']);
+    s.appendChild(ol);
+    s.appendChild(el('p', 'more', 'Bot har bir qadamdan keyin chatda javob beradi. Javob kelmasa, botga /start yozing.'));
+    s.id = 'guide'; $('p-guide').appendChild(s);
+  }
+
+  function setupTabs(tabs) {
+    var nav = $('tabs');
+    var all = ['p-mine', 'p-today', 'p-orders', 'p-staff', 'p-report', 'p-settings', 'p-guide'];
+    function show(id) {
+      all.forEach(function (p) { $(p).hidden = p !== id; });
+      Array.prototype.forEach.call(nav.children, function (b) { b.setAttribute('aria-selected', String(b.dataset.p === id)); });
+      window.scrollTo(0, 0);
+    }
+    if (tabs.length > 1) {
+      tabs.forEach(function (t) {
+        var b = btn(t[1]); b.dataset.p = t[0]; b.setAttribute('role', 'tab'); b.id = 'tab-' + t[0].slice(2);
+        if (t[2]) b.appendChild(el('span', 'tc', t[2]));
+        b.addEventListener('click', function () { show(t[0]); });
+        nav.appendChild(b);
+      });
+      nav.hidden = false; document.body.classList.add('has-tabs');
+    }
+    show(tabs[0][0]);
+  }
+
+  function renderV2(d) {
+    V = d; doneFn = doneV2;
+    if (d.r === 'o') {
+      header(d);
+      ownerToday(d);
+      var nNew = ordersPanel(d, d.o);
+      staffPanel(d); reportPanel(d); settingsPanel(d);
+      setupTabs([['p-today', 'Bugun'], ['p-orders', 'Buyurtmalar', nNew ? nNew + ' yangi' : ''], ['p-staff', 'Xodimlar'], ['p-report', 'Hisobot'], ['p-settings', 'Sozlamalar']]);
+    } else {
+      var mine = {}; Object.keys(d).forEach(function (k) { mine[k] = d[k]; });
+      delete mine.s; delete mine.ot; delete mine.ol; // xodimda bular jamoa jadvali emas
+      render(mine);
+      var tabs = [['p-mine', 'Mening ishim']];
+      if (Number(d.ot) === 1) { var nn = ordersPanel(d, d.ol); tabs.push(['p-orders', 'Buyurtmalar', nn ? nn + ' yangi' : '']); }
+      guidePanel(d); tabs.push(['p-guide', "Yo'riqnoma"]);
+      setupTabs(tabs);
+    }
+  }
+
+  function noData() { fail(inTg ? "Ma'lumot topilmadi. Botga /start yozib, tugmani qayta bosing." : 'Bu sahifa faqat Mercedes Center botidagi "📊 Mening ishim" tugmasidan ochiladi.'); }
+  decode().then(function (d) {
+    if (!d || typeof d !== 'object' || (d.v !== 1 && d.v !== 2)) return noData();
+    try { if (d.v === 2) renderV2(d); else render(d); }
+    catch (e) {
+      hideAll(); ['p-today', 'p-orders', 'p-staff', 'p-report', 'p-settings', 'p-guide'].forEach(function (k) { $(k).hidden = true; });
+      $('tabs').hidden = true; document.body.classList.remove('has-tabs');
+      fail("Ma'lumotni ko'rsatib bo'lmadi. Botga /start yozib, tugmani qayta bosing.");
+    }
+  }, function (e) {
+    if (e && e.upd) fail('Telegram ilovasini yangilang');
+    else noData();
+  });
 })();
 </script>
 </body>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-4azWAxb6HKiEPUjdDYj0tmKh8DC2/uneLFy43HEyNUM=' 'sha256-iRap8dA84UGb6DktS6cMG6XM/GQOV4EbrfKNh11jX0E='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-4azWAxb6HKiEPUjdDYj0tmKh8DC2/uneLFy43HEyNUM=' 'sha256-bU01zMZE/Z4yHzWIBAzGwS7xNNe4odNVab2GNvG8ymM='; style-src 'self' 'sha256-rxBQTLWi5ycaPOBPe3aMD2ggn8xttMJx+ssvsqb95RE='; font-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
 <title>Mening hisobim</title>
 <!-- Telegram skripti hash oxiriga &tgWebApp… qo'shadi — asl hash'ni undan OLDIN saqlaymiz -->
 <script>window.__mjHash = String(location.hash || '');</script>
@@ -24,13 +24,13 @@
   .tabs button { background: transparent; color: var(--muted); padding: 10px 8px 9px; font-size: 14px; border-bottom: 2px solid transparent; white-space: normal; }
   .tabs button + button { border-left: 1px solid var(--line); }
   .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
-  .tabs .cnt { display: block; font-family: var(--f-mono); font-weight: 400; font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .tabs .cnt { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
   .list { background: var(--surface); border: 1px solid var(--line); }
   .rc { border-bottom: 1px solid var(--line); }
   .rc:last-child { border-bottom: 0; }
   .rc > button { background: transparent; color: inherit; font: inherit; font-weight: 400; text-align: left; width: 100%; padding: 11px 14px; display: flex; gap: 10px; align-items: center; white-space: normal; }
   .rc .l { flex: 1; min-width: 0; }
-  .rc .r { text-align: right; font-family: var(--f-mono); font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .rc .r { text-align: right; font-family: var(--f-body); font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .rc .tot { color: var(--ink); }
   .rc .debt { color: var(--no); font-size: 12px; }
   .rc .chev { color: var(--muted); font-size: 16px; width: 12px; text-align: center; }
@@ -38,7 +38,7 @@
   .ln { padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
   .ln:first-child { border-top: 0; }
   .ln .nm { overflow-wrap: anywhere; }
-  .ln .calc { color: var(--muted); font-size: 13px; font-family: var(--f-mono); font-weight: 400; font-variant-numeric: tabular-nums; display: flex; justify-content: space-between; gap: 8px; }
+  .ln .calc { color: var(--muted); font-size: 13px; font-family: var(--f-body); font-weight: 400; font-variant-numeric: tabular-nums; display: flex; justify-content: space-between; gap: 8px; }
   .ln .calc b { color: var(--ink); font-weight: 400; }
   .search { width: 100%; padding: 11px 12px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); font: inherit; font-size: 16px; }
   .search:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
@@ -47,12 +47,15 @@
   .pr:last-child { border-bottom: 0; }
   .pr .l { flex: 1; min-width: 0; }
   .pr .nm { overflow-wrap: anywhere; }
-  .pr .r { text-align: right; white-space: nowrap; font-family: var(--f-mono); font-weight: 400; font-variant-numeric: tabular-nums; }
+  .pr .r { text-align: right; white-space: nowrap; font-family: var(--f-body); font-weight: 400; font-variant-numeric: tabular-nums; }
   .empty { padding: 16px 14px; text-align: center; }
   .bad { color: var(--no); font-weight: 600; }
   .err { text-align: center; padding: 24px 16px; border: 1px solid var(--no); background: var(--no-bg); }
   .err .ico { font-size: 32px; }
   #name { color: var(--steel-ink); }
+  .mt6 { margin-top: 6px; }
+  #app:not([hidden]) { display: contents; }
+  #found { margin: 8px 2px; }
 </style>
 </head>
 <body>
@@ -63,12 +66,12 @@
 <main>
   <div id="err" class="card err" hidden>
     <div class="ico">⚠️</div>
-    <p class="bad" style="margin-top:6px">Ma'lumotni ochib bo'lmadi</p>
-    <p class="muted" style="margin-top:6px">Telegram'ni yangilang yoki botdagi 💰 Qarzim tugmasini bosing</p>
+    <p class="bad mt6">Ma'lumotni ochib bo'lmadi</p>
+    <p class="muted mt6">Telegram'ni yangilang yoki botdagi 💰 Qarzim tugmasini bosing</p>
   </div>
-  <div id="app" hidden style="display:contents">
+  <div id="app" hidden>
     <section id="bal" class="card bal"><div class="lbl" id="balLbl"></div><div class="sum" id="balSum"></div></section>
-    <a id="call" class="call" href="tel:+998505220008">Do'konga qo'ng'iroq qilish</a>
+    <a id="call" class="call" href="tel:+998901282000">Do'konga qo'ng'iroq qilish</a>
     <div class="tabs" role="tablist">
       <button id="tabT" role="tab" aria-selected="true">Xaridlar <span class="cnt" id="cntT"></span></button>
       <button id="tabP" role="tab" aria-selected="false">Mening narxlarim <span class="cnt" id="cntP"></span></button>
@@ -76,7 +79,7 @@
     <section id="paneT"><div class="list" id="rcs"></div></section>
     <section id="paneP" hidden>
       <input id="q" class="search" type="search" placeholder="Nomi yoki kodi bo'yicha qidirish" autocomplete="off">
-      <p class="muted" id="found" style="margin:8px 2px"></p>
+      <p class="muted" id="found"></p>
       <div class="list" id="prs"></div>
     </section>
     <p class="note">Ma'lumot bot tugmani yuborgan paytdagi holat. Yangilash uchun botdagi 💰 Qarzim tugmasini qayta bosing.</p>
@@ -195,6 +198,13 @@
   function render(d) {
     if (!d || typeof d !== 'object' || d.v !== 1) throw new Error('bad data');
     var T = Array.isArray(d.t) ? d.t : [], P = Array.isArray(d.p) ? d.p : [];
+    // Do'kon telefoni URL'dan emas, saytning o'z config.json faylidan (egasi admin panelda o'zgartiradi); bo'lmasa sahifadagi raqam qoladi
+    try {
+      fetch('../config.json', { cache: 'no-store', credentials: 'omit' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (c) {
+        var p = c && typeof c.phone === 'string' ? c.phone.replace(/[\s()-]/g, '') : '';
+        if (/^\+998\d{9}$/.test(p)) $('call').href = 'tel:' + p;
+      }).catch(function () {});
+    } catch (e) {}
     $('name').textContent = str(d.n) || 'Mijoz';
     $('upd').textContent = "Ma'lumot: " + str(d.u) + ' holatiga';
     var b = Math.round(num(d.b) * 100) / 100, bal = $('bal');

@@ -49,9 +49,9 @@ input[type=file]{font:inherit;font-size:14px}
 <header><b>Mercedes Center</b> · sayt sozlamalari <a href="./">Saytga qaytish</a></header>
 <main>
   <form class="card" id="f" novalidate>
-    <h2>Buyurtma qayerga kelsin</h2>
+    <h2>Aloqa va buyurtma</h2>
     <label>Telefon raqami <small>Saytning pastida ko'rinadi, buyurtma shu raqamga Telegram/WhatsApp orqali keladi</small>
-      <input type="tel" id="phone" placeholder="+998 50 522 00 08"></label>
+      <input type="tel" id="phone" placeholder="+998 90 128 20 00"></label>
     <span class="err" id="ePhone" hidden>Raqamni +998 XX XXX XX XX ko'rinishida yozing</span>
     <label>Telegram username <small>Ixtiyoriy. Bo'lsa, Telegram tugmasi shu username'ga ochiladi (raqamdan ishonchliroq)</small>
       <input type="text" id="telegram" placeholder="@mercedescenter" autocapitalize="off" autocomplete="off"></label>
@@ -65,6 +65,21 @@ input[type=file]{font:inherit;font-size:14px}
     <div class="msg" id="msg" hidden></div>
     <div class="msg no" id="loadErr" hidden>Joriy sozlamalar yuklanmadi. Barcha maydonlarni tekshirib, keyin saqlang.</div>
     <button class="link" type="button" id="forget" hidden>Kalitni bu brauzerdan o'chirish</button>
+  </form>
+  <form class="card" id="df" novalidate>
+    <h2>Do'kon ma'lumotlari («Biz haqimizda»)</h2>
+    <p style="margin:0;color:var(--muted);font-size:14px">Saytdagi «Biz haqimizda» bo'limida ko'rinadi. Bo'sh qoldirilgan qator saytda chiqmaydi. Telefon va Telegram yuqoridagi «Aloqa va buyurtma» dan olinadi.</p>
+    <label>Ish vaqti <small>Masalan: Har kuni 09:00–20:00</small><input type="text" id="dVaqt" maxlength="80"></label>
+    <label>Manzil <small>Masalan: Qo'qon shahri, ... ko'chasi</small><input type="text" id="dManzil" maxlength="160"></label>
+    <label>Mo'ljal <small>Ixtiyoriy</small><input type="text" id="dMoljal" maxlength="120"></label>
+    <label>Xarita havolasi <small>Google Maps'da do'konni ochib, «Ulashish» → havolani nusxalab qo'ying. Bo'sh bo'lsa, do'kon nuqtasi ochiladi.</small><input type="text" id="dMap" maxlength="300" autocapitalize="off" autocomplete="off" placeholder="https://maps.app.goo.gl/..."></label>
+    <span class="err" id="eMap" hidden>Faqat Google Maps havolasi (https://maps.app.goo.gl/... yoki https://www.google.com/maps/...)</span>
+    <label>Do'kon haqida qisqa matn <small>Ixtiyoriy, 400 belgigacha</small><textarea id="dMatn" maxlength="400"></textarea></label>
+    <label>Do'kon rasmi <small>Do'konning o'zingiz olgan rasmi. Avtomatik kichraytiriladi, joylashuv ma'lumoti olib tashlanadi.</small><input type="file" id="dPhoto" accept="image/jpeg,image/png,image/webp"></label>
+    <div class="person" id="dPrev" hidden><span class="noimg"></span><div><b>Joriy rasm</b></div><div class="acts"><button type="button" class="del" id="dDel">O'chirish</button></div></div>
+    <span class="err" id="dErr" hidden></span>
+    <button class="big" type="submit" id="dSave">Saqlash</button>
+    <div class="msg" id="dMsg" hidden></div>
   </form>
   <form class="card" id="tf" novalidate>
     <h2>Mutaxassislar («Biz haqimizda»)</h2>
@@ -163,7 +178,7 @@ const tshow=(t,ok)=>{ const m=$('#tMsg'); m.textContent=t; m.className='msg '+(o
 const clean=(v,n)=>typeof v==='string'?v.replace(/[\u0000-\u001f\u007f<>]/g,'').trim().slice(0,n):'';
 function setDoc(j){ jdoc=j&&typeof j==='object'&&!Array.isArray(j)?j:{};
   team=(Array.isArray(jdoc.mutaxassislar)?jdoc.mutaxassislar:[]).map(o=>({ism:clean(o&&o.ism,40),soha:clean(o&&o.soha,80),rasm:IMG_RE.test(o&&o.rasm)?o.rasm:''})).filter(o=>o.ism||o.soha||o.rasm);
-  gone=[]; tLoaded=true; drawTeam(); }
+  gone=[]; tLoaded=true; drawTeam(); fillDokon(); }
 async function loadTeam(){
   try{ if(token){ const f=await api('/contents/'+JFILE+'?ref='+SITE); setDoc(JSON.parse(unb64(f.content))); return; } }catch(e){ if(e.status===404){ setDoc({}); return; } }
   try{ const r=await fetch(JFILE+'?t='+Date.now(),{cache:'no-store'}); if(r.status===404){ setDoc({}); return; } if(!r.ok) throw 0; setDoc(await r.json()); }
@@ -209,32 +224,66 @@ $('#pAdd').onclick=async()=>{
   }catch(e){ err(e.message==='type'?'Faqat JPG, PNG yoki WEBP rasm.':e.message==='size'?'Rasm juda katta (25 MB dan oshmasin).':e.message==='small'?'Rasm juda kichik.':"Rasmni o'qib bo'lmadi, boshqa rasm tanlang."); }
   $('#pAdd').textContent="Ro'yxatga qo'shish"; drawTeam();
 };
+// Bitta commit: data/jamoa.json (eng so'nggi nusxasi ustiga o'zgarish) + yangi rasmlar + o'chirilgan rasmlar
+async function commitJamoa(mutate, imgs, dels, message){
+  const ref=await api('/git/ref/heads/'+SITE), base=ref.object.sha, bc=await api('/git/commits/'+base);
+  let cur={}; try{ const f=await api('/contents/'+JFILE+'?ref='+base); cur=JSON.parse(unb64(f.content)); if(!cur||typeof cur!=='object'||Array.isArray(cur)) cur={}; }catch(e){ if(e.status!==404) throw e; }
+  const doc=mutate(cur), tree=[];
+  for(const [path,blob] of imgs){ const bl=await api('/git/blobs',{method:'POST',body:JSON.stringify({content:await blobB64(blob),encoding:'base64'})}); tree.push({path,mode:'100644',type:'blob',sha:bl.sha}); }
+  tree.push({path:JFILE,mode:'100644',type:'blob',content:JSON.stringify(doc,null,2)+'\n'});
+  const keep=JSON.stringify(doc);
+  for(const g of dels) if(IMG_RE.test(g)&&!keep.includes('"'+g+'"')){ try{ await api('/contents/'+g+'?ref='+base); tree.push({path:g,mode:'100644',type:'blob',sha:null}); }catch(x){} }
+  const nt=await api('/git/trees',{method:'POST',body:JSON.stringify({base_tree:bc.tree.sha,tree})});
+  const nc=await api('/git/commits',{method:'POST',body:JSON.stringify({message,tree:nt.sha,parents:[base]})});
+  try{ await api('/git/refs/heads/'+SITE,{method:'PATCH',body:JSON.stringify({sha:nc.sha,force:false})}); }catch(x){ x.race=true; throw x; }
+  let mainOk=true; try{ await api('/git/refs/heads/main',{method:'PATCH',body:JSON.stringify({sha:nc.sha,force:false})}); }catch(x){ mainOk=false; }
+  jdoc=doc; return mainOk;
+}
+const gitErr=err=>{ const s=err.status; return err.race?"Shu payt saytga boshqa o'zgarish tushdi. Saqlashni yana bir bosing."
+  :s===401?"Kalit noto'g'ri yoki muddati o'tgan. Yangi kalit oling."
+  :s===403||s===404?"Kalitga mercedes-center uchun «Contents: Read and write» ruxsati berilmagan."
+  :s>=500?"GitHub hozir javob bermayapti. Birozdan keyin qayta bosing.":"Saqlab bo'lmadi. Internetni tekshirib, qayta bosing."; };
+const takeToken=()=>{ const tv=$('#token').value.trim(); if(tv && !tv.startsWith('•')) { token=tv; try{ localStorage.setItem(KEY,token); }catch(e){} } return !!token; };
 $('#tf').onsubmit=async e=>{
   e.preventDefault(); $('#tMsg').hidden=true;
   if(!tLoaded) return tshow("Ro'yxat yuklanmadi. Sahifani yangilang.",false);
-  const tv=$('#token').value.trim(); if(tv && !tv.startsWith('•')) { token=tv; try{ localStorage.setItem(KEY,token); }catch(e){} }
-  if(!token) return tshow("Avval yuqoridagi «GitHub kaliti» maydoniga kalitni kiriting.",false);
+  if(!takeToken()) return tshow("Avval yuqoridagi «GitHub kaliti» maydoniga kalitni kiriting.",false);
   const bad=team.find(p=>p.ism.length<2||p.soha.length<3); if(bad) return tshow("Har bir yozuvda ism va soha bo'lsin.",false);
   $('#tSave').disabled=true; $('#tSave').textContent='Saqlanmoqda...';
   try{
-    const ref=await api('/git/ref/heads/'+SITE), base=ref.object.sha, bc=await api('/git/commits/'+base);
-    const tree=[];
-    for(const p of team) if(p.newImg){ const bl=await api('/git/blobs',{method:'POST',body:JSON.stringify({content:await blobB64(p.newImg),encoding:'base64'})}); tree.push({path:p.rasm,mode:'100644',type:'blob',sha:bl.sha}); }
-    const doc={...jdoc, mutaxassislar:team.map(p=>({ism:p.ism,soha:p.soha,rasm:p.rasm}))};
-    tree.push({path:JFILE,mode:'100644',type:'blob',content:JSON.stringify(doc,null,2)+'\n'});
-    for(const g of gone) if(IMG_RE.test(g)&&!team.some(p=>p.rasm===g)){ try{ await api('/contents/'+g+'?ref='+base); tree.push({path:g,mode:'100644',type:'blob',sha:null}); }catch(x){} }
-    const nt=await api('/git/trees',{method:'POST',body:JSON.stringify({base_tree:bc.tree.sha,tree})});
-    const nc=await api('/git/commits',{method:'POST',body:JSON.stringify({message:'Mutaxassislar admin paneldan yangilandi',tree:nt.sha,parents:[base]})});
-    try{ await api('/git/refs/heads/'+SITE,{method:'PATCH',body:JSON.stringify({sha:nc.sha,force:false})}); }catch(x){ x.race=true; throw x; }
-    let mainOk=true; try{ await api('/git/refs/heads/main',{method:'PATCH',body:JSON.stringify({sha:nc.sha,force:false})}); }catch(x){ mainOk=false; }
-    team.forEach(p=>{ if(p.blobUrl) URL.revokeObjectURL(p.blobUrl); delete p.newImg; delete p.blobUrl; }); jdoc=doc; gone=[]; drawTeam();
+    const list=team.map(p=>({ism:p.ism,soha:p.soha,rasm:p.rasm}));
+    const mainOk=await commitJamoa(d=>({...d,mutaxassislar:list}), team.filter(p=>p.newImg).map(p=>[p.rasm,p.newImg]), gone, 'Mutaxassislar admin paneldan yangilandi');
+    team.forEach(p=>{ if(p.blobUrl) URL.revokeObjectURL(p.blobUrl); delete p.newImg; delete p.blobUrl; }); gone=[]; drawTeam();
     tshow(mainOk?"Saqlandi. Saytda odatda 1–2 daqiqada ko'rinadi.":"Saytga saqlandi, lekin main tarmog'ini yangilab bo'lmadi, dasturchiga ayting.",mainOk);
-  }catch(err){ const s=err.status;
-    tshow(err.race?"Shu payt saytga boshqa o'zgarish tushdi. «Saytga saqlash»ni yana bir bosing."
-      :s===401?"Kalit noto'g'ri yoki muddati o'tgan. Yangi kalit oling."
-      :s===403||s===404?"Kalitga mercedes-center uchun «Contents: Read and write» ruxsati berilmagan."
-      :s>=500?"GitHub hozir javob bermayapti. Birozdan keyin qayta bosing.":"Saqlab bo'lmadi. Internetni tekshirib, qayta bosing.",false); }
+  }catch(err){ tshow(gitErr(err),false); }
   $('#tSave').disabled=false; $('#tSave').textContent='Saytga saqlash'; syncToken();
+};
+// Do'kon ma'lumotlari
+const MAP_OK=v=>{ if(!v) return true; try{ const u=new URL(v); return u.protocol==='https:'&&(/^(www\.)?google\.[a-z.]{2,6}$/.test(u.hostname)&&u.pathname.startsWith('/maps')||/^(maps\.app\.goo\.gl|goo\.gl|maps\.google\.com)$/.test(u.hostname)); }catch(e){ return false; } };
+let dPhoto=null, dOld='', dDrop=false;
+function fillDokon(){ const d=jdoc.dokon&&typeof jdoc.dokon==='object'?jdoc.dokon:{};
+  $('#dVaqt').value=clean(d.ish_vaqti,80); $('#dManzil').value=clean(d.manzil,160); $('#dMoljal').value=clean(d.moljal,120); $('#dMap').value=typeof d.xarita_url==='string'?d.xarita_url.slice(0,300):''; $('#dMatn').value=typeof d.matn==='string'?d.matn.replace(/[<>]/g,'').slice(0,400):'';
+  dOld=IMG_RE.test(d.rasm)?d.rasm:''; dPhoto=null; dDrop=false; drawDPrev(); }
+function drawDPrev(){ const box=$('#dPrev'), src=dPhoto?dPhoto.url:(!dDrop&&dOld?dOld+'?t='+Date.now():''); box.hidden=!src; if(src){ box.firstElementChild.replaceWith(el('img',{alt:'',src})); box.querySelector('b').textContent=dPhoto?'Yangi rasm, hali saqlanmagan':'Joriy rasm'; } }
+$('#dPhoto').onchange=async()=>{ $('#dErr').hidden=true; const f=$('#dPhoto').files[0]; if(!f) return;
+  try{ const b=await shrink(f); if(dPhoto) URL.revokeObjectURL(dPhoto.url); dPhoto={blob:b,url:URL.createObjectURL(b)}; drawDPrev(); }
+  catch(e){ $('#dErr').textContent=e.message==='type'?'Faqat JPG, PNG yoki WEBP rasm.':e.message==='size'?'Rasm juda katta (25 MB dan oshmasin).':e.message==='small'?'Rasm juda kichik.':"Rasmni o'qib bo'lmadi, boshqa rasm tanlang."; $('#dErr').hidden=false; } $('#dPhoto').value=''; };
+$('#dDel').onclick=()=>{ if(dPhoto){ URL.revokeObjectURL(dPhoto.url); dPhoto=null; } else dDrop=true; drawDPrev(); };
+$('#df').onsubmit=async e=>{
+  e.preventDefault(); $('#dMsg').hidden=true;
+  const show2=(t,ok)=>{ const m=$('#dMsg'); m.textContent=t; m.className='msg '+(ok?'ok':'no'); m.hidden=false; };
+  if(!tLoaded) return show2("Ma'lumot yuklanmadi. Sahifani yangilang.",false);
+  const map=$('#dMap').value.trim(); $('#eMap').hidden=MAP_OK(map); if(!MAP_OK(map)) return;
+  if(!takeToken()) return show2("Avval yuqoridagi «GitHub kaliti» maydoniga kalitni kiriting.",false);
+  const vals={ish_vaqti:clean($('#dVaqt').value,80), manzil:clean($('#dManzil').value,160), moljal:clean($('#dMoljal').value,120), xarita_url:map, matn:$('#dMatn').value.replace(/[\u0000-\u0009\u000b-\u001f\u007f<>]/g,'').trim().slice(0,400)};
+  const newPath=dPhoto?'img/jamoa/dokon-'+Date.now().toString(36)+'.jpg':'';
+  $('#dSave').disabled=true; $('#dSave').textContent='Saqlanmoqda...';
+  try{
+    const mainOk=await commitJamoa(d=>{ const old=d.dokon&&typeof d.dokon==='object'?d.dokon:{}; return {...d,dokon:{...old,...vals,rasm:newPath||(dDrop?'':(IMG_RE.test(old.rasm)?old.rasm:''))}}; },
+      dPhoto?[[newPath,dPhoto.blob]]:[], (dPhoto||dDrop)&&dOld?[dOld]:[], "Do'kon ma'lumotlari admin paneldan yangilandi");
+    fillDokon(); show2(mainOk?"Saqlandi. Saytda odatda 1–2 daqiqada ko'rinadi.":"Saytga saqlandi, lekin main tarmog'ini yangilab bo'lmadi, dasturchiga ayting.",mainOk);
+  }catch(err){ show2(gitErr(err),false); }
+  $('#dSave').disabled=false; $('#dSave').textContent='Saqlash'; syncToken();
 };
 loadTeam();
 $('#forget').onclick=()=>{ token=''; try{ localStorage.removeItem(KEY); }catch(e){} syncToken(); show("Kalit bu brauzerdan o'chirildi.",true); };

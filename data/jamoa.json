@@ -1,13 +1,12 @@
 {
-  "_izoh": "Biz haqimizda bo'limi. Rasmlar img/jamoa/ papkasida (kichik harf, .jpg/.png/.webp). Mutaxassis faqat rasm, ism va soha uchalasi yozilganda ko'rinadi. Shaxsiy telefon raqami yozilmaydi.",
+  "_izoh": "Biz haqimizda bo'limi. Mutaxassislarni admin paneldan (admin.html) qo'shing. Rasmlar img/jamoa/ da. Mutaxassis faqat rasm, ism va soha uchalasi bo'lganda ko'rinadi. Shaxsiy telefon raqami yozilmaydi.",
   "dokon": {
     "rasm": "",
-    "manzil": "",
+    "manzil": "Qo'qon shahri",
     "moljal": "",
-    "ish_vaqti": "",
+    "ish_vaqti": "09:00–20:00",
+    "xarita": "40.5581875,70.9370625",
     "matn": ""
   },
-  "mutaxassislar": [
-    { "ism": "", "soha": "", "rasm": "" }
-  ]
+  "mutaxassislar": []
 }

@@ -240,6 +240,29 @@ a.big.tg{background:#2aabee;color:#fff}a.big.wa{background:#25d366;color:#08130c
 .done h2{font-size:30px}
 .askline{margin:14px 0 0;color:var(--muted);font-size:14px}
 .ordno{font-family:var(--f-mono);font-size:18px;background:var(--tile);padding:4px 12px;border-radius:6px}
+.done.okv{max-width:640px;text-align:left;justify-items:stretch;gap:18px}
+.okhead{display:flex;gap:16px;align-items:center}
+.okhead .ic{flex:none}
+.okhead h2{margin:0;font-size:26px;line-height:1.2}
+.okhead p{margin:4px 0 0;color:var(--muted)}
+.okrows{margin:0;display:grid;border-top:1px solid var(--line)}
+.okrows div{display:grid;grid-template-columns:120px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.okrows dt{color:var(--muted);font-size:14px}
+.okrows dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.okrows .ordno{font-size:17px;padding:2px 10px}
+.okitems{display:grid}
+.okit{display:grid;grid-template-columns:1fr auto auto;gap:4px 16px;padding:10px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.okit .nm{min-width:0;overflow-wrap:anywhere}
+.okit small{display:block;color:var(--muted);font-size:12.5px}
+.okit .q{color:var(--muted);font-size:14px;white-space:nowrap}
+.okit .s{font-weight:600;white-space:nowrap;text-align:right;min-width:64px}
+.oktot{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding-top:12px}
+.oktot span{color:var(--muted)}
+.oktot b{font-size:24px}
+.oknote{margin:0;color:var(--muted);font-size:14px}
+.oktel{color:var(--ink);font-weight:600;white-space:nowrap}
+.okbar{display:flex;gap:10px;flex-wrap:wrap}
+@media (max-width:560px){.okrows div{grid-template-columns:96px 1fr}.okit{grid-template-columns:1fr auto}.okit .q{grid-column:1}.okit .s{grid-row:1/3;grid-column:2;align-self:center}.okbar .big{width:100%}.okhead h2{font-size:22px}}
 footer{border-top:1px solid var(--line);margin-top:30px;padding-block:22px;color:var(--muted);font-size:13px}
 footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-between}
 .toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--steel);color:#fff;padding:10px 16px;border-radius:8px;font-size:14px;z-index:50;box-shadow:0 6px 20px rgba(0,0,0,.25)}
@@ -723,6 +746,29 @@ nav.tabs .badge,.cartbtn .n{font-weight:600}
   .carpick .carmore::after{content:" ↓";margin-left:6px}
 }
 
+/* order / request confirmation: receipt, square, ruled */
+.done.okv{padding:28px 32px;border-top:2px solid var(--rule)}
+.okhead .ic{width:48px;height:48px;border:1px solid var(--ok);background:transparent}
+.okhead .ic svg{width:24px;height:24px}
+.okhead h2{font-family:var(--f-display);font-weight:600}
+.okrows{border-top:1px solid var(--rule)}
+.okrows dt{font-size:13px}
+.okrows .ordno{font-family:var(--f-mono);font-weight:500;background:transparent;border:1px solid var(--line-2);font-size:16px;padding:3px 10px}
+.okit .s,.oktot b{font-family:var(--f-display)}
+.okit small{font-family:var(--f-mono);font-size:12px}
+.oktot{border-top:1px solid var(--rule);margin-top:-1px}
+.oktel{font-family:var(--f-mono);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.oktel:hover{color:var(--accent)}
+@media (max-width:560px){.done.okv{padding:22px 18px;margin-inline:0}}
+
+/* send failure: ruled notice, quiet chat fallback */
+#oFail{margin-top:14px;padding:12px 14px;border:1px solid var(--no);border-left-width:3px;background:var(--no-bg);color:var(--ink);font-size:14px!important;line-height:1.5}
+#oFail a{color:inherit;font-family:var(--f-mono);font-weight:600;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+#oFail + .sendbox{margin-top:12px}
+.sendbox a.big.tg,.sendbox a.big.wa{background:transparent;color:var(--ink);border:1px solid var(--line-2);font-weight:600}
+.sendbox a.big.tg:hover,.sendbox a.big.wa:hover{border-color:var(--ink);filter:none}
+@media (max-width:560px){.sendbox a.big{width:100%}}
+
 </style>
 
 </head>
@@ -1133,11 +1179,16 @@ function failBox(err){
   return `<div class="err" id="oFail" role="alert" style="display:block;font-size:14px">${err.kind==='req'?"So'rov":'Buyurtma'} yuborilmadi. Internetni tekshirib, qayta bosing yoki qo'ng'iroq qiling: <a href="tel:${esc(fmtTel(SHOP.phone||'+998505220008').replace(/ /g,''))}">${esc(fmtTel(SHOP.phone||'+998505220008'))}</a></div>
       ${links?`<div class="sendbox"><span style="font-size:13px;color:var(--muted)">Yoki chatda yuboring:</span><div class="bar" style="display:flex;gap:10px;flex-wrap:wrap">${links}</div></div>`:''}`;
 }
-const okView = (title, line, ref) => `<div class="wrap"><div class="done"><div class="ic"><svg viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg></div>
-    <h2>${title}</h2><p style="margin:0">${line}</p>
-    <span style="color:var(--muted);font-size:14px">Kod</span><span class="ordno">${esc(ref)}</span>
-    <p style="margin:0;color:var(--muted);font-size:14px">Savol bo'lsa: <a href="tel:${esc(fmtTel(SHOP.phone||'+998505220008').replace(/ /g,''))}">${esc(fmtTel(SHOP.phone||'+998505220008'))}</a></p>
-    <div class="bar" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><button class="big" data-go="catalog">Katalogga qaytish</button></div></div></div>`;
+const okTel = () => { const t=fmtTel(SHOP.phone||'+998505220008'); return `<a class="oktel" href="tel:${esc(t.replace(/ /g,''))}">${esc(t)}</a>`; };
+const okRows = rows => `<dl class="okrows">${rows.filter(r=>r&&r[1]).map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>`;
+// Tasdiq ekrani: kod, mijoz ma'lumoti va (buyurtmada) mahsulotlar ro'yxati, chek ko'rinishida
+const okView = (title, line, ref, o, extra) => `<div class="wrap"><div class="done okv">
+    <div class="okhead"><div class="ic"><svg viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg></div><div><h2>${title}</h2><p>${line}</p></div></div>
+    ${okRows([['Kod',`<span class="ordno">${esc(ref)}</span>`], ...(o?[['Ism',esc(o.name)],['Telefon',esc(fmtTel(o.phone))],['Olish usuli',esc(o.dlv)],['Manzil',esc(o.addr||'')],['Izoh',esc(o.note||'')]]:[]), ...(extra||[])])}
+    ${o&&o.items&&o.items.length?`<div class="okitems">${o.items.map(it=>`<div class="okit"><div class="nm">${esc(it.n)}<small>${esc([it.b,it.oem].filter(Boolean).join(' · '))}${it.st?'':' · Tugagan: sotuvchi aniqlaydi'}</small></div><div class="q">${it.q} × ${it.pr==null?'—':money(it.pr)}</div><div class="s">${it.pr==null||!it.st?'—':money(it.pr*it.q)}</div></div>`).join('')}
+      <div class="oktot"><span>Jami optom narxda (${o.items.reduce((s,it)=>s+it.q,0)} dona)</span><b>${o.items.every(it=>it.pr==null)?'Sotuvchi aytadi':money(o.total)+(o.anyAsk?'+':'')}</b></div></div>`:''}
+    <p class="oknote">${o&&o.items?"Sotuvchi narx va mavjudligini tasdiqlash uchun qo'ng'iroq qiladi. ":''}Savol bo'lsa: ${okTel()}</p>
+    <div class="bar okbar"><button class="big" data-go="catalog">Katalogga qaytish</button></div></div></div>`;
 const MSG_MAX = 3900;  // Telegram bitta xabarga 4096 belgigacha oladi
 const URL_MAX = 3900;  // t.me 4108 belgidan uzun havolani qaytaradi; kodlangan matn shu chegaradan oshmasin
 function orderParts(text){
@@ -1160,7 +1211,7 @@ const sendLinks = text => { const ph=String(SHOP.phone||'').replace(/\D/g,''), t
   return o; };
 function doneView(){
   if (!state.order) return `<div class="wrap"><div class="empty" style="margin-block:20px 40px">Buyurtma yo'q.<br><br><button class="big" data-go="catalog">Katalog</button></div></div>`;
-  if (state.order.sent) return okView('Buyurtmangiz qabul qilindi', "Tez orada siz bilan bog'lanamiz.", state.order.no);
+  if (state.order.sent) return okView('Buyurtmangiz qabul qilindi', "Tez orada siz bilan bog'lanamiz.", state.order.no, state.order);
   const parts = orderParts(state.order.text), multi = parts.length>1;
   const send = sendLinks('x').length ? `<div class="sendbox">${multi?`<p style="margin:0 0 8px;color:var(--muted)">Buyurtma uzun, ${parts.length} ta xabarga bo'lindi. Har birini navbat bilan yuboring.</p>`:''}
     ${parts.map((txt,i)=>`<div class="bar" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">${sendLinks(txt).map(([l,u])=>`<a class="big ${/Whats/.test(l)?'wa':'tg'}" href="${esc(u)}" target="_blank" rel="noopener">${l}${multi?` (${i+1}/${parts.length})`:''}</a>`).join('')}</div>`).join('')}</div>` : '';
@@ -1180,7 +1231,7 @@ const partEnc = () => BOT() ? 1e9 : PART_ENC_MAX;
 function askText(a){ return [`Mercedes Center — detal so'rovi`, `Mijoz: ${a.name}, ${a.phone}`, a.car?`Mashina: ${a.car}`:'', '', 'Kerakli detal:', a.part].filter((x,i,arr)=>x!==''||arr[i-1]!=='').join('\n'); }
 function askView(){
   const crumbs = `<div class="crumbs"><button class="back" data-back="1">← Orqaga</button><button data-go="home">Bosh sahifa</button> / <span>Detal so'rovi</span></div>`;
-  if (ask.sent && ask.sent.bot) return okView("So'rovingiz qabul qilindi", "Detalni topib, siz bilan bog'lanamiz.", ask.sent.ref);
+  if (ask.sent && ask.sent.bot) return okView("So'rovingiz qabul qilindi", "Detalni topib, siz bilan bog'lanamiz.", ask.sent.ref, {name:ask.sent.name, phone:ask.sent.phone}, [['Kerakli detal',esc(ask.sent.part)],['Mashina',esc(ask.sent.car||'')]]);
   if (ask.sent){ const links=sendLinks(ask.sent.text);
     return `<div class="wrap">${crumbs}<div class="done"><div class="ic"><svg viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg></div>
     <h2>So'rov tayyor</h2>
@@ -1284,6 +1335,7 @@ function bind(){
     if (BOT()) { o.note=cpCut(o.note,300).trim(); o.addr=addr; o.phone=cp;
       const data={ t:'order', name, phone:o.phone, delivery:send?'yetkazish':'olib_ketish', address:addr, note:o.note,
         items:cartIds().map(id=>[id, cart[id], byId[id].price==null?0:Math.round(byId[id].price*100)]) };
+      o.items=cartIds().map(id=>{ const p=byId[id]; return {n:p.title, b:p.brand, oem:p.oem, q:cart[id], pr:p.price, st:!!p.stock}; });
       botSend('order', data).then(r=>{ if (!r) return; o.no=r.ref||o.no; o.text=orderText(o); state.order=o;
         if (r.ok) { o.sent=true; cart={}; cartOrder=[]; saveCart(); form.note=''; form.addr=''; go('done'); }
         else { state.sendErr={kind:'order', error:r.error, text:o.text}; render(); $('#oFail')?.scrollIntoView({block:'center'}); } });

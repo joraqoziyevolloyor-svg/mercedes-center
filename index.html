@@ -260,6 +260,8 @@ a.big.tg{background:#2aabee;color:#fff}a.big.wa{background:#25d366;color:#08130c
 .oktot span{color:var(--muted)}
 .oktot b{font-size:24px}
 .oknote{margin:0;color:var(--muted);font-size:14px}
+.failref{display:block;margin-top:8px}
+.failref .ordno{font-size:15px;padding:1px 8px}
 .oktel{color:var(--ink);font-weight:600;white-space:nowrap}
 .okbar{display:flex;gap:10px;flex-wrap:wrap}
 @media (max-width:560px){.okrows div{grid-template-columns:96px 1fr}.okit{grid-template-columns:1fr auto}.okit .q{grid-column:1}.okit .s{grid-row:1/3;grid-column:2;align-self:center}.okbar .big{width:100%}.okhead h2{font-size:22px}}
@@ -768,6 +770,7 @@ nav.tabs .badge,.cartbtn .n{font-weight:600}
 .sendbox a.big.tg,.sendbox a.big.wa{background:transparent;color:var(--ink);border:1px solid var(--line-2);font-weight:600}
 .sendbox a.big.tg:hover,.sendbox a.big.wa:hover{border-color:var(--ink);filter:none}
 @media (max-width:560px){.sendbox a.big{width:100%}}
+#oFail .failref .ordno{font-family:var(--f-mono);font-weight:500;background:var(--surface);border:1px solid var(--line-2);font-size:14px;padding:1px 8px}
 
 </style>
 
@@ -826,6 +829,7 @@ const addToCart = (id,n) => { if (!cart[id]) cartOrder = cartOrder.filter(x=>x!=
 const saveCart = () => { cartOrder = cartIds(); try { localStorage.setItem('mc-cart', JSON.stringify(cart)); localStorage.setItem('mc-cart-order', JSON.stringify(cartOrder)); } catch(e) {} updCount(); };
 function updCount(){ const n = Object.values(cart).reduce((a,b)=>a+b,0); $('#cartN').textContent = n; $('#tabN').textContent = n; $('#tabN').hidden = !n; }
 function toast(t){ const el=$('#toast'); el.textContent=t; el.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>el.hidden=true,1800); }
+function hideToast(){ clearTimeout(toast._t); const el=$('#toast'); if (el) el.hidden=true; }  // tasdiq oynasini to'smasin
 
 const knownCar = c => CARS.some(([k])=>k===c) ? c : '';   // eski nom (masalan "Starex V6") bo'sh katalog bermasin
 let myCar=''; try { myCar = knownCar(localStorage.getItem('mc-car')||''); } catch(e) {}
@@ -1176,7 +1180,7 @@ function failBox(err){
   if (err.error==='too_big') return `<div class="err" id="oFail" role="alert" style="display:block;font-size:14px">Ro'yxat juda uzun, ikki buyurtmaga bo'ling.</div>`;
   const parts = err.text ? orderParts(err.text) : [], multi = parts.length>1;
   const links = parts.map((txt,i)=>sendLinks(txt).map(([l,u])=>`<a class="big ${/Whats/.test(l)?'wa':'tg'}" href="${esc(u)}" target="_blank" rel="noopener">${l}${multi?` (${i+1}/${parts.length})`:''}</a>`).join('')).join('');
-  return `<div class="err" id="oFail" role="alert" style="display:block;font-size:14px">${err.kind==='req'?"So'rov":'Buyurtma'} yuborilmadi. Internetni tekshirib, qayta bosing yoki qo'ng'iroq qiling: <a href="tel:${esc(fmtTel(SHOP.phone||'+998505220008').replace(/ /g,''))}">${esc(fmtTel(SHOP.phone||'+998505220008'))}</a></div>
+  return `<div class="err" id="oFail" role="alert" style="display:block;font-size:14px">${err.kind==='req'?"So'rov":'Buyurtma'} yuborilmadi. Internetni tekshirib, qayta bosing yoki qo'ng'iroq qiling: <a href="tel:${esc(fmtTel(SHOP.phone||'+998505220008').replace(/ /g,''))}">${esc(fmtTel(SHOP.phone||'+998505220008'))}</a>${err.ref?`<span class="failref">Qo'ng'iroqda shu kodni ayting: <span class="ordno">${esc(err.ref)}</span></span>`:''}</div>
       ${links?`<div class="sendbox"><span style="font-size:13px;color:var(--muted)">Yoki chatda yuboring:</span><div class="bar" style="display:flex;gap:10px;flex-wrap:wrap">${links}</div></div>`:''}`;
 }
 const okTel = () => { const t=fmtTel(SHOP.phone||'+998505220008'); return `<a class="oktel" href="tel:${esc(t.replace(/ /g,''))}">${esc(t)}</a>`; };
@@ -1337,8 +1341,8 @@ function bind(){
         items:cartIds().map(id=>[id, cart[id], byId[id].price==null?0:Math.round(byId[id].price*100)]) };
       o.items=cartIds().map(id=>{ const p=byId[id]; return {n:p.title, b:p.brand, oem:p.oem, q:cart[id], pr:p.price, st:!!p.stock}; });
       botSend('order', data).then(r=>{ if (!r) return; o.no=r.ref||o.no; o.text=orderText(o); state.order=o;
-        if (r.ok) { o.sent=true; cart={}; cartOrder=[]; saveCart(); form.note=''; form.addr=''; go('done'); }
-        else { state.sendErr={kind:'order', error:r.error, text:o.text}; render(); $('#oFail')?.scrollIntoView({block:'center'}); } });
+        if (r.ok) { hideToast(); o.sent=true; cart={}; cartOrder=[]; saveCart(); form.note=''; form.addr=''; go('done'); }
+        else { state.sendErr={kind:'order', error:r.error, text:o.text, ref:r.ref}; render(); $('#oFail')?.scrollIntoView({block:'center'}); } });
       return; }
     o.text=orderText(o); state.order=o; go('done');
     } catch(err) { toast("Xatolik yuz berdi. Matnni tekshirib, qayta bosing yoki qo'ng'iroq qiling: "+fmtTel(SHOP.phone)); } };
@@ -1354,8 +1358,8 @@ function bind(){
     const a={name,phone,car:$('#aCar').value.trim().slice(0,BOT()?100:80),part};
     if (BOT()) { a.phone=cp;
       botSend('req', { t:'req', name, phone:a.phone, part, car:a.car, note:'' }).then(r=>{ if (!r) return;
-        if (r.ok) { ask.sent={...a, bot:true, ref:r.ref}; ask.dropped=0; ask.part=''; render(); window.scrollTo({top:0}); }
-        else { state.sendErr={kind:'req', error:r.error, text:askText(a)}; render(); $('#oFail')?.scrollIntoView({block:'center'}); } });
+        if (r.ok) { hideToast(); ask.sent={...a, bot:true, ref:r.ref}; ask.dropped=0; ask.part=''; render(); window.scrollTo({top:0}); }
+        else { state.sendErr={kind:'req', error:r.error, text:askText(a), ref:r.ref}; render(); $('#oFail')?.scrollIntoView({block:'center'}); } });
       return; }
     ask.sent={...a,text:askText(a)}; ask.dropped=0; render(); window.scrollTo({top:0});
     } catch(err) { toast("Xatolik yuz berdi. Matnni tekshirib, qayta bosing yoki qo'ng'iroq qiling: "+fmtTel(SHOP.phone)); } };

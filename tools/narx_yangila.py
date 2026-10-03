@@ -3,7 +3,7 @@
 
 Bito connector javoblari (bito_product_get_paging va bito_price_items_get_paging,
 limit=50) sessiya yozuvlaridan (~/.claude/projects ostidagi *.jsonl, katta
-javoblar uchun tool-results/*.txt) yig'iladi, natijani qayta yozish shart emas.
+javoblar uchun tool-results/*.txt, *.json) yig'iladi, natijani qayta yozish shart emas.
 To'liq bo'lmasa, qaysi sahifalar yetishmasligini chiqaradi.
 
   python3 tools/narx_yangila.py --since <ISO vaqt> [--out data/narxlar.json]
@@ -61,7 +61,7 @@ def results_from_jsonl(path, since):
                 cc = b.get("content")
                 parts = [cc] if isinstance(cc, str) else [x.get("text", "") for x in cc or [] if x.get("type") == "text"]
                 for t in parts:
-                    m = re.search(r"saved to (\S+?\.txt)", t)
+                    m = re.search(r"saved to:? (\S+?\.(?:txt|json))", t)
                     if m and os.path.exists(m.group(1)):
                         t = open(m.group(1), encoding="utf-8").read()
                     yield ts, name, page, t

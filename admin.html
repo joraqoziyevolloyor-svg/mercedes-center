@@ -57,6 +57,7 @@ input[type=file]{font:inherit;font-size:14px}
       <input type="text" id="telegram" placeholder="@mercedescenter" autocapitalize="off" autocomplete="off"></label>
     <span class="err" id="eTg" hidden>Username lotin harfi bilan boshlanadi, 5–32 belgi (harf, raqam, _), oxiri _ bo'lmaydi, ketma-ket ikki _ bo'lmaydi</span>
     <label class="chk"><input type="checkbox" id="whatsapp"> Shu raqamda WhatsApp bor</label>
+    <label class="chk"><input type="checkbox" id="model3d"> Saytda «3D model» havolasi ko'rinsin</label>
     <label>Tepadagi sariq yozuv <small>Bo'sh qoldirsangiz, yozuv ko'rinmaydi</small>
       <textarea id="banner"></textarea></label>
     <label>GitHub kaliti <small>Bir marta kiritasiz, faqat shu brauzerda saqlanadi. Hech kimga yubormang.</small>
@@ -118,7 +119,7 @@ let token=''; try{ token=localStorage.getItem(KEY)||''; }catch(e){}
 const show=(t,ok)=>{ const m=$('#msg'); m.textContent=t; m.className='msg '+(ok?'ok':'no'); m.hidden=false; };
 const str=v=>typeof v==='string'?v:'';
 const obj=c=>{ if(!c||typeof c!=='object'||Array.isArray(c)) throw 0; return c; };
-function fill(c){ c=c&&typeof c==='object'?c:{}; $('#phone').value=str(c.phone); $('#telegram').value=str(c.telegram); $('#whatsapp').checked=c.whatsapp===true; $('#banner').value=str(c.banner); }
+function fill(c){ c=c&&typeof c==='object'?c:{}; $('#phone').value=str(c.phone); $('#telegram').value=str(c.telegram); $('#whatsapp').checked=c.whatsapp===true; $('#model3d').checked=c.model3d!==false; $('#banner').value=str(c.banner); }
 function syncToken(){ $('#token').value=token?'••••••••••••':''; $('#forget').hidden=!token; $('#help').hidden=!!token; }
 const b64=s=>btoa(unescape(encodeURIComponent(s)));
 const unb64=s=>decodeURIComponent(escape(atob(String(s).replace(/\s/g,''))));
@@ -152,7 +153,7 @@ $('#f').onsubmit=async e=>{
   const okP=!digits || /^998\d{9}$/.test(digits), okT=!tg || /^[A-Za-z][A-Za-z0-9_]{3,30}[A-Za-z0-9]$/.test(tg) && !tg.includes('__');
   $('#ePhone').hidden=okP; $('#eTg').hidden=okT; if(!okP||!okT) return;
   if(!token){ show("GitHub kalitini kiriting (pastdagi yo'riqnoma bo'yicha).",false); return; }
-  const cfg={phone:digits?'+'+digits:'',telegram:tg,whatsapp:$('#whatsapp').checked,banner:$('#banner').value.trim()};
+  const cfg={phone:digits?'+'+digits:'',telegram:tg,whatsapp:$('#whatsapp').checked,model3d:$('#model3d').checked,banner:$('#banner').value.trim()};
   $('#save').disabled=true; $('#save').textContent='Saqlanmoqda...';
   try{
     const r=await save(cfg); $('#loadErr').hidden=true;

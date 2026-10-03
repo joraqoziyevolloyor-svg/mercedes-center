@@ -51,8 +51,10 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surf
 nav.tabs button{flex:1;background:none;border:0;padding:8px 0 10px;font-size:11.5px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;position:relative}
 nav.tabs button.on{color:var(--ink);font-weight:600}
 nav.tabs svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
-nav.tabs a{flex:1;padding:9px 0;font-size:12px;font-weight:500;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none}
 .nav3d[hidden]{display:none!important}
+.m3d{margin-block:4px 0}
+.m3d iframe{display:block;width:100%;height:calc(100vh - 200px);height:calc(100dvh - 200px);min-height:440px;border:1px solid var(--line);background:#0f1418}
+@media (max-width:720px){.m3d iframe{height:calc(100dvh - 210px);min-height:420px}}
 @media (min-width:721px){header .nav3d{display:inline-flex;align-items:center}}
 nav.tabs .badge{position:absolute;top:4px;left:calc(50% + 6px);background:var(--accent);color:var(--accent-ink);font-size:10.5px;font-weight:700;border-radius:99px;min-width:18px;height:18px;display:grid;place-items:center;padding:0 5px}
 @media (max-width:720px){nav.tabs{display:flex}}
@@ -818,7 +820,7 @@ nav.tabs .badge,.cartbtn .n{font-weight:600}
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input id="q" type="search" placeholder="OEM, kod yoki nomi" autocomplete="off">
     </div>
-    <button class="quickbtn" data-go="quick">Ro'yxat bo'yicha buyurtma</button><a class="quickbtn nav3d" href="3d/" style="margin-left:0;text-decoration:none">3D model</a>
+    <button class="quickbtn" data-go="quick">Ro'yxat bo'yicha buyurtma</button><button class="quickbtn nav3d" data-go="model3d" style="margin-left:0">3D model</button>
     <button class="cartbtn" id="cartTop"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h2l2.4 11h10.8L21 7H6.2"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg>Savat <span class="n" id="cartN">0</span></button>
   </div>
 </header>
@@ -828,7 +830,7 @@ nav.tabs .badge,.cartbtn .n{font-weight:600}
   <button data-go="home"><svg viewBox="0 0 24 24"><path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z"/></svg>Bosh sahifa</button>
   <button data-go="catalog"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Katalog</button>
   <button data-go="quick"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Ro'yxat</button>
-  <a class="nav3d" href="3d/"><svg viewBox="0 0 24 24"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9z M4 7.5 12 12l8-4.5 M12 12v9"/></svg>3D model</a>
+  <button class="nav3d" data-go="model3d"><svg viewBox="0 0 24 24"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9z M4 7.5 12 12l8-4.5 M12 12v9"/></svg>3D model</button>
   <button data-go="cart"><svg viewBox="0 0 24 24"><path d="M3 4h2l2.4 11h10.8L21 7H6.2"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg>Savat<span class="badge" id="tabN" hidden>0</span></button>
 </nav>
 <div class="toast" id="toast" hidden></div>
@@ -877,6 +879,7 @@ function urlFor(s){
   if (s.view==='catalog'){ const u=new URLSearchParams(); ['q','car','cat','brand'].forEach(k=>{ if(s[k]) u.set(k,s[k]); }); if(s.stock) u.set('stock','1'); if(s.photo) u.set('photo','1'); const x=u.toString(); return '#c'+(x?'?'+x:''); }
   if (s.view==='quick'||s.view==='cart'||s.view==='ask') return '#'+s.view;
   if (s.view==='biz') return '#biz';
+  if (s.view==='model3d') return '#model3d';
   if (s.view==='sxema') return '#sxema'+(s.sxCar?'?car='+encodeURIComponent(s.sxCar):'');
   return location.pathname+location.search;
 }
@@ -886,6 +889,7 @@ function fromUrl(){
   if (h==='c' || h.startsWith('c?')){ const u=new URLSearchParams(location.hash.slice(location.hash.indexOf('?')+1)); return {view:'catalog',q:u.get('q')||'',car:knownCar(u.get('car')||''),cat:u.get('cat')||'',brand:u.get('brand')||'',stock:u.get('stock')==='1',photo:u.get('photo')==='1'}; }
   if (h==='quick'||h==='cart'||h==='ask') return {view:h};
   if (h==='biz') return {view:'biz'};
+  if (h==='model3d') return {view:'model3d'};
   if ((h==='sxema'||h.startsWith('sxema?')) && SX_CARS.length) return {view:'sxema',sxCar:new URLSearchParams(location.hash.slice(location.hash.indexOf('?')+1)).get('car')||''};
   return {view:'home'};
 }
@@ -1349,12 +1353,19 @@ function bizView(){
       <p class="oknote">Savollar uchun do'kon raqami: ${okTel()}</p>`:''}
   </section></div>`;
 }
+// 3D model: sayt ichida, faqat shu bo'lim ochilganda yuklanadi; alohida (sandbox) oynada, saytning ma'lumotlariga kira olmaydi
+let M3D_ON=true;
+function m3dView(){
+  const crumbs = `<div class="crumbs"><button class="back" data-back="1">← Orqaga</button><button data-go="home">Bosh sahifa</button> / <span>3D model</span></div>`;
+  return `<div class="wrap">${crumbs}<div class="m3d"><iframe src="3d/" title="Sprinter W906 3D model" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div></div>`;
+}
 function render(){
   if (state.car && !knownCar(state.car)) state.car='';           // tarixdagi/havoladagi eski mashina nomi
-  if (state.view==='sxema' && !SX_CARS.length) state.view='home';  // sxema hali chiqmagan
+  if (state.view==='sxema' && !SX_CARS.length) state.view='home';
+  if (state.view==='model3d' && !M3D_ON) state.view='home';  // sxema hali chiqmagan
   const v = state.view;
   const cb = (v==='catalog'||v==='product'||v==='quick'||v==='cart') ? `<div class="wrap catbar" aria-label="Bo'limlar">${CATS.map(([c])=>`<button data-cat="${esc(c)}" class="${(v==='catalog'&&state.cat===c)||(v==='product'&&byId[state.id]?.cat===c)?'on':''}">${esc(c)}</button>`).join('')}</div>` : '';
-  app.innerHTML = cb + (v==='home'?home():v==='catalog'?catalog():v==='product'?product():v==='cart'?cartView():v==='quick'?quickView():v==='ask'?askView():v==='sxema'?sxemaView():v==='biz'?bizView():doneView());
+  app.innerHTML = cb + (v==='home'?home():v==='catalog'?catalog():v==='product'?product():v==='cart'?cartView():v==='quick'?quickView():v==='ask'?askView():v==='sxema'?sxemaView():v==='biz'?bizView():v==='model3d'?m3dView():doneView());
   document.body.classList.toggle('onhome', v==='home');
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.go===v || (v==='product'&&b.dataset.go==='catalog')));
   const qi=$('#q'); if (v==='catalog') { if (qi.value !== state.q && document.activeElement!==qi) qi.value = state.q; } else if (document.activeElement!==qi) qi.value='';
@@ -1490,7 +1501,7 @@ fetch('data/jamoa.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():
 const pricesAgain = () => { if (document.visibilityState==='visible' && Date.now()-priceAt > 30*60*1000) loadPrices(); };
 document.addEventListener('visibilitychange', pricesAgain); addEventListener('focus', pricesAgain);
 fetch('config.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(c=>{ if(!c) return;
-  ['phone','telegram','banner'].forEach(k=>{ if (typeof c[k]==='string') SHOP[k]=c[k]; }); if (typeof c.whatsapp==='boolean') SHOP.whatsapp=c.whatsapp; document.querySelectorAll('.nav3d').forEach(e=>e.hidden=c.model3d===false); if (c.buyurtma==='bot'||c.buyurtma==='chat') { const was=ORDER.mode; ORDER.mode=c.buyurtma; if (was!==ORDER.mode && (state.view==='cart'||state.view==='ask')) render(); } applyShop(); if (state.view==='done') render(); }).catch(()=>{});
+  ['phone','telegram','banner'].forEach(k=>{ if (typeof c[k]==='string') SHOP[k]=c[k]; }); if (typeof c.whatsapp==='boolean') SHOP.whatsapp=c.whatsapp; M3D_ON=c.model3d!==false; document.querySelectorAll('.nav3d').forEach(e=>e.hidden=!M3D_ON); if (!M3D_ON && state.view==='model3d') { state.view='home'; render(); } if (c.buyurtma==='bot'||c.buyurtma==='chat') { const was=ORDER.mode; ORDER.mode=c.buyurtma; if (was!==ORDER.mode && (state.view==='cart'||state.view==='ask')) render(); } applyShop(); if (state.view==='done') render(); }).catch(()=>{});
 $('#cartTop').onclick = () => go('cart');
 let qt; $('#q').addEventListener('input', e => { clearTimeout(qt); qt=setTimeout(()=>{ state.q=e.target.value; if(state.view!=='catalog'){ Object.assign(state,{car:myCar,cat:'',brand:''}); go('catalog'); } else { state.limit=24; render(); $('#q').focus(); } },250); });
 try { if (history.state && history.state.view) Object.assign(state, history.state); else if (location.hash) Object.assign(state, fromUrl()); } catch(e) {}

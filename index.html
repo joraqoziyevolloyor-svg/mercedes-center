@@ -1528,7 +1528,9 @@ updCount(); render();
    3D -> sayt: ready {ids}, add {id,n}, open {id}, cartview.  Sayt -> 3D: init {prices,cart}, cart {cart}.
    Tovar sahifasida 3d/map.json bo'yicha "3D'da alohida ko'rish" havolasi chiqadi. */
 (function(){
-  let PART = '', MAP = null, loadT = 0;
+  /* M3D_V changes with every 3D release, so browsers never pair the new shop page with a cached old 3d/ page */
+  const M3D_V = '20261009b';
+  let PART = '', MAP = null, loadT = 0, slowT = 0;
   const frame = () => document.querySelector('.m3d iframe');
   const post = m => { const f = frame(); if (f && f.contentWindow) f.contentWindow.postMessage(Object.assign({t:'mc3d'}, m), '*'); };
   const cartNow = () => Object.assign({}, cart);
@@ -1536,7 +1538,7 @@ updCount(); render();
     const f = frame(); if (!f || e.source !== f.contentWindow) return;
     const d = e.data; if (!d || d.t !== 'mc3d') return;
     if (d.a === 'ready') {
-      PART = ''; clearTimeout(loadT); f.parentNode.classList.add('ready');
+      PART = ''; clearTimeout(loadT); clearTimeout(slowT); f.parentNode.classList.add('ready');
       const prices = {};
       (Array.isArray(d.ids) ? d.ids : []).slice(0, 3000).forEach(id => { const p = byId[String(id)]; if (p) prices[p.id] = {price: p.price, stock: !!p.stock, title: p.title || ''}; });
       post({a:'init', prices, cart: cartNow()});
@@ -1554,10 +1556,11 @@ updCount(); render();
   });
   const m3dBase = m3dView;
   m3dView = function(){
-    const src = PART ? `3d/#${PART}` : '3d/';
-    clearTimeout(loadT);
-    loadT = setTimeout(() => { const w = document.querySelector('.m3d'); if (w) w.classList.add('ready'); }, 45000);
-    return m3dBase().replace('<iframe src="3d/"', `<iframe src="${src}"`)
+    const src = `3d/?v=${M3D_V}` + (PART ? `#${PART}` : '');
+    clearTimeout(loadT); clearTimeout(slowT);
+    slowT = setTimeout(() => { const s = document.querySelector('.m3d-load small'); if (s) s.textContent = 'Internet sekin bo\'lsa, 30 soniyagacha olishi mumkin. Iltimos, kuting…'; }, 15000);
+    loadT = setTimeout(() => { const w = document.querySelector('.m3d'); if (w) w.classList.add('ready'); }, 60000);
+    return m3dBase().replace('src="3d/"', `src="${src}"`)
       .replace('</iframe></div>', `</iframe><div class="m3d-load" aria-live="polite"><i></i><b>3D model yuklanmoqda…</b><small>Telefonda 5–15 soniya olishi mumkin</small></div></div>`);
   };
   function addLink(){

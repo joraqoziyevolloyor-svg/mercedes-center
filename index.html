@@ -1530,7 +1530,7 @@ updCount(); render();
    Tovar sahifasida 3d/map.json bo'yicha "3D'da alohida ko'rish" havolasi chiqadi. */
 (function(){
   /* M3D_V changes with every 3D release, so browsers never pair the new shop page with a cached old 3d/ page */
-  const M3D_V = '20261009e';
+  const M3D_V = '20261009f';
   let PART = '', MAP = null, loadT = 0, job = 0;
   const frame = () => document.querySelector('.m3d iframe');
   const post = m => { const f = frame(); if (f && f.contentWindow) f.contentWindow.postMessage(Object.assign({t:'mc3d'}, m), '*'); };
@@ -1555,9 +1555,9 @@ updCount(); render();
       go('cart');
     }
   });
-  /* The 3D page (3d/?v=…) and the body model (3d/body.glb) are downloaded here first, with real progress and
-     automatic retries when the connection drops. The iframe is pointed at the page only once both are in the browser
-     cache, so its own requests are answered from the cache. */
+  /* The 3D page (3d/?v=…, ≈0.6 MB over the wire) is downloaded here first, with real progress and automatic retries
+     when the connection drops; the iframe is pointed at it once it is in the browser cache. The mechanical parts show
+     at once; the body model (3d/body.glb.gz) streams in afterwards inside the 3D page, with its own progress and retries. */
   const m3dBase = m3dView;
   m3dView = function(){
     clearTimeout(loadT);
@@ -1577,9 +1577,9 @@ updCount(); render();
     const f = document.querySelector('.m3d iframe[data-m3d]'); if (!f || f.getAttribute('src') || f.dataset.busy) return;
     f.dataset.busy = '1';
     const my = ++job, wrap = f.parentNode, small = wrap.querySelector('.m3d-load small'), btn = wrap.querySelector('.m3d-load button');
-    const page = `3d/?v=${M3D_V}`, glb = `3d/body.glb?v=${M3D_V}`, hash = PART ? `#${PART}` : '';
-    const size = {page: 1830000, glb: 3540000}, got = {page: 0, glb: 0};
-    const show = () => { if (small) small.textContent = Math.min(99, Math.round((got.page + got.glb) / (size.page + size.glb) * 100)) + '%'; };
+    const page = `3d/?v=${M3D_V}`, hash = PART ? `#${PART}` : '';
+    const size = {page: 1830000}, got = {page: 0};
+    const show = () => { if (small) small.textContent = Math.min(99, Math.round(got.page / size.page * 100)) + '%'; };
     const fetchRetry = (name, url, n) => get(url, (b, done) => { got[name] = done ? size[name] : Math.min(b, size[name]); show(); })
       .catch(err => {
         if (my !== job || n >= 6) throw err;
@@ -1588,7 +1588,7 @@ updCount(); render();
       });
     btn.hidden = true;
     btn.onclick = () => { delete f.dataset.busy; btn.hidden = true; startM3D(); };
-    Promise.all([fetchRetry('page', page, 0), fetchRetry('glb', glb, 0)]).then(() => {
+    fetchRetry('page', page, 0).then(() => {
       if (my !== job || !document.body.contains(f)) return;
       if (small) small.textContent = '100%';
       f.setAttribute('src', page + hash);

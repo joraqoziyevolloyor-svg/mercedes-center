@@ -2,7 +2,7 @@
 <html lang="uz">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-9QtWi2wpXSKjJjAbikwOcch4viDnIQCWg1L7VHEesDw='; style-src 'self' 'sha256-xRWYs8buJ2Xk3bL45rT/v3GuiXReEXpB5giZAwgKBvQ='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-LH6L1CE2dZ05mBSClKO1Dedq4iHJxrZiwtLaYoSa1VQ='; style-src 'self' 'sha256-xRWYs8buJ2Xk3bL45rT/v3GuiXReEXpB5giZAwgKBvQ='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mening ishim</title>
 <script>window.__mcHash = String(location.hash || '');</script>
@@ -108,11 +108,17 @@
     // Telegram o'z parametrlarini (& yoki #kb kabi) qo'shishi mumkin; # qismi Telegram skriptidan oldin olib qo'yilgan.
     var h = window.__mcHash || String(location.hash || '');
     var z = h.match(/[#&]z=([A-Za-z0-9_-]+)/);
-    if (z) {
+    if (z) return decodeZ(z[1]);
+    var m = h.match(/[#&]d=([A-Za-z0-9_-]+)/);
+    if (!m || m[1].length > MAX_Z) return Promise.resolve(null);
+    try { return Promise.resolve(JSON.parse(new TextDecoder().decode(b64bytes(m[1])))); } catch (e) { return Promise.resolve(null); }
+  }
+  function decodeZ(zs) {
+    {
       var ds;
       try { ds = new DecompressionStream('deflate-raw'); } catch (e) { return Promise.reject({ upd: 1 }); }
-      if (z[1].length > MAX_Z) return Promise.reject(new Error('big'));
-      var bytes = b64bytes(z[1]);
+      if (zs.length > MAX_Z) return Promise.reject(new Error('big'));
+      var bytes = b64bytes(zs);
       // Ochishni bo'laklab o'qiymiz va MAX_OUT dan oshsa darhol to'xtatamiz (siqilgan "bomba" xotirani to'ldirmasin)
       var reader = new Blob([bytes]).stream().pipeThrough(ds).getReader(), chunks = [], total = 0;
       var pump = function () {
@@ -130,9 +136,6 @@
       };
       return pump();
     }
-    var m = h.match(/[#&]d=([A-Za-z0-9_-]+)/);
-    if (!m || m[1].length > MAX_Z) return Promise.resolve(null);
-    try { return Promise.resolve(JSON.parse(new TextDecoder().decode(b64bytes(m[1])))); } catch (e) { return Promise.resolve(null); }
   }
   function done(id, row, btn) {
     if (!inTg) return fail('Bu tugma faqat Telegram\'dagi bot ichida ishlaydi.');
@@ -308,6 +311,53 @@
     if (ok) try { ok(); } catch (e) {}
     return true;
   }
+  // v16: manzilida ma'lumot yo'q (chat ro'yxatidagi "Ochish" yoki qadalgan xabar tugmasi): ma'lumot botdan so'raladi.
+  // Sahifa bir martalik kalit va tasodifiy javob topic'ini yaratadi, 'get' amalini yuboradi; bot javobni shu kalitga
+  // shifrlab (HKDF info mc-app-get-v1) o'sha topic'ga qo'yadi. Javob ichida #z= qatori, u odatdagidek ochiladi.
+  var NTFY = ENDPOINT.slice(0, ENDPOINT.lastIndexOf('/'));
+  function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  async function openReply(kp, msg) {
+    var subtle = crypto.subtle, raw = b64bytes(msg);
+    if (raw.length < 65 + 12 + 17 || raw.length > 6000) return null;
+    var bk = await subtle.importKey('raw', raw.slice(0, 65), { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+    var shared = await subtle.deriveBits({ name: 'ECDH', public: bk }, kp.privateKey, 256);
+    var hk = await subtle.importKey('raw', shared, 'HKDF', false, ['deriveKey']);
+    var aes = await subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(0), info: new TextEncoder().encode('mc-app-get-v1') },
+      hk, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+    var pt = await subtle.decrypt({ name: 'AES-GCM', iv: raw.slice(65, 77) }, aes, raw.slice(77));
+    var zs = new TextDecoder('utf-8', { fatal: true }).decode(pt);
+    return /^[A-Za-z0-9_-]{1,8000}$/.test(zs) ? zs : null;
+  }
+  async function fetchLive() {
+    var subtle = crypto.subtle;
+    var kp = await subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveBits']);
+    var pub = new Uint8Array(await subtle.exportKey('raw', kp.publicKey));
+    var topic = 'mc-r-' + b64u(crypto.getRandomValues(new Uint8Array(18)));
+    var since = Math.floor(Date.now() / 1000) - 10;
+    var body = 'ma1 ' + await encrypt(JSON.stringify({ v: 1, i: INIT, n: nonce(), a: { t: 'get', k: b64u(pub), r: topic } }));
+    var r = await fetch(endpoint(), { method: 'POST', body: body, headers: { 'Content-Type': 'text/plain' }, cache: 'no-store', credentials: 'omit' });
+    if (!r.ok) throw new Error('post');
+    var until = Date.now() + 30000;
+    while (Date.now() < until) {
+      await wait(1200);
+      var txt = '';
+      try {
+        var g = await fetch(NTFY + '/' + topic + '/json?poll=1&since=' + since, { cache: 'no-store', credentials: 'omit' });
+        if (!g.ok) continue;
+        txt = await g.text();
+      } catch (e) { continue; }
+      if (txt.length > 50000) throw new Error('big');
+      var lines = txt.split('\n');
+      for (var i = 0; i < lines.length; i++) {
+        var ev; try { ev = JSON.parse(lines[i]); } catch (e) { continue; }
+        if (!ev || ev.event !== 'message' || typeof ev.message !== 'string' || ev.message.indexOf('mr1 ') !== 0) continue;
+        var zs = null; try { zs = await openReply(kp, ev.message.slice(4)); } catch (e) { zs = null; }
+        if (zs) return decodeZ(zs);
+      }
+    }
+    throw { timeout: 1 };
+  }
+
   function doneV2(id, row, btn, txt) {
     if (!INIT) return done(id, row, btn); // klaviatura tugmasi: v1 dagidek sendData
     var box = txt.querySelector('.amsg') || txt.appendChild(el('p', 'amsg'));
@@ -687,10 +737,9 @@
     var s = sec('Kelish va ketishni belgilash'), ol = el('ol', 'guide');
     function li(parts) { var l = el('li'); parts.forEach(function (x) { l.appendChild(typeof x === 'string' ? document.createTextNode(x) : x); }); ol.appendChild(l); }
     li(['Botda ', el('b', null, '✅ Keldim'), ' tugmasini bosing.']);
-    li([el('b', null, '📍 Joylashuvni yuborish'), ' tugmasini bosing (yoki 15 daqiqalik jonli joylashuvni ulashing). ' +
+    li(['Chiqqan ', el('b', null, '📍 Joylashuvni yuborish'), ' tugmasini bosing. ' +
       (rad ? "Do'kondan " + rad + " m ichida bo'lishingiz kerak." : "Do'kon yonida bo'lishingiz kerak.")]);
-    li(['3 daqiqa ichida dumaloq video xabar yozib yuboring.']);
-    li([el('b', null, '🏁 Ketdim'), ' ham xuddi shunday: tugma, joylashuv, video.']);
+    li([el('b', null, '🏁 Ketdim'), ' ham xuddi shunday: tugma, keyin joylashuv.']);
     s.appendChild(ol);
     s.appendChild(el('p', 'more', 'Bot har bir qadamdan keyin chatda javob beradi. Javob kelmasa, botga /start yozing.'));
     s.id = 'guide'; $('p-guide').appendChild(s);
@@ -736,7 +785,11 @@
   }
 
   function noData() { fail(inTg ? "Ma'lumot topilmadi. Botga /start yozib, tugmani qayta bosing." : 'Bu sahifa faqat Mercedes Center botidagi "📊 Mening ishim" tugmasidan ochiladi.'); }
-  decode().then(function (d) {
+  var hasData = /[#&][zd]=/.test(window.__mcHash || String(location.hash || ''));
+  var loading = null;
+  if (!hasData && INIT && window.crypto && crypto.subtle) { loading = el('p', 'more', 'Yuklanmoqda…'); loading.id = 'loading'; document.body.insertBefore(loading, document.body.firstChild); }
+  (loading ? fetchLive() : decode()).then(function (d) {
+    if (loading) loading.remove();
     if (!d || typeof d !== 'object' || (d.v !== 1 && d.v !== 2)) return noData();
     try { if (d.v === 2) renderV2(d); else render(d); }
     catch (e) {
@@ -745,7 +798,9 @@
       fail("Ma'lumotni ko'rsatib bo'lmadi. Botga /start yozib, tugmani qayta bosing.");
     }
   }, function (e) {
+    if (loading) loading.remove();
     if (e && e.upd) fail('Telegram ilovasini yangilang');
+    else if (loading) fail("Bot javob bermadi. Biroz kutib, qayta oching. Bir necha marta takrorlansa, botga /start yozing.");
     else noData();
   });
 })();

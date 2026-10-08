@@ -1513,5 +1513,69 @@ let qt; $('#q').addEventListener('input', e => { clearTimeout(qt); qt=setTimeout
 try { if (history.state && history.state.view) Object.assign(state, history.state); else if (location.hash) Object.assign(state, fromUrl()); } catch(e) {}
 updCount(); render();
 </script>
+<!-- mc3d-bridge: 3D model (3d/ iframe) bilan aloqa. Shablonga (internet-dokon/template.html) </body> oldidan shu blokni qo'ying. -->
+<style>
+.m3d{position:relative}
+.m3d .m3d-load{position:absolute;inset:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:#0f1418;color:#e8ecef;font-size:15px;text-align:center;padding:20px;pointer-events:none}
+.m3d.ready .m3d-load{display:none}
+.m3d-load i{width:42px;height:42px;border:3px solid #2a333b;border-top-color:#f5b53a;border-radius:50%;animation:m3dspin .9s linear infinite}
+.m3d-load small{color:#9aa5ae;font-size:13px}
+@keyframes m3dspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.m3d-load i{animation:none}}
+</style>
+<script>
+/* 3D model ko'prigi. 3d/ sahifasi sandbox iframe ichida; xabarlar faqat shu iframe'dan qabul qilinadi.
+   3D -> sayt: ready {ids}, add {id,n}, open {id}, cartview.  Sayt -> 3D: init {prices,cart}, cart {cart}.
+   Tovar sahifasida 3d/map.json bo'yicha "3D'da alohida ko'rish" havolasi chiqadi. */
+(function(){
+  let PART = '', MAP = null, loadT = 0;
+  const frame = () => document.querySelector('.m3d iframe');
+  const post = m => { const f = frame(); if (f && f.contentWindow) f.contentWindow.postMessage(Object.assign({t:'mc3d'}, m), '*'); };
+  const cartNow = () => Object.assign({}, cart);
+  addEventListener('message', e => {
+    const f = frame(); if (!f || e.source !== f.contentWindow) return;
+    const d = e.data; if (!d || d.t !== 'mc3d') return;
+    if (d.a === 'ready') {
+      PART = ''; clearTimeout(loadT); f.parentNode.classList.add('ready');
+      const prices = {};
+      (Array.isArray(d.ids) ? d.ids : []).slice(0, 3000).forEach(id => { const p = byId[String(id)]; if (p) prices[p.id] = {price: p.price, stock: !!p.stock, title: p.title || ''}; });
+      post({a:'init', prices, cart: cartNow()});
+    } else if (d.a === 'add') {
+      const id = String(d.id), n = Math.floor(+d.n) || 0, p = byId[id];
+      if (!p || !p.stock || n < 1) return;
+      addToCart(id, Math.min(n, QMAX)); saveCart();
+      toast(`Savatga qo'shildi: ${p.title} (savatda ${cart[id]} ta)`);
+      post({a:'cart', cart: cartNow()});
+    } else if (d.a === 'open') {
+      const id = String(d.id); if (byId[id]) go('product', {id});
+    } else if (d.a === 'cartview') {
+      go('cart');
+    }
+  });
+  const m3dBase = m3dView;
+  m3dView = function(){
+    const src = PART ? `3d/#${PART}` : '3d/';
+    clearTimeout(loadT);
+    loadT = setTimeout(() => { const w = document.querySelector('.m3d'); if (w) w.classList.add('ready'); }, 45000);
+    return m3dBase().replace('<iframe src="3d/"', `<iframe src="${src}"`)
+      .replace('</iframe></div>', `</iframe><div class="m3d-load" aria-live="polite"><i></i><b>3D model yuklanmoqda…</b><small>Telefonda 5–15 soniya olishi mumkin</small></div></div>`);
+  };
+  function addLink(){
+    if (!MAP || !M3D_ON || state.view !== 'product') return;
+    const m = MAP[state.id]; if (!m) return;
+    const info = document.querySelector('.pd .info'); if (!info || info.querySelector('.m3dlink')) return;
+    const p = document.createElement('p'); p.className = 'askline m3dlink'; p.style.margin = '0';
+    p.innerHTML = `Sprinter 3D modelida: <button class="link" data-m3d="part">${esc(m.uz)}, alohida ko'rish</button>`
+      + (m.sec ? ` · <button class="link" data-m3d="sec">${esc(m.secUz)} bo'limi</button>` : '');
+    p.querySelector('[data-m3d="part"]').onclick = () => { PART = 'part=' + encodeURIComponent(m.part) + '&solo=1'; go('model3d'); };
+    const sb = p.querySelector('[data-m3d="sec"]'); if (sb) sb.onclick = () => { PART = 'section=' + encodeURIComponent(m.sec); go('model3d'); };
+    const last = [...info.querySelectorAll('p.askline')].pop();
+    last ? info.insertBefore(p, last) : info.appendChild(p);
+  }
+  const renderBase = render;
+  render = function(){ renderBase.apply(this, arguments); addLink(); };
+  fetch('3d/map.json', {cache:'no-cache'}).then(r => r.ok ? r.json() : {}).then(m => { MAP = m || {}; addLink(); }).catch(() => { MAP = {}; });
+})();
+</script>
 </body>
 </html>

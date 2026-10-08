@@ -1519,7 +1519,8 @@ updCount(); render();
 .m3d .m3d-load{position:absolute;inset:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:#0f1418;color:#e8ecef;font-size:15px;text-align:center;padding:20px;pointer-events:none}
 .m3d.ready .m3d-load{display:none}
 .m3d-load i{width:42px;height:42px;border:3px solid #2a333b;border-top-color:#f5b53a;border-radius:50%;animation:m3dspin .9s linear infinite}
-.m3d-load small{color:#9aa5ae;font-size:13px}
+.m3d-load small{color:#9aa5ae;font-size:13px;font-variant-numeric:tabular-nums}
+.m3d-load button{pointer-events:auto;margin-top:6px}
 @keyframes m3dspin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.m3d-load i{animation:none}}
 </style>
@@ -1529,8 +1530,8 @@ updCount(); render();
    Tovar sahifasida 3d/map.json bo'yicha "3D'da alohida ko'rish" havolasi chiqadi. */
 (function(){
   /* M3D_V changes with every 3D release, so browsers never pair the new shop page with a cached old 3d/ page */
-  const M3D_V = '20261009d';
-  let PART = '', MAP = null, loadT = 0, slowT = 0;
+  const M3D_V = '20261009e';
+  let PART = '', MAP = null, loadT = 0, job = 0;
   const frame = () => document.querySelector('.m3d iframe');
   const post = m => { const f = frame(); if (f && f.contentWindow) f.contentWindow.postMessage(Object.assign({t:'mc3d'}, m), '*'); };
   const cartNow = () => Object.assign({}, cart);
@@ -1538,7 +1539,7 @@ updCount(); render();
     const f = frame(); if (!f || e.source !== f.contentWindow) return;
     const d = e.data; if (!d || d.t !== 'mc3d') return;
     if (d.a === 'ready') {
-      PART = ''; clearTimeout(loadT); clearTimeout(slowT); f.parentNode.classList.add('ready');
+      PART = ''; clearTimeout(loadT); f.parentNode.classList.add('ready');
       const prices = {};
       (Array.isArray(d.ids) ? d.ids : []).slice(0, 3000).forEach(id => { const p = byId[String(id)]; if (p) prices[p.id] = {price: p.price, stock: !!p.stock, title: p.title || ''}; });
       post({a:'init', prices, cart: cartNow()});
@@ -1554,15 +1555,51 @@ updCount(); render();
       go('cart');
     }
   });
+  /* The 3D page (3d/?v=…) and the body model (3d/body.glb) are downloaded here first, with real progress and
+     automatic retries when the connection drops. The iframe is pointed at the page only once both are in the browser
+     cache, so its own requests are answered from the cache. */
   const m3dBase = m3dView;
   m3dView = function(){
-    const src = `3d/?v=${M3D_V}` + (PART ? `#${PART}` : '');
-    clearTimeout(loadT); clearTimeout(slowT);
-    slowT = setTimeout(() => { const s = document.querySelector('.m3d-load small'); if (s) s.textContent = 'Internet sekin bo\'lsa, 30 soniyagacha olishi mumkin. Iltimos, kuting…'; }, 15000);
-    loadT = setTimeout(() => { const w = document.querySelector('.m3d'); if (w) w.classList.add('ready'); }, 60000);
-    return m3dBase().replace('src="3d/"', `src="${src}"`)
-      .replace('</iframe></div>', `</iframe><div class="m3d-load" aria-live="polite"><i></i><b>3D model yuklanmoqda…</b><small>Telefonda 5–15 soniya olishi mumkin</small></div></div>`);
+    clearTimeout(loadT);
+    return m3dBase().replace('src="3d/"', 'data-m3d="1"')
+      .replace('</iframe></div>', `</iframe><div class="m3d-load" aria-live="polite"><i></i><b>3D model yuklanmoqda…</b><small>0%</small><button type="button" class="big" hidden>Qayta urinish</button></div></div>`);
   };
+  function get(url, onBytes){
+    return fetch(url, {cache:'default'}).then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      if (!r.body || !r.body.getReader) return r.arrayBuffer().then(b => onBytes(b.byteLength, true));
+      const rd = r.body.getReader(); let got = 0;
+      const pump = () => rd.read().then(x => { if (x.done) { onBytes(got, true); return; } got += x.value.length; onBytes(got, false); return pump(); });
+      return pump();
+    });
+  }
+  function startM3D(){
+    const f = document.querySelector('.m3d iframe[data-m3d]'); if (!f || f.getAttribute('src') || f.dataset.busy) return;
+    f.dataset.busy = '1';
+    const my = ++job, wrap = f.parentNode, small = wrap.querySelector('.m3d-load small'), btn = wrap.querySelector('.m3d-load button');
+    const page = `3d/?v=${M3D_V}`, glb = `3d/body.glb?v=${M3D_V}`, hash = PART ? `#${PART}` : '';
+    const size = {page: 1830000, glb: 3540000}, got = {page: 0, glb: 0};
+    const show = () => { if (small) small.textContent = Math.min(99, Math.round((got.page + got.glb) / (size.page + size.glb) * 100)) + '%'; };
+    const fetchRetry = (name, url, n) => get(url, (b, done) => { got[name] = done ? size[name] : Math.min(b, size[name]); show(); })
+      .catch(err => {
+        if (my !== job || n >= 6) throw err;
+        if (small) small.textContent = `Internet uzildi, qayta urinilmoqda… (${n + 1})`;
+        return new Promise(r => setTimeout(r, Math.min(8000, 1000 * (n + 1)))).then(() => fetchRetry(name, url, n + 1));
+      });
+    btn.hidden = true;
+    btn.onclick = () => { delete f.dataset.busy; btn.hidden = true; startM3D(); };
+    Promise.all([fetchRetry('page', page, 0), fetchRetry('glb', glb, 0)]).then(() => {
+      if (my !== job || !document.body.contains(f)) return;
+      if (small) small.textContent = '100%';
+      f.setAttribute('src', page + hash);
+      loadT = setTimeout(() => wrap.classList.add('ready'), 20000);
+    }).catch(() => {
+      if (my !== job) return;
+      delete f.dataset.busy;
+      if (small) small.textContent = 'Internetga ulanib bo\'lmadi.';
+      btn.hidden = false;
+    });
+  }
   function addLink(){
     if (!MAP || !M3D_ON || state.view !== 'product') return;
     const m = MAP[state.id]; if (!m) return;
@@ -1576,7 +1613,8 @@ updCount(); render();
     last ? info.insertBefore(p, last) : info.appendChild(p);
   }
   const renderBase = render;
-  render = function(){ renderBase.apply(this, arguments); addLink(); };
+  render = function(){ renderBase.apply(this, arguments); addLink(); if (state.view === 'model3d') startM3D(); };
+  if (state.view === 'model3d') startM3D();
   fetch('3d/map.json', {cache:'no-cache'}).then(r => r.ok ? r.json() : {}).then(m => { MAP = m || {}; addLink(); }).catch(() => { MAP = {}; });
 })();
 </script>

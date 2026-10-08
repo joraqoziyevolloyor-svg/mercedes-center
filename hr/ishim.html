@@ -2,7 +2,7 @@
 <html lang="uz">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-YgNKn0PqNvI21PbgmpsaczH6fHKDOxlX/3+seA0zTcI='; style-src 'self' 'sha256-DiraVPRipewLIflvkI8HenPKWfEELF5JJJbQV9FgH0E='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-Av4KwU/q0fpdPAyUJTPlS+/5x6p/pJiZg3aLynehnkk='; style-src 'self' 'sha256-DiraVPRipewLIflvkI8HenPKWfEELF5JJJbQV9FgH0E='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mening ishim</title>
 <script>window.__mcHash = String(location.hash || '');</script>
@@ -356,7 +356,7 @@
     var kp = await subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveBits']);
     var pub = new Uint8Array(await subtle.exportKey('raw', kp.publicKey));
     var topic = 'mc-r-' + b64u(crypto.getRandomValues(new Uint8Array(18)));
-    var since = Math.floor(Date.now() / 1000) - 10;
+    var since = 'all'; // rebuild 7: javob mavzusi har so'rovda yangi va tasodifiy, telefon soatiga bog'liq emas
     // v17: 32 baytlik sir faqat shifrlangan so'rov ichida ketadi va javob kalitining tuzi bo'ladi: begona soxta javob yasay olmaydi
     var salt = crypto.getRandomValues(new Uint8Array(32));
     var a = { t: 'get' };
@@ -743,18 +743,21 @@
     // Xodim qo'shish
     var a = sec("Xodim qo'shish"), f = el('div', 'form');
     var iName = input('text', '', { maxlength: '40', autocomplete: 'off' });
-    var iPh = input('tel', '', { maxlength: '20', inputmode: 'numeric', placeholder: '998900000001', autocomplete: 'off' });
+    var NIK = Array.isArray(d.pu); // rebuild 7: v20 bot Telegram nik bilan qo'shishni biladi (pu ro'yxatini yuboradi)
+    var iPh = NIK ? input('text', '', { maxlength: '33', placeholder: '998900000001 yoki @nik', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' })
+      : input('tel', '', { maxlength: '20', inputmode: 'numeric', placeholder: '998900000001', autocomplete: 'off' });
     var iSt = timeInput('09:00'), iEn = timeInput('18:00');
     var row = el('div', 'row2'); row.appendChild(field('Boshlanishi', iSt)); row.appendChild(field('Tugashi', iEn));
     var off = daySelect(0), b = btn("Qo'shish", 'wide'), msg = el('p', 'amsg');
-    f.appendChild(field('Ism', iName)); f.appendChild(field('Telefon', iPh, '9–12 raqam'));
+    f.appendChild(field('Ism', iName)); f.appendChild(NIK ? field('Telefon yoki Telegram nik', iPh, '9–12 raqam yoki @nik') : field('Telefon', iPh, '9–12 raqam'));
     f.appendChild(row); f.appendChild(field('Dam olish kuni', off)); f.appendChild(b); f.appendChild(msg);
     a.appendChild(f); a.id = 'addForm'; p.appendChild(a);
     b.addEventListener('click', function () {
-      var x = { t: 'sadd', name: iName.value.replace(/\s+/g, ' ').trim(), phone: iPh.value.replace(/\D/g, ''), st: iSt.value, en: iEn.value, off: Number(off.value) };
+      var raw = iPh.value.trim(), nik = NIK && /^@?[A-Za-z][A-Za-z0-9_]{4,31}$/.test(raw) && !/^\d+$/.test(raw);
+      var x = { t: 'sadd', name: iName.value.replace(/\s+/g, ' ').trim(), phone: nik ? '@' + raw.replace(/^@/, '') : raw.replace(/\D/g, ''), st: iSt.value, en: iEn.value, off: Number(off.value) };
       if (!x.name) return say(msg, 'Ismni yozing.', true);
       if (x.name.length > 40) return say(msg, '40 belgidan oshmasin.', true);
-      if (!/^\d{9,12}$/.test(x.phone)) return say(msg, "Telefon 9–12 raqam bo'lsin.", true);
+      if (!nik && !/^\d{9,12}$/.test(x.phone)) return say(msg, NIK ? "Telefon 9–12 raqam yoki @nik (kamida 5 belgi) bo'lsin." : "Telefon 9–12 raqam bo'lsin.", true);
       if (!HM.test(x.st) || !HM.test(x.en)) return say(msg, "Vaqtni SS:DD ko'rinishida kiriting.", true);
       if (x.st >= x.en) return say(msg, "Tugash vaqti boshlanishdan keyin bo'lsin.", true);
       act(x, b, msg, function () {
@@ -817,11 +820,11 @@
     var r1 = el('div', 'row2'); r1.appendChild(field('Kechikish chegarasi, daq', g, '0–60')); r1.appendChild(field('Radius, m', r, '50–1000'));
     var r2 = el('div', 'row2'); r2.appendChild(field('Ertalabki hisobot', am, '06:00–12:00')); r2.appendChild(field('Kechki hisobot', pm, '15:00–23:30'));
     var lm = el('select');
-    [['live', 'Faqat jonli joylashuv'], ['button', 'Oddiy tugma ham']].forEach(function (x) { var o = el('option', null, x[1]); o.value = x[0]; lm.appendChild(o); });
+    [['button', 'Bir tugma (standart)'], ['live', 'Faqat jonli joylashuv']].forEach(function (x) { var o = el('option', null, x[1]); o.value = x[0]; lm.appendChild(o); });
     lm.value = c.lm === 'button' ? 'button' : 'live';
     var b = btn('Saqlash', 'wide'), msg = el('p', 'amsg');
     f.appendChild(r1); f.appendChild(r2);
-    if (BOT17) f.appendChild(field('Keldi-ketdi joylashuvi', lm, "Jonli: xaritadan boshqa nuqta tanlab aldab bo'lmaydi. Oddiy: bir bosishda, lekin aldash mumkin."));
+    if (BOT17) f.appendChild(field('Keldi-ketdi joylashuvi', lm, "Bir tugma: telefonning hozirgi joyi bir bosishda; shubhali bo'lsa sizga ⚠️ bilan aytiladi. Faqat jonli: qattiqroq, lekin xodim har safar 📎 orqali jonli joylashuv ulashadi."));
     f.appendChild(b); f.appendChild(msg);
     f.appendChild(el('p', 'hint', "Do'kon har kuni ishlaydi. Dam olish kuni har bir xodimga alohida: Xodimlar bo'limida."));
     if (BOT17) { remindPanel(d, p); accessPanel(d, p); groupPanel(d, p); } // v16 bot bu amallarni bilmaydi: ko'rsatilmaydi // v17: egasi so'ragan eslatmalar Admin bo'limida birinchi
@@ -986,6 +989,23 @@
     });
     if (!team.length) s.appendChild(el('p', 'empty', "Xodim yo'q."));
     s.id = 'accList'; p.appendChild(s);
+
+    // rebuild 7 (v20): faqat nik bilan qo'shilgan, hali raqamini yubormaganlar
+    var pu = (arr(d.pu) || []).filter(Array.isArray);
+    if (pu.length) {
+      var q = sec('Nik bilan qo\'shilganlar', String(pu.length));
+      q.appendChild(el('p', 'more', "Bu odamlar botni ochib raqamini yuborgach oddiy xodim bo'ladi."));
+      pu.forEach(function (x) {
+        var pid = sid(x[0]); if (!pid) return;
+        var row = el('div', 'form'), line = el('p', null, (str(x[1]) || '—') + ' · @' + str(x[2]) + ' · ' + (x[3] ? "botni ochgan, raqam kutilmoqda" : 'botni hali ochmagan'));
+        var b = btn("Ro'yxatdan o'chirish", 'danger'), msg = el('p', 'amsg');
+        row.appendChild(line); row.appendChild(b); row.appendChild(msg); q.appendChild(row);
+        b.addEventListener('click', function () {
+          ask(str(x[1]) + " ro'yxatdan o'chirilsinmi?", function (y) { if (y) act({ t: 'sdel', sid: pid }, b, msg, function () { row.classList.add('gone'); }); });
+        });
+      });
+      q.id = 'nikList'; p.appendChild(q);
+    }
 
     // Ro'yxatda yo'q raqam bilan kirmoqchi bo'lganlar (oxirgi 7 kun)
     var jt = (arr(d.jt) || []).filter(Array.isArray);

@@ -1530,16 +1530,24 @@ updCount(); render();
    Tovar sahifasida 3d/map.json bo'yicha "3D'da alohida ko'rish" havolasi chiqadi. */
 (function(){
   /* M3D_V changes with every 3D release, so browsers never pair the new shop page with a cached old 3d/ page */
-  const M3D_V = '20261009g';
+  const M3D_V = '20261009h';
   let PART = '', MAP = null, loadT = 0, job = 0;
   const frame = () => document.querySelector('.m3d iframe');
   const post = m => { const f = frame(); if (f && f.contentWindow) f.contentWindow.postMessage(Object.assign({t:'mc3d'}, m), '*'); };
   const cartNow = () => Object.assign({}, cart);
+  /* Quality: full unless this device could not hold it. Phones reporting 4 GB or less, a 3D start that did not stay
+     up for 15 s (the browser closed the page) and a lost WebGL context are remembered here, and the next start uses
+     "#lite=1" (images at 1024 px instead of 2048). */
+  const LS = k => { try { return localStorage.getItem(k); } catch(e) { return null; } };
+  const LSset = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch(e) {} };
+  const isLite = () => LS('m3d-lite') === '1' || LS('m3d-try') === '1' || !!(navigator.deviceMemory && navigator.deviceMemory <= 4);
+  addEventListener('pagehide', () => LSset('m3d-try', null));
   addEventListener('message', e => {
     const f = frame(); if (!f || e.source !== f.contentWindow) return;
     const d = e.data; if (!d || d.t !== 'mc3d') return;
     if (d.a === 'ready') {
       PART = ''; clearTimeout(loadT); f.parentNode.classList.add('ready');
+      setTimeout(() => LSset('m3d-try', null), 15000);
       const prices = {};
       (Array.isArray(d.ids) ? d.ids : []).slice(0, 3000).forEach(id => { const p = byId[String(id)]; if (p) prices[p.id] = {price: p.price, stock: !!p.stock, title: p.title || ''}; });
       post({a:'init', prices, cart: cartNow()});
@@ -1553,6 +1561,9 @@ updCount(); render();
       const id = String(d.id); if (byId[id]) go('product', {id});
     } else if (d.a === 'cartview') {
       go('cart');
+    } else if (d.a === 'lost' && !d.lite) {
+      LSset('m3d-lite', '1');
+      const wrap = f.parentNode; wrap.classList.remove('ready'); f.removeAttribute('src'); delete f.dataset.busy; startM3D();
     }
   });
   /* The 3D page (3d/?v=…, ≈0.6 MB over the wire) is downloaded here first, with real progress and automatic retries
@@ -1591,7 +1602,10 @@ updCount(); render();
     fetchRetry('page', page, 0).then(() => {
       if (my !== job || !document.body.contains(f)) return;
       if (small) small.textContent = '100%';
-      f.setAttribute('src', page + hash);
+      if (LS('m3d-try') === '1') LSset('m3d-lite', '1');
+      const lite = isLite(); LSset('m3d-try', '1');
+      const h = [lite ? 'lite=1' : '', PART].filter(Boolean).join('&');
+      f.setAttribute('src', page + (h ? '#' + h : ''));
       loadT = setTimeout(() => wrap.classList.add('ready'), 20000);
     }).catch(() => {
       if (my !== job) return;
@@ -1613,7 +1627,7 @@ updCount(); render();
     last ? info.insertBefore(p, last) : info.appendChild(p);
   }
   const renderBase = render;
-  render = function(){ renderBase.apply(this, arguments); addLink(); if (state.view === 'model3d') startM3D(); };
+  render = function(){ renderBase.apply(this, arguments); addLink(); if (state.view === 'model3d') startM3D(); else LSset('m3d-try', null); };
   if (state.view === 'model3d') startM3D();
   fetch('3d/map.json', {cache:'no-cache'}).then(r => r.ok ? r.json() : {}).then(m => { MAP = m || {}; addLink(); }).catch(() => { MAP = {}; });
 })();

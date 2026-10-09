@@ -4458,16 +4458,22 @@ function parse(buf,onLoad,onErr){try{
   /* Every image is decoded first; the textures are made from the finished bitmaps and only then is the scene handed
      over (as GLTFLoader does). Handing over textures that are still empty made the body render black/mirror-like
      whenever the first frame came before the decode finished. */
-  var bmp={};
+  /* Decoded bitmaps are closed as soon as the GPU has them: they are a second full copy of every image (23 x 16 MB
+     at 2048 px, about 370 MB) that Safari counts against the page and that nothing reads after the upload. Full
+     resolution everywhere. Older Safari rejects some decode options, so a plain decode is the fallback. */
+  var bmp={},users={};
+  function decode(u8,type){var o={imageOrientation:"none",premultiplyAlpha:"none",colorSpaceConversion:"none"};
+    return createImageBitmap(new Blob([u8],{type:type}),o).catch(function(){return createImageBitmap(new Blob([u8],{type:type}))})}
   (G.textures||[]).forEach(function(td){var src=td.extensions&&td.extensions.EXT_texture_webp?td.extensions.EXT_texture_webp.source:td.source;
     if(bmp[src])return;var img=G.images[src],bv=G.bufferViews[img.bufferView];
-    bmp[src]=createImageBitmap(new Blob([new Uint8Array(bin,bv.byteOffset||0,bv.byteLength)],{type:img.mimeType}),{imageOrientation:"none",premultiplyAlpha:"none",colorSpaceConversion:"none"})});
+    bmp[src]=decode(new Uint8Array(bin,bv.byteOffset||0,bv.byteLength),img.mimeType)});
   var srcs=Object.keys(bmp);
   Promise.all(srcs.map(function(k){return bmp[k]})).then(function(list){srcs.forEach(function(k,j){bmp[k]=list[j]});build()}).catch(function(e){onErr&&onErr(e)});
   function build(){try{
   var texCache={};
   function texture(i,srgb){var key=i+(srgb?"s":"l");if(texCache[key])return texCache[key];var td=G.textures[i],src=td.extensions&&td.extensions.EXT_texture_webp?td.extensions.EXT_texture_webp.source:td.source;
     var t=new T.CanvasTexture(bmp[src]);t.flipY=!1;if(srgb)t.colorSpace=T.SRGBColorSpace;t.needsUpdate=!0;
+    users[src]=(users[src]||0)+1;t.onUpdate=function(){t.onUpdate=null;if(--users[src]===0&&bmp[src]&&bmp[src].close){var b=bmp[src];setTimeout(function(){b.close()},0)}};
     var sm=G.samplers&&td.sampler!=null?G.samplers[td.sampler]:{};if(sm.wrapS===10497||sm.wrapS==null)t.wrapS=T.RepeatWrapping;if(sm.wrapT===10497||sm.wrapT==null)t.wrapT=T.RepeatWrapping;
     texCache[key]=t;return t}
   var mats=(G.materials||[]).map(function(md){var p=md.pbrMetallicRoughness||{},m=new T.MeshStandardMaterial({name:md.name||""}),f=p.baseColorFactor||[1,1,1,1];
@@ -4739,7 +4745,9 @@ function msg(t){var e=document.querySelector("#glbstate");if(e)e.textContent=t;v
 try{
   var cv=_3.domElement,gl=_3.getContext();
   if(!gl||gl.isContextLost()){msg("3D ko'rinish ishlamadi: grafik (WebGL) o'chgan. Ilovani to'liq yopib, qayta oching.")}
-  cv.addEventListener("webglcontextlost",function(ev){ev.preventDefault();msg("Grafik kontekst yo'qoldi. Sahifani yangilang (Ctrl+F5); yordam bermasa ilovani qayta oching.")},false);
+  /* inside the shop the page tells its parent, which reopens the 3D in the lighter "#lite=1" mode (index-bridge) */
+  cv.addEventListener("webglcontextlost",function(ev){ev.preventDefault();msg("Grafik kontekst yo'qoldi. Sahifani yangilang (Ctrl+F5); yordam bermasa ilovani qayta oching.");
+    try{if(parent!==window)parent.postMessage({t:"mc3d",a:"lost",lite:/[#&]lite=1/.test(location.hash)},"*")}catch(e){}},false);
   cv.addEventListener("webglcontextrestored",function(){msg("Grafik tiklandi.");v9()},false);
 }catch(e){msg("3D xato: "+e.message)}
 })();
@@ -4750,6 +4758,13 @@ try{
    - W.mergeAll(): merges each part's meshes per material (test tool only; not run, see below). */
 var W=window.__W9,T=W.T;
 
+/* "#lite=1": the two 2048 px procedural canvases (tyre tread bump, rim vent-hole mask) are redrawn at 1024 px, like the
+   body images in 02-glb-local.js. Without it nothing changes. */
+if(/[#&]lite=1/.test(location.hash))addEventListener("load",function(){var done=new Set;O3.traverse(function(o){if(!o.isMesh)return;
+  [].concat(o.material).forEach(function(m){["map","bumpMap","alphaMap","roughnessMap","normalMap"].forEach(function(k){var t=m[k],im=t&&t.image;
+    if(!im||done.has(t)||!(im.width>1024||im.height>1024)||!(im instanceof HTMLCanvasElement))return;done.add(t);
+    var s=1024/Math.max(im.width,im.height),c=document.createElement("canvas");c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);
+    c.getContext("2d").drawImage(im,0,0,c.width,c.height);t.image=c;t.needsUpdate=!0})})});v9(3)});
 var _io=Wc.intersectObjects.bind(Wc);
 Wc.intersectObjects=function(o,r,t){return _io(o,r,t).filter(function(h){for(var u=h.object;u;u=u.parent)if(!u.visible)return false;return true})};
 

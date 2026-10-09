@@ -4952,9 +4952,10 @@ addEventListener("load",function(){P=IDS.map(function(id){return W.part(id)}).fi
    whole van fits (before, the preset only widened below aspect 1.2 and the van was cut at both ends on phones). */
 /* the page CSS sits in <body>, after this sheet, so every rule here is scoped under "html body" to win */
 var css=document.createElement("style");css.textContent="@media (max-width:760px){"+
- "html body header{flex-wrap:nowrap;gap:8px;padding:6px 12px}html body .brand h1{font-size:15px}html body .brand p{display:none}"+
- "html body .tools{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;min-width:0}html body .tools::-webkit-scrollbar{display:none}html body .tools .btn{flex:none;padding:6px 10px;font-size:13px}"+
- "html body .views{left:10px;right:10px;top:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}html body .views::-webkit-scrollbar{display:none}html body .views .btn{flex:none}"+
+ "html body header{flex-wrap:wrap;gap:6px;padding:6px 10px}html body .brand h1{font-size:15px;white-space:nowrap}html body .brand p{display:none}"+
+ /* every header button stays visible: the row wraps instead of scrolling (a hidden scrollbar hid "Studiya" on phones) */
+ "html body .tools{flex-wrap:wrap;gap:5px;width:100%;min-width:0;overflow:visible}html body .tools .btn{flex:1 1 auto;padding:6px 8px;font-size:13px;text-align:center}"+
+ "html body .views{left:10px;right:10px;top:8px;flex-wrap:wrap;gap:4px;overflow:visible}html body .views .btn{flex:1 1 auto;padding:5px 6px;font-size:12px;text-align:center}"+
  "html body .paint{left:10px;top:44px;padding:4px 7px}html body .paint .sw{width:20px;height:20px}html body #secBar{left:10px;right:10px;bottom:10px}"+
  /* the parts card is a bottom sheet: smaller by default, and the handle folds it down to one line so the model is in full view */
  "html body #info{max-height:46%;padding-top:0}html body #info .grab{display:flex}html body.sheet-min #info{max-height:52px;overflow:hidden}"+
@@ -4968,6 +4969,9 @@ var info=document.querySelector("#info");function grab(){if(!info||info.hidden||
   b.onclick=function(){document.body.classList.toggle("sheet-min");lbl(b);info.scrollTop=0};lbl(b);info.prepend(b)}
 function lbl(b){b.textContent=document.body.classList.contains("sheet-min")?"▲ Ro\u2018yxatni ochish":"▼ Ro\u2018yxatni yig\u2018ish"}
 if(info){new MutationObserver(grab).observe(info,{childList:!0,attributes:!0,attributeFilter:["hidden"]});grab()}
+/* the colour row sits right under the view buttons, however many lines they take */
+var vw=document.querySelector(".views"),pt=document.querySelector(".paint");function place(){if(!vw||!pt)return;pt.style.top=innerWidth<=760?(vw.offsetTop+vw.offsetHeight+6)+"px":""}
+if(vw&&pt){new ResizeObserver(place).observe(vw);addEventListener("resize",place);place()}
 function home(){if(a4||document.body.classList.contains("solo"))return;K2.position.copy(Vs(J7.out));J3.target.set(...J7.out.tgt);v9(4)}
 G_();home();addEventListener("load",function(){G_();home()});
 })();

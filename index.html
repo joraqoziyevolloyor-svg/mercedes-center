@@ -1523,6 +1523,15 @@ updCount(); render();
 .m3d-load button{pointer-events:auto;margin-top:6px}
 @keyframes m3dspin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.m3d-load i{animation:none}}
+.m3d-fsbtn{margin-left:auto;display:inline-flex;align-items:center;gap:6px}
+.m3d-bar{display:none}
+body.m3d-full{overflow:hidden}
+body.m3d-full .m3d{position:fixed;inset:0;z-index:2147483000;margin:0;background:#0f1418;display:flex;flex-direction:column}
+body.m3d-full .m3d-bar{display:flex;align-items:center;gap:10px;height:44px;padding:0 10px;padding-top:env(safe-area-inset-top,0px);box-sizing:content-box;background:#171e24;color:#e8ecef;border-bottom:1px solid #2a333b;flex:none}
+body.m3d-full .m3d-bar b{flex:1;font-size:15px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+body.m3d-full .m3d-bar button{background:#f5b53a;color:#1b1300;border:0;font-weight:700;padding:8px 14px;font-size:14px}
+body.m3d-full .m3d iframe{flex:1;height:auto!important;min-height:0!important;border:0}
+body.m3d-full .m3d .m3d-load{top:45px}
 </style>
 <script>
 /* 3D model ko'prigi. 3d/ sahifasi sandbox iframe ichida; xabarlar faqat shu iframe'dan qabul qilinadi.
@@ -1530,7 +1539,7 @@ updCount(); render();
    Tovar sahifasida 3d/map.json bo'yicha "3D'da alohida ko'rish" havolasi chiqadi. */
 (function(){
   /* M3D_V changes with every 3D release, so browsers never pair the new shop page with a cached old 3d/ page */
-  const M3D_V = '20261009h';
+  const M3D_V = '20261009i';
   let PART = '', MAP = null, loadT = 0, job = 0;
   const frame = () => document.querySelector('.m3d iframe');
   const post = m => { const f = frame(); if (f && f.contentWindow) f.contentWindow.postMessage(Object.assign({t:'mc3d'}, m), '*'); };
@@ -1573,6 +1582,8 @@ updCount(); render();
   m3dView = function(){
     clearTimeout(loadT);
     return m3dBase().replace('src="3d/"', 'data-m3d="1"')
+      .replace('<div class="m3d">', '<div class="m3d"><div class="m3d-bar"><b>Sprinter W906 · 3D</b><button type="button" data-m3dfs="0">✕ Yopish</button></div>')
+      .replace('<span>3D model</span></div>', '<span>3D model</span><button type="button" class="back m3d-fsbtn" data-m3dfs="1">⛶ To\'liq ekran</button></div>')
       .replace('</iframe></div>', `</iframe><div class="m3d-load" aria-live="polite"><i></i><b>3D model yuklanmoqda…</b><small>0%</small><button type="button" class="big" hidden>Qayta urinish</button></div></div>`);
   };
   function get(url, onBytes){
@@ -1614,6 +1625,11 @@ updCount(); render();
       btn.hidden = false;
     });
   }
+  /* "To'liq ekran": the 3D block covers the whole screen (fixed layer, works on iPhone too, where Safari has no
+     element fullscreen); a slim top bar or Esc closes it. The iframe is not reloaded either way. */
+  const setFull = on => document.body.classList.toggle('m3d-full', !!on);
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-m3dfs]'); if (b) setFull(b.dataset.m3dfs === '1'); });
+  addEventListener('keydown', e => { if (e.key === 'Escape') setFull(false); });
   function addLink(){
     if (!MAP || !M3D_ON || state.view !== 'product') return;
     const m = MAP[state.id]; if (!m) return;
@@ -1627,7 +1643,7 @@ updCount(); render();
     last ? info.insertBefore(p, last) : info.appendChild(p);
   }
   const renderBase = render;
-  render = function(){ renderBase.apply(this, arguments); addLink(); if (state.view === 'model3d') startM3D(); else LSset('m3d-try', null); };
+  render = function(){ renderBase.apply(this, arguments); addLink(); if (state.view === 'model3d') startM3D(); else { LSset('m3d-try', null); document.body.classList.remove('m3d-full'); } };
   if (state.view === 'model3d') startM3D();
   fetch('3d/map.json', {cache:'no-cache'}).then(r => r.ok ? r.json() : {}).then(m => { MAP = m || {}; addLink(); }).catch(() => { MAP = {}; });
 })();

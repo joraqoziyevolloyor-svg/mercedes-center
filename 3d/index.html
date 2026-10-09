@@ -4747,7 +4747,7 @@ try{
 ;(function(){
 /* Performance.
    - Raycasts ignore meshes inside hidden groups (three.js does not skip them by itself).
-   - All devices: after the part files ran, each mechanical part's meshes are merged per material (draw calls ~2000 -> a few hundred). */
+   - W.mergeAll(): merges each part's meshes per material (test tool only; not run, see below). */
 var W=window.__W9,T=W.T;
 
 var _io=Wc.intersectObjects.bind(Wc);
@@ -4781,7 +4781,7 @@ function mergeAll(){var n0=0,n1=0;O3.traverse(function(o){o.isMesh&&n0++});
   c4.forEach(function(p){try{mergePart(p)}catch(e){W.errors.push({id:"07-perf "+p.id,e:String(e)})}});
   O3.traverse(function(o){o.isMesh&&n1++});W.meshes=[n0,n1];_3.shadowMap.needsUpdate=!0;v9(6)}
 W.mergeAll=mergeAll;
-if(!/[#&]nomerge/.test(location.hash))addEventListener("load",function(){setTimeout(mergeAll,0)});
+/* Merging is OFF: the merged copies tripled geometry memory (82 -> 234 MB) and phones dropped the WebGL context right after the van appeared. W.mergeAll() stays for tests only. */
 })();
 
 ;(function(){

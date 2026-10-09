@@ -1516,6 +1516,13 @@ updCount(); render();
 <!-- mc3d-bridge: 3D model (3d/ iframe) bilan aloqa. Shablonga (internet-dokon/template.html) </body> oldidan shu blokni qo'ying. -->
 <style>
 .m3d{position:relative}
+/* the 3D frame lives once, in #m3dHost on <body>, laid over the page's .m3d-slot; other pages only hide it */
+.m3d-slot{margin-block:4px 0;height:calc(100vh - 200px);height:calc(100dvh - 200px);min-height:440px}
+@media (max-width:720px){.m3d-slot{height:calc(100dvh - 210px);min-height:420px}}
+#m3dHost{position:absolute;z-index:5;margin:0;top:0;left:0;width:0;height:0}
+#m3dHost iframe{display:block;width:100%;height:100%!important;min-height:0!important;box-sizing:border-box}
+#m3dHost.off{visibility:hidden;pointer-events:none;left:-300vw!important}
+body.m3d-full #m3dHost{top:0!important;left:0!important;width:auto!important;height:auto!important}
 .m3d .m3d-load{position:absolute;inset:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:#0f1418;color:#e8ecef;font-size:15px;text-align:center;padding:20px;pointer-events:none}
 .m3d.ready .m3d-load{display:none}
 .m3d-load i{width:42px;height:42px;border:3px solid #2a333b;border-top-color:#f5b53a;border-radius:50%;animation:m3dspin .9s linear infinite}
@@ -1539,9 +1546,33 @@ body.m3d-full .m3d .m3d-load{top:45px}
    Tovar sahifasida 3d/map.json bo'yicha "3D'da alohida ko'rish" havolasi chiqadi. */
 (function(){
   /* M3D_V changes with every 3D release, so browsers never pair the new shop page with a cached old 3d/ page */
-  const M3D_V = '20261009j';
-  let PART = '', MAP = null, loadT = 0, job = 0;
-  const frame = () => document.querySelector('.m3d iframe');
+  const M3D_V = '20261009k';
+  let PART = '', MAP = null, loadT = 0, job = 0, host = null, base = '', baseLite = false, navN = 0;
+  const frame = () => host && host.querySelector('iframe');
+  /* One 3D frame for the whole visit. It used to be rebuilt on every return to the 3D page, which reloaded the model
+     and its images into graphics memory each time while the old copy was still waiting to be freed; after a few trips
+     phones slowed down and froze. Now the frame is made once, laid over the page's placeholder, and only hidden
+     (not removed) while other pages are shown. */
+  function ensureHost(){
+    if (host) return host;
+    host = document.createElement('div'); host.id = 'm3dHost'; host.className = 'm3d off';
+    host.innerHTML = '<div class="m3d-bar"><b>Sprinter W906 · 3D</b><button type="button" data-m3dfs="0">✕ Yopish</button></div>'
+      + '<iframe data-m3d="1" title="Sprinter W906 3D model" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>'
+      + '<div class="m3d-load" aria-live="polite"><i></i><b>3D model yuklanmoqda…</b><small>0%</small><button type="button" class="big" hidden>Qayta urinish</button></div>';
+    document.body.appendChild(host);
+    return host;
+  }
+  function place(){
+    if (!host) return;
+    const s = state.view === 'model3d' && document.querySelector('.m3d-slot');
+    if (!s) { host.classList.add('off'); return; }
+    const r = s.getBoundingClientRect();
+    host.style.top = (r.top + scrollY) + 'px'; host.style.left = (r.left + scrollX) + 'px';
+    host.style.width = r.width + 'px'; host.style.height = r.height + 'px';
+    host.classList.remove('off');
+  }
+  addEventListener('resize', place);
+  if (window.ResizeObserver) new ResizeObserver(place).observe(document.body);
   const post = m => { const f = frame(); if (f && f.contentWindow) f.contentWindow.postMessage(Object.assign({t:'mc3d'}, m), '*'); };
   const cartNow = () => Object.assign({}, cart);
   /* Quality: full unless this device could not hold it. Phones reporting 4 GB or less, a 3D start that did not stay
@@ -1572,7 +1603,7 @@ body.m3d-full .m3d .m3d-load{top:45px}
       go('cart');
     } else if (d.a === 'lost' && !d.lite) {
       LSset('m3d-lite', '1');
-      const wrap = f.parentNode; wrap.classList.remove('ready'); f.removeAttribute('src'); delete f.dataset.busy; startM3D();
+      const wrap = f.parentNode; wrap.classList.remove('ready'); f.removeAttribute('src'); base = ''; delete f.dataset.busy; startM3D();
     }
   });
   /* The 3D page (3d/?v=…, ≈0.6 MB over the wire) is downloaded here first, with real progress and automatic retries
@@ -1580,11 +1611,8 @@ body.m3d-full .m3d .m3d-load{top:45px}
      at once; the body model (3d/body.glb.gz) streams in afterwards inside the 3D page, with its own progress and retries. */
   const m3dBase = m3dView;
   m3dView = function(){
-    clearTimeout(loadT);
-    return m3dBase().replace('src="3d/"', 'data-m3d="1"')
-      .replace('<div class="m3d">', '<div class="m3d"><div class="m3d-bar"><b>Sprinter W906 · 3D</b><button type="button" data-m3dfs="0">✕ Yopish</button></div>')
-      .replace('<span>3D model</span></div>', '<span>3D model</span><button type="button" class="back m3d-fsbtn" data-m3dfs="1">⛶ To\'liq ekran</button></div>')
-      .replace('</iframe></div>', `</iframe><div class="m3d-load" aria-live="polite"><i></i><b>3D model yuklanmoqda…</b><small>0%</small><button type="button" class="big" hidden>Qayta urinish</button></div></div>`);
+    return m3dBase().replace(/<div class="m3d"><iframe[^>]*><\/iframe><\/div>/, '<div class="m3d-slot"></div>')
+      .replace('<span>3D model</span></div>', '<span>3D model</span><button type="button" class="back m3d-fsbtn" data-m3dfs="1">⛶ To\'liq ekran</button></div>');
   };
   function get(url, onBytes){
     return fetch(url, {cache:'default'}).then(r => {
@@ -1596,7 +1624,10 @@ body.m3d-full .m3d .m3d-load{top:45px}
     });
   }
   function startM3D(){
-    const f = document.querySelector('.m3d iframe[data-m3d]'); if (!f || f.getAttribute('src') || f.dataset.busy) return;
+    const f = ensureHost().querySelector('iframe');
+    /* already open: a part or section link only moves the open 3D there (a change of the address after "#" does not reload the page) */
+    if (f.getAttribute('src')) { if (PART && base) { f.setAttribute('src', base + '#' + [baseLite ? 'lite=1' : '', PART, 'n=' + (++navN)].filter(Boolean).join('&')); PART = ''; } return; }
+    if (f.dataset.busy) return;
     f.dataset.busy = '1';
     const my = ++job, wrap = f.parentNode, small = wrap.querySelector('.m3d-load small'), btn = wrap.querySelector('.m3d-load button');
     const page = `3d/?v=${M3D_V}`, hash = PART ? `#${PART}` : '';
@@ -1616,7 +1647,7 @@ body.m3d-full .m3d .m3d-load{top:45px}
       if (LS('m3d-try') === '1') LSset('m3d-lite', '1');
       const lite = isLite(); LSset('m3d-try', '1');
       const h = [lite ? 'lite=1' : '', PART].filter(Boolean).join('&');
-      f.setAttribute('src', page + (h ? '#' + h : ''));
+      base = page; baseLite = lite; f.setAttribute('src', page + (h ? '#' + h : ''));
       loadT = setTimeout(() => wrap.classList.add('ready'), 20000);
     }).catch(() => {
       if (my !== job) return;
@@ -1643,8 +1674,10 @@ body.m3d-full .m3d .m3d-load{top:45px}
     last ? info.insertBefore(p, last) : info.appendChild(p);
   }
   const renderBase = render;
-  render = function(){ renderBase.apply(this, arguments); addLink(); if (state.view === 'model3d') startM3D(); else { LSset('m3d-try', null); document.body.classList.remove('m3d-full'); } };
-  if (state.view === 'model3d') startM3D();
+  render = function(){ renderBase.apply(this, arguments); addLink();
+    if (state.view === 'model3d') { startM3D(); place(); if (base) post({a:'cart', cart: cartNow()}); }
+    else { place(); document.body.classList.remove('m3d-full'); } };
+  if (state.view === 'model3d') { startM3D(); place(); }
   fetch('3d/map.json', {cache:'no-cache'}).then(r => r.ok ? r.json() : {}).then(m => { MAP = m || {}; addLink(); }).catch(() => { MAP = {}; });
 })();
 </script>

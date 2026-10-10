@@ -2,7 +2,7 @@
 <html lang="uz">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-RExEmpc1L7bNyb68fuc9yiKdhtzqxmBka8Asdw7VgWs='; style-src 'self' 'sha256-DiraVPRipewLIflvkI8HenPKWfEELF5JJJbQV9FgH0E='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-eHmPD23zJl/34Lk2SL9Mvlo01qnRC3YQPZuu4MH/1Oo='; style-src 'self' 'sha256-en5OZ5sr4MIcH15FQG2JSW40tyJukHZb+i7T8LUZ37M='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mening ishim</title>
 <script>window.__mcHash = String(location.hash || '');</script>
@@ -31,6 +31,57 @@
   .olog .lrow { font-family: var(--f-mono); font-size: 12px; padding: 2px 0; overflow-wrap: anywhere; }
   ol.steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
   .hint.pad { padding: 10px 14px 0; }
+
+  /* rebuild 13: yangi ko'rinish (dizayn "Qayta ishlangan joylashuv"): oq/qora fon, chiziqli bo'limlar, yengil yumaloq tugmalar */
+  :root{--bg:#ffffff;--surface:#ffffff;--ink:#111316;--muted:#5c6370;--line:#e3e5e8;--line-2:#111316;--accent:#1f5fa8;--accent-ink:#ffffff;--tile:#f6f7f8;--warn:#9a6200;--warn-bar:#c8860a;--ok:#1e7a4f;--off:#c9cdd3;--newbg:#f3f7fc}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1013;--surface:#0e1013;--ink:#e8eaed;--muted:#9aa0a8;--line:#262a30;--line-2:#3a3f47;--accent:#7fb2e5;--accent-ink:#0e1013;--tile:#15181c;--warn:#e0a33a;--warn-bar:#e0a33a;--ok:#3fb37f;--off:#4a4f57;--newbg:#121a23}}
+  :root[data-theme="dark"]{--bg:#0e1013;--surface:#0e1013;--ink:#e8eaed;--muted:#9aa0a8;--line:#262a30;--line-2:#3a3f47;--accent:#7fb2e5;--accent-ink:#0e1013;--tile:#15181c;--warn:#e0a33a;--warn-bar:#e0a33a;--ok:#3fb37f;--off:#4a4f57;--newbg:#121a23}
+  .bar{background:var(--bg);color:var(--ink);border-bottom:1px solid var(--line-2);padding:18px 20px 12px}
+  .bar h1{font-size:22px}
+  .bar .meta{color:var(--muted)} .bar .meta .mono{color:var(--ink)}
+  main{padding:0 0 calc(24px + env(safe-area-inset-bottom));gap:0;max-width:560px}
+  body.has-tabs main{padding-bottom:calc(86px + env(safe-area-inset-bottom))}
+  .sec{background:transparent;border:0;border-bottom:1px solid var(--line)}
+  .sec>h2{font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);padding:16px 20px 8px}
+  .sec>h2 .cnt{color:var(--muted)}
+  .srow,.orow{padding:12px 20px}
+  th:first-child,td:first-child{padding-left:20px} th:last-child,td:last-child{padding-right:20px}
+  th{background:transparent;font-weight:500;letter-spacing:.06em;text-transform:uppercase;font-size:11px}
+  .form{padding:14px 20px 16px} .more,.empty{padding:12px 20px} .task{padding:12px 20px} .sec .pad{padding:12px 20px} .sec>.muted{padding:0 20px 12px}
+  .note{border-top:0;padding:14px 20px} .err{margin:12px 20px}
+  button,.btn{border-radius:8px!important;min-height:44px}
+  .btn.ghost,button.ghost,button.danger{border-radius:8px!important}
+  input,select,textarea{border-radius:8px!important;border-color:var(--line);background:var(--tile)}
+  .tag{border-radius:4px!important}
+  .sed,.odet{background:var(--tile)}
+  .ord.open .orow{background:var(--tile)}
+  .tabs{background:var(--bg);border-top:1px solid var(--line-2)}
+  .tabs button{border-radius:0!important;color:var(--muted);font-weight:500;font-size:11px;min-height:60px;padding:8px 2px 8px;border-top:3px solid transparent;margin-top:-1px;position:relative}
+  .tabs button[aria-selected="true"]{color:var(--ink);font-weight:600;border-top-color:var(--accent)}
+  .tabs button svg{display:block;margin:0 auto 3px}
+  .tabs .bdg{position:absolute;top:6px;left:50%;margin-left:6px;min-width:18px;height:18px;padding:0 5px;border-radius:9px!important;background:var(--accent);color:var(--accent-ink);font-size:11px;font-weight:600;line-height:18px}
+  .kpi{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-bottom:1px solid var(--line)}
+  .kpi button{all:unset;cursor:pointer;padding:16px 0 14px 20px;border-right:1px solid var(--line)}
+  .kpi button:last-child{border-right:0}
+  .kpi b{display:block;font-family:var(--f-mono);font-weight:500;font-size:34px;line-height:1}
+  .kpi span{display:block;font-size:13px;color:var(--muted);margin-top:6px}
+  .lbl2{padding:16px 20px 8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;align-items:baseline;gap:8px}
+  .lbl2 .grow{flex:1}
+  .att{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;width:100%;padding:12px 20px;border-top:1px solid var(--line)}
+  .att .bar4{width:4px;height:36px;border-radius:2px!important;flex:none}
+  .att .t1{font-size:15px;font-weight:500} .att .t2{font-size:13px;color:var(--muted)}
+  .att .gr{flex:1;min-width:0}
+  .trow{display:grid;grid-template-columns:minmax(0,1fr) 64px 64px;align-items:center;padding:10px 20px;border-top:1px solid var(--line);font-size:15px}
+  .trow.h{font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;border-top:0;padding-top:0;padding-bottom:6px}
+  .trow .n{display:flex;align-items:center;gap:10px;min-width:0} .trow .n span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .trow .tm2{text-align:right;font-family:var(--f-mono);font-size:14px}
+  .dot{width:8px;height:8px;border-radius:2px!important;flex:none}
+  .abar{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+  .stats{border:0;border-bottom:1px solid var(--line);background:transparent}
+  .stat{padding:14px 0 12px 20px} .stat b{font-family:var(--f-mono);font-weight:500;font-size:28px}
+  th.t{font-weight:500}
+  .kpi button,.att,.srow,.orow,.backb{border-radius:0!important;min-height:0}
+  .backb{all:unset;cursor:pointer;display:flex;align-items:center;gap:6px;padding:12px 20px;color:var(--accent);font-size:15px;border-bottom:1px solid var(--line)}
 </style>
 </head>
 <body>
@@ -330,6 +381,9 @@
     }
     say(box, SENT);
     if (ok) try { ok(); } catch (e) {}
+    // rebuild 12: o'zgartirishdan keyin bot bazaga yozgach (bir necha soniya) sahifa yangi ma'lumot bilan o'zini yangilaydi
+    try { ACT_FORM = btn && btn.closest ? btn.closest('.form') : null; } catch (e) { ACT_FORM = null; }
+    if (a.t !== 'xls') { clearTimeout(window.__mcAfter); window.__mcAfter = setTimeout(function () { refresh(true, true); }, 7000); } // ketma-ket amallarda bitta yangilash
     return true;
   }
   // v16: manzilida ma'lumot yo'q (chat ro'yxatidagi "Ochish" yoki qadalgan xabar tugmasi): ma'lumot botdan so'raladi.
@@ -397,7 +451,7 @@
   // ma'lumot so'raydi va o'zini qayta chizadi. Ishga xalaqit bermaslik uchun: faqat ilovaga qaytganda (5 daqiqadan eski bo'lsa)
   // yoki 15 daqiqada bir, odam hech narsa yozmayotgan va tahrir oynasi ochiq bo'lmaganda. Band bo'lsa - "Yangilash" tugmasi chiqadi.
   var STALE = "Sahifa 2 soatdan beri ochiq: xavfsizlik uchun amal yuborilmadi. Ilovani ✕ bilan yoping va botdagi \"📊\" tugmasidan qayta oching.";
-  var LOADED = Date.now(), lastInput = 0, refreshing = false, CUR_TAB = '', V0 = new WeakMap();
+  var LOADED = Date.now(), lastInput = 0, refreshing = false, CUR_TAB = '', V0 = new WeakMap(), ACT_FORM = null;
   function authAge() { var d = Number(tg && tg.initDataUnsafe && tg.initDataUnsafe.auth_date); return d > 0 ? Date.now() / 1000 - d : 0; }
   function ss(k, v) { try { if (v === undefined) return sessionStorage.getItem(k); if (v === null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (e) {} return null; }
   ['input', 'keydown', 'focusin'].forEach(function (ev) { document.addEventListener(ev, function () { lastInput = Date.now(); }, true); });
@@ -423,7 +477,7 @@
     location.replace(location.pathname + location.search + '#z=' + zs);
     location.reload();
   }
-  async function refresh(force) {
+  async function refresh(force, afterAct) {
     if (refreshing || !INIT || !(window.crypto && crypto.subtle) || document.hidden) return;
     if (authAge() > 86000) { staleBar(); return; } // bot o'qishni ham 24 soatdan keyin qabul qilmaydi
     var last = Number(ss('mc-ref')) || 0;
@@ -433,7 +487,13 @@
     try {
       var zs = await fetchLive(null, true);
       if (!zs) return;
-      if (busyNow()) { bar("Yangi ma'lumot bor.", 'Yangilash', function () { applyZ(zs); }); return; }
+      // amaldan keyingi yangilashda: faqat odam hozir nimadir yozayotgan bo'lsa kutiladi
+      var a0 = document.activeElement, typing = a0 && /^(INPUT|TEXTAREA)$/.test(a0.tagName) && Date.now() - lastInput < 15000;
+      // hozir yuborilgan formadan tashqarida yozilgan (saqlanmagan) matn bo'lsa ham kutiladi: yo'qolmasin
+      if (!typing) typing = Array.prototype.some.call(document.querySelectorAll('input,textarea,select'), function (i) {
+        return V0.has(i) && !(ACT_FORM && ACT_FORM.contains(i)) && (i.type === 'checkbox' ? String(i.checked) : i.value) !== V0.get(i);
+      });
+      if (afterAct ? typing : busyNow()) { bar("Yangi ma'lumot bor.", 'Yangilash', function () { applyZ(zs); }); return; }
       applyZ(zs);
     } catch (e) { /* bot javob bermadi: eski ma'lumot qoladi */ } finally { refreshing = false; }
   }
@@ -953,7 +1013,7 @@
   function lavozimPanel(d, p) {
     var list = lvList(d), team = staffRows(d);
     var s = sec('Lavozimlar', String(list.length));
-    s.appendChild(el('p', 'more', "Har bir lavozimda nima qilish mumkinligini belgilang. Odamga lavozim berish: pastdagi \"Kirish huquqi\" bo'limida."));
+    s.appendChild(el('p', 'more', "Har bir lavozimda nima qilish mumkinligini belgilang. Odamga lavozim berish: Admin → \"Kirish huquqi\"."));
     list.forEach(function (l) {
       var wrap = el('div', 'ord'), head = btn(null, 'srow'); head.setAttribute('aria-expanded', 'false');
       var nm = el('span', 'nm', str(l[1])), hr = el('span', 'hr'), sub = el('span', 'sub');
@@ -1208,12 +1268,268 @@
     s.id = 'guide'; $('p-guide').appendChild(s);
   }
 
+  // --- rebuild 10: ixcham joylashuv (pastga cho'zilib ketmasin) ---
+  // Admin: bo'limlar ketma-ket emas, avval menyu; bittasi ochiladi, "‹ Admin" (yoki Telegram'ning orqaga tugmasi) bilan qaytiladi.
+  // Xodimlar va Bugun: qo'shish/topshiriq formasi tugma orqasida.
+  var onTab = null, admClose = null;
+  function foldBehind(panelId, secId, label) {
+    var p = $(panelId), sc = $(secId);
+    if (!p || !sc) return;
+    var b = btn(label, 'wide ghost'); b.id = secId + 'Btn'; b.setAttribute('aria-expanded', 'false'); b.style.margin = '12px 20px'; b.style.width = 'calc(100% - 40px)';
+    sc.hidden = true;
+    p.insertBefore(b, p.firstChild); p.insertBefore(sc, b.nextSibling);
+    b.addEventListener('click', function () { sc.hidden = !sc.hidden; b.setAttribute('aria-expanded', String(!sc.hidden)); b.textContent = sc.hidden ? label : 'Yopish'; });
+  }
+  function adminMenu() {
+    var p = $('p-settings'); if (!p) return;
+    var G = [['acc', 'Kirish huquqi', "Kim botdan foydalanadi, lavozimi, to'xtatish", ['accList', 'nikList', 'joinList']],
+      ['lv', 'Lavozimlar', 'Har bir lavozim nima qila oladi', ['lvList', 'lvAdd']],
+      ['rem', 'Eslatmalar', 'Ish boshlanishi va tugashidagi eslatmalar', ['remList', 'remAdd']],
+      ['grp', 'Guruhlar', 'Buyurtmalar va eslatmalar guruhi', ['grpBox', 'egBox']],
+      ['cfg', 'Asosiy sozlamalar', 'Radius, kechikish, hisobot vaqti, joylashuv', ['cfgForm']]];
+    var menu = sec('Admin'); menu.id = 'admMenu';
+    var back = btn('‹ Admin'); back.id = 'admBack'; back.hidden = true;
+    var groups = [];
+    G.forEach(function (g) {
+      var els = g[3].map(function (id) { return $(id); }).filter(Boolean);
+      if (!els.length) return;
+      var c = els[0].querySelector('h2 .cnt');
+      var row = el('div', 'ord'), h = btn(null, 'srow');
+      h.appendChild(el('span', 'nm', g[1])); h.appendChild(el('span', 'hr', (c ? c.textContent + '  ' : '') + '›')); h.appendChild(el('span', 'sub', g[2]));
+      row.appendChild(h); menu.appendChild(row);
+      h.addEventListener('click', function () { open(g[0]); });
+      groups.push({ k: g[0], els: els });
+    });
+    var known = [].concat.apply([], groups.map(function (g) { return g.els; }));
+    var other = Array.prototype.filter.call(p.children, function (x) { return known.indexOf(x) < 0; });
+    other.forEach(function (x) { known.push(x); }); // noma'lum bo'lim (eski bot) - "Asosiy sozlamalar" bilan birga ko'rinadi
+    if (other.length && groups.length) groups[groups.length - 1].els = groups[groups.length - 1].els.concat(other);
+    known.forEach(function (x) { x.hidden = true; });
+    p.insertBefore(back, p.firstChild); p.insertBefore(menu, back.nextSibling);
+    function bb(show) { try { if (tg && tg.BackButton && tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) { if (show) tg.BackButton.show(); else tg.BackButton.hide(); } } catch (e) {} }
+    function open(k) {
+      var g = groups.filter(function (x) { return x.k === k; })[0]; if (!g) return;
+      menu.hidden = true; back.hidden = false; known.forEach(function (x) { x.hidden = g.els.indexOf(x) < 0 || x.dataset.fold === '1'; });
+      ss('mc-grp', k); bb(true); window.scrollTo(0, 0);
+    }
+    function close() { menu.hidden = false; back.hidden = true; known.forEach(function (x) { x.hidden = true; }); ss('mc-grp', null); bb(false); window.scrollTo(0, 0); }
+    back.addEventListener('click', close);
+    try { if (tg && tg.BackButton && tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) tg.BackButton.onClick(function () { if (!back.hidden) close(); }); } catch (e) {}
+    admClose = close;
+    onTab = function (id) { if (id !== 'p-settings' && !back.hidden) { close(); } };
+    [['lvAdd', "➕ Lavozim qo'shish"], ['remAdd', "➕ Eslatma qo'shish"]].forEach(function (x) {
+      var sc = $(x[0]); if (!sc) return;
+      var b = btn(x[1], 'wide'), shown = false; b.id = x[0] + 'Btn';
+      sc.parentNode.insertBefore(b, sc);
+      var g = groups.filter(function (q) { return q.els.indexOf(sc) >= 0; })[0];
+      if (g) { g.els.push(b); known.push(b); b.hidden = true; }
+      sc.dataset.fold = '1';
+      b.addEventListener('click', function () { shown = !shown; sc.dataset.fold = shown ? '' : '1'; sc.hidden = !shown; b.textContent = shown ? 'Yopish' : x[1]; });
+    });
+    var keep = ss('mc-grp'); if (keep) open(keep);
+  }
+
+  // --- rebuild 13: yangi ko'rinish: pastki menyu (Bugun, Xodimlar, Buyurtma, Topshiriq, Ko'proq) va "Bugun" ekrani ---
+  var ICO = {
+    home: ['M3 11l9-7l9 7v10h-6v-6H9v6H3z'],
+    users: ['M9 4a4 4 0 1 1 0 8a4 4 0 0 1 0-8z', 'M3 21v-1a6 6 0 0 1 12 0v1', 'M16 4a4 4 0 0 1 0 8M21 21v-1a6 6 0 0 0-4-5.6'],
+    box: ['M12 3l8 4.5v9L12 21l-8-4.5v-9z', 'M12 12l8-4.5M12 12v9M12 12L4 7.5'],
+    check: ['M9 11l3 3l8-8', 'M20 12v8H4V4h11'],
+    menu: ['M4 7h16M4 12h16M4 17h16'],
+    cal: ['M4 5h16v16H4z', 'M4 10h16M9 3v4M15 3v4'],
+    info: ['M12 3a9 9 0 1 1 0 18a9 9 0 0 1 0-18z', 'M12 16v-4M12 8h.01'],
+    chev: ['M9 6l6 6l-6 6'], back: ['M15 6l-6 6l6 6']
+  };
+  function ico(name, size) {
+    var NS = 'http://www.w3.org/2000/svg', v = document.createElementNS(NS, 'svg');
+    v.setAttribute('width', String(size || 22)); v.setAttribute('height', String(size || 22)); v.setAttribute('viewBox', '0 0 24 24');
+    v.setAttribute('fill', 'none'); v.setAttribute('stroke', 'currentColor'); v.setAttribute('stroke-width', '1.7'); v.setAttribute('aria-hidden', 'true');
+    (ICO[name] || []).forEach(function (dd) { var pth = document.createElementNS(NS, 'path'); pth.setAttribute('d', dd); v.appendChild(pth); });
+    return v;
+  }
+  function hmMin(x) { var m = /^(\d\d):(\d\d)$/.exec(str(x)); return m ? Number(m[1]) * 60 + Number(m[2]) : -1; }
+  function appShell(d, nNew) {
+    var main = $('p-today').parentNode, team = staffRows(d), now = hmMin(d.u);
+    var cameN = 0, lateN = 0, missN = 0, att = [];
+    if (nNew) att.push({ c: 'var(--accent)', t1: nNew + " ta buyurtmani hech kim olmagan", t2: 'Buyurtmalar bo\'limida', go: 'orders' });
+    team.forEach(function (r) {
+      if (r[14] || r[7]) return;
+      if (r[2]) { cameN++; if (num(r[4]) > 0) { lateN++; att.push({ c: 'var(--warn-bar)', t1: str(r[1]) + ' ' + num(r[4]) + ' daqiqa kechikdi', t2: 'Keldi ' + str(r[2]) + ' · ish ' + str(r[8]) + ' da', go: 'staff' }); } }
+      else if (hmMin(r[8]) >= 0 && now >= hmMin(r[8])) { missN++; att.push({ c: 'var(--off)', t1: str(r[1]) + ' hali kelmadi', t2: 'Ish ' + str(r[8]) + ' da boshlangan', go: 'staff' }); }
+    });
+    // Bugun ekrani
+    var home = el('div', 'panel'); home.id = 'p-home';
+    var kpi = el('div', 'kpi');
+    [[cameN, 'keldi', 'var(--ok)'], [lateN, 'kechikdi', 'var(--warn)'], [missN, 'kelmagan', 'var(--muted)']].forEach(function (k) {
+      var b = btn(null); var n = el('b', null, String(k[0])); n.style.color = k[2]; b.appendChild(n); b.appendChild(el('span', null, k[1]));
+      b.addEventListener('click', function () { go('staff'); }); kpi.appendChild(b);
+    });
+    home.appendChild(kpi);
+    home.appendChild(el('div', 'lbl2', att.length ? "Hozir e'tibor bering" : 'Hammasi joyida'));
+    att.slice(0, 6).forEach(function (a) {
+      var r = btn(null, 'att'), b4 = el('div', 'bar4'); b4.style.background = a.c;
+      var g = el('div', 'gr'); g.appendChild(el('div', 't1', a.t1)); g.appendChild(el('div', 't2', a.t2));
+      r.appendChild(b4); r.appendChild(g); var cv = ico('chev', 16); cv.style.color = 'var(--muted)'; r.appendChild(cv);
+      r.addEventListener('click', function () { go(a.go); }); home.appendChild(r);
+    });
+    var lh = el('div', 'lbl2'); lh.style.borderTop = '1px solid var(--line)'; lh.appendChild(el('span', 'grow', 'Xodimlar bugun')); home.appendChild(lh);
+    var hh = el('div', 'trow h'); hh.appendChild(el('div', null, 'Ism')); var k1 = el('div', 'tm2', 'Keldi'), k2 = el('div', 'tm2', 'Ketdi'); k1.style.font = 'inherit'; k2.style.font = 'inherit'; hh.appendChild(k1); hh.appendChild(k2); home.appendChild(hh);
+    team.forEach(function (r) {
+      var row = el('div', 'trow'), n = el('div', 'n'), dt = el('div', 'dot');
+      dt.style.background = r[14] ? 'var(--off)' : r[2] ? (num(r[4]) > 0 ? 'var(--warn-bar)' : 'var(--ok)') : (r[7] ? 'transparent' : 'var(--off)');
+      if (r[7] && !r[2]) dt.style.border = '1px solid var(--off)';
+      n.appendChild(dt); n.appendChild(el('span', null, str(r[1]) + (r[7] && !r[2] ? ' · dam' : ''))); row.appendChild(n);
+      var a1 = el('div', 'tm2', str(r[2]) || '—'); a1.style.color = r[2] ? (num(r[4]) > 0 ? 'var(--warn)' : 'var(--ink)') : 'var(--muted)';
+      var a2 = el('div', 'tm2', str(r[3]) || '—'); a2.style.color = 'var(--muted)';
+      row.appendChild(a1); row.appendChild(a2); home.appendChild(row);
+    });
+    if (!team.length) home.appendChild(el('p', 'empty', "Xodim yo'q."));
+    var abar = el('div', 'abar'), hasTask = !!$('taskForm'), hasAdd = !!$('addForm');
+    if (hasTask) { var b1 = btn('Topshiriq berish'); b1.addEventListener('click', function () { go('tasks'); openFold('taskForm'); }); abar.appendChild(b1); }
+    if (hasAdd) { var b2 = btn("Xodim qo'shish", 'ghost'); b2.addEventListener('click', function () { go('staff'); openFold('addForm'); }); abar.appendChild(b2); }
+    if (abar.children.length === 1) abar.style.gridTemplateColumns = '1fr';
+    if (abar.children.length) home.appendChild(abar);
+    main.insertBefore(home, $('p-today'));
+    // Topshiriq va Xodim qo'shish formalari tugma orqasida; Bugun jadvali yangi ekranda
+    if ($('teamBox')) $('teamBox').remove();
+    foldBehind('p-today', 'taskForm', '+ Topshiriq berish');
+    foldBehind('p-staff', 'addForm', "+ Xodim qo'shish");
+    // Ko'proq: hisobot va Admin bandlari
+    var more = el('div', 'panel'); more.id = 'p-more';
+    var items = [['report', 'Hisobot va Excel', "Oy bo'yicha keldi, kechikdi, kelmadi", 'p-report', null]];
+    if (ADM) items = items.concat([
+      ['acc', 'Kirish huquqi', "Kim botdan foydalanadi, lavozimi", 'p-settings', ['accList', 'nikList', 'joinList']],
+      ['lv', 'Lavozimlar', 'Har bir lavozim nima qila oladi', 'p-settings', ['lvList', 'lvAdd']],
+      ['rem', 'Eslatmalar', 'Ish boshlanishi va tugashidagi eslatmalar', 'p-settings', ['remList', 'remAdd']],
+      ['grp', 'Guruhlar', 'Buyurtmalar va eslatmalar guruhi', 'p-settings', ['grpBox', 'egBox']],
+      ['cfg', 'Asosiy sozlamalar', 'Radius, kechikish, hisobot vaqti, joylashuv', 'p-settings', ['cfgForm']]]);
+    items = items.filter(function (x) { return !x[4] || x[4].some(function (id) { return $(id); }); });
+    var ms = sec(ADM ? "Hisobot va sozlamalar" : 'Hisobot');
+    items.forEach(function (x) {
+      var row = el('div', 'ord'), h = btn(null, 'srow');
+      h.appendChild(el('span', 'nm', x[1])); var cv = el('span', 'hr'); cv.appendChild(ico('chev', 16)); h.appendChild(cv); h.appendChild(el('span', 'sub', x[2]));
+      h.addEventListener('click', function () { openItem(x); }); row.appendChild(h); ms.appendChild(row);
+    });
+    more.appendChild(ms); main.insertBefore(more, $('p-today'));
+    var back = btn(null, 'backb'); back.appendChild(ico('back', 18)); back.appendChild(document.createTextNode("Ko'proq")); back.hidden = true; back.id = 'moreBack';
+    main.insertBefore(back, $('p-today'));
+    ['lvAdd', 'remAdd'].forEach(function (id) { var e = $(id); if (e) e.dataset.fold = ''; });
+    ['lvAddBtn', 'remAddBtn', 'admMenu', 'admBack'].forEach(function (id) { var e = $(id); if (e) e.dataset.fold = '1'; });
+    var P = ['p-home', 'p-staff', 'p-orders', 'p-today', 'p-more', 'p-report', 'p-settings', 'p-mine', 'p-guide'];
+    var TABS = [['home', 'Bugun', 'home', 'p-home'], ['staff', 'Xodimlar', 'users', 'p-staff'], ['orders', 'Buyurtma', 'box', 'p-orders'], ['tasks', 'Topshiriq', 'check', 'p-today'], ['more', "Ko'proq", 'menu', 'p-more']];
+    var nav = $('tabs'); while (nav.firstChild) nav.removeChild(nav.firstChild);
+    var TB = {};
+    TABS.forEach(function (t) {
+      var b = btn(null); b.setAttribute('role', 'tab'); b.id = 'tab-' + t[0]; b.appendChild(ico(t[2])); b.appendChild(document.createTextNode(t[1]));
+      if (t[0] === 'orders' && nNew) b.appendChild(el('span', 'bdg', String(nNew)));
+      b.addEventListener('click', function () { go(t[0]); }); nav.appendChild(b); TB[t[0]] = b;
+    });
+    nav.hidden = false; document.body.classList.add('has-tabs');
+    function bb(show) { try { if (tg && tg.BackButton && tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) { if (show) tg.BackButton.show(); else tg.BackButton.hide(); } } catch (e) {} }
+    var TITLES = { home: 'Bugun', staff: 'Xodimlar', orders: 'Buyurtmalar', tasks: 'Topshiriqlar', more: "Ko'proq" };
+    function show(panelId, els) {
+      P.forEach(function (id) { var e = $(id); if (e) e.hidden = id !== panelId; });
+      var pn = $(panelId);
+      if (pn && els) Array.prototype.forEach.call(pn.children, function (c) { c.hidden = els.indexOf(c) < 0 || c.dataset.fold === '1'; });
+      else if (pn) Array.prototype.forEach.call(pn.children, function (c) { if (c.dataset.fold === '1') c.hidden = true; });
+      window.scrollTo(0, 0);
+    }
+    function go(k) {
+      var t = TABS.filter(function (x) { return x[0] === k; })[0] || TABS[0];
+      back.hidden = true; bb(false); show(t[3]); CUR_TAB = 'g:' + t[0];
+      Object.keys(TB).forEach(function (q) { TB[q].setAttribute('aria-selected', String(q === t[0])); });
+      $('title').textContent = TITLES[t[0]];
+    }
+    function openItem(x) {
+      var els = x[4] ? x[4].map(function (id) { return $(id); }).filter(Boolean) : null;
+      show(x[3], els); back.hidden = false; bb(true); CUR_TAB = 'i:' + x[0];
+      Object.keys(TB).forEach(function (q) { TB[q].setAttribute('aria-selected', String(q === 'more')); });
+      $('title').textContent = x[1];
+    }
+    function openFold(id) { var b = $(id + 'Btn'), e = $(id); if (b && e && e.hidden) b.click(); if (e) e.scrollIntoView({ block: 'start' }); }
+    back.addEventListener('click', function () { go('more'); });
+    try { if (tg && tg.BackButton && tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) tg.BackButton.onClick(function () { if (!back.hidden) go('more'); }); } catch (e) {}
+    var keep = ss('mc-tab'), y = Number(ss('mc-y')) || 0; ss('mc-tab', null); ss('mc-y', null);
+    if (keep && keep.indexOf('i:') === 0) { var it = items.filter(function (x) { return x[0] === keep.slice(2); })[0]; if (it) openItem(it); else go('home'); }
+    else go(keep && keep.indexOf('g:') === 0 ? keep.slice(2) : 'home');
+    if (y > 0) window.scrollTo(0, y);
+  }
+
+  // --- rebuild 11: hammasi bitta bosh menyuda (egasi va boshqaruvchi) ---
+  // Pastdagi yorliqlar o'rniga bosh menyu: har bir band bosilganda faqat o'sha bo'lim ochiladi, "‹ Menyu" (yoki Telegram'ning
+  // orqaga tugmasi) bilan qaytiladi. Bo'limlar o'z joyida chiziladi (avvalgi funksiyalar o'zgarmagan), menyu faqat ko'rsatadi/yashiradi.
+  var HOME_ITEMS = [];
+  function homeMenu(d, nNew) {
+    var P = ['p-today', 'p-orders', 'p-staff', 'p-report', 'p-settings'];
+    var cnt = function (id) { var e = $(id); var c = e && e.querySelector('h2 .cnt'); return c ? c.textContent : ''; };
+    var it = function (k, icon, title, sub, panel, ids, right) {
+      var els = ids ? ids.map(function (id) { return $(id); }).filter(Boolean) : null;
+      if (ids && !els.length) return;
+      HOME_ITEMS.push({ k: k, icon: icon, title: title, sub: sub, panel: panel, els: els, right: right || '' });
+    };
+    var G = [];
+    var team = staffRows(d), came = team.filter(function (r) { return r[2]; }).length;
+    G.push(['Bugun']);
+    it('today', '📋', 'Bugungi holat', 'Kim keldi, kim ketdi', 'p-today', ['teamBox'], came + '/' + team.length);
+    it('tasks', '📌', 'Ochiq topshiriqlar', 'Bajarilmagan topshiriqlar', 'p-today', ['teamTasksBox'], $('otCnt') ? $('otCnt').textContent : '');
+    it('task', '➕', 'Topshiriq berish', 'Xodimga yangi topshiriq', 'p-today', ['taskForm']);
+    it('orders', '📦', 'Buyurtmalar', 'Saytdan kelgan buyurtmalar va tarixi', 'p-orders', null, nNew ? nNew + ' yangi' : '');
+    G.push(['Xodimlar']);
+    it('staff', '👥', "Xodimlar ro'yxati", "Ish vaqti, dam olish kuni, buyurtma oladimi", 'p-staff', ['staffList'], cnt('staffList'));
+    it('add', '➕', "Xodim qo'shish", 'Telefon raqami yoki Telegram nik bilan', 'p-staff', ['addForm']);
+    it('report', '📊', 'Hisobot va Excel', 'Oy bo\'yicha keldi, kechikdi, kelmadi', 'p-report', null);
+    if (ADM) {
+      G.push(['Admin']);
+      it('acc', '🔐', 'Kirish huquqi', "Kim botdan foydalanadi, lavozimi, to'xtatish", 'p-settings', ['accList', 'nikList', 'joinList'], cnt('accList'));
+      it('lv', '🏷', 'Lavozimlar', 'Har bir lavozim nima qila oladi', 'p-settings', ['lvList', 'lvAddBtn', 'lvAdd'], cnt('lvList'));
+      it('rem', '⏰', 'Eslatmalar', 'Ish boshlanishi va tugashidagi eslatmalar', 'p-settings', ['remList', 'remAddBtn', 'remAdd'], cnt('remList'));
+      it('grp', '💬', 'Guruhlar', 'Buyurtmalar va eslatmalar guruhi', 'p-settings', ['grpBox', 'egBox']);
+      it('cfg', '⚙️', 'Asosiy sozlamalar', 'Radius, kechikish, hisobot vaqti, joylashuv', 'p-settings', ['cfgForm']);
+    }
+    // menyu ko'rinishi: guruh sarlavhalari bilan
+    var home = el('div', 'panel'); home.id = 'p-home';
+    var groupOf = { today: 0, tasks: 0, task: 0, orders: 0, staff: 1, add: 1, report: 1, acc: 2, lv: 2, rem: 2, grp: 2, cfg: 2 };
+    var secs = [];
+    HOME_ITEMS.forEach(function (x) {
+      var gi = groupOf[x.k], sc = secs[gi];
+      if (!sc) { sc = secs[gi] = sec(['Ish', 'Xodimlar va hisobot', 'Admin'][gi]); home.appendChild(sc); }
+      var row = el('div', 'ord'), h = btn(null, 'srow');
+      h.appendChild(el('span', 'nm', x.icon + '  ' + x.title)); h.appendChild(el('span', 'hr', (x.right ? x.right + '  ' : '') + '›')); h.appendChild(el('span', 'sub', x.sub));
+      row.appendChild(h); sc.appendChild(row);
+      h.addEventListener('click', function () { openItem(x.k); });
+    });
+    var back = btn('‹ Menyu', 'wide'); back.id = 'homeBack'; back.hidden = true;
+    var main = $('p-today').parentNode;
+    main.insertBefore(home, $('p-today')); main.insertBefore(back, home);
+    // "qo'shish" formalari alohida band bo'lgani uchun ular doim ochiq ko'rinadi
+    ['lvAdd', 'remAdd'].forEach(function (id) { var e = $(id); if (e) e.dataset.fold = ''; });
+    ['lvAddBtn', 'remAddBtn'].forEach(function (id) { var e = $(id); if (e) e.dataset.fold = '1'; });
+    function bb(show) { try { if (tg && tg.BackButton && tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) { if (show) tg.BackButton.show(); else tg.BackButton.hide(); } } catch (e) {} }
+    function openItem(k) {
+      var x = HOME_ITEMS.filter(function (q) { return q.k === k; })[0]; if (!x) return goHome();
+      home.hidden = true; back.hidden = false;
+      P.forEach(function (id) { var p = $(id); if (p) p.hidden = id !== x.panel; });
+      var p = $(x.panel);
+      if (x.els) Array.prototype.forEach.call(p.children, function (c) { c.hidden = x.els.indexOf(c) < 0 || c.dataset.fold === '1'; });
+      CUR_TAB = 'i:' + k; bb(true); window.scrollTo(0, 0);
+    }
+    function goHome() { home.hidden = false; back.hidden = true; P.forEach(function (id) { var p = $(id); if (p) p.hidden = true; }); CUR_TAB = 'home'; bb(false); window.scrollTo(0, 0); }
+    back.addEventListener('click', goHome);
+    try { if (tg && tg.BackButton && tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) tg.BackButton.onClick(function () { if (!back.hidden) goHome(); }); } catch (e) {}
+    $('tabs').hidden = true; document.body.classList.remove('has-tabs');
+    ['p-mine', 'p-guide'].forEach(function (id) { var e = $(id); if (e) e.hidden = true; }); // xodim bo'limlari egasi menyusida yo'q
+    // o'zi yangilanganda avvalgi band va joy saqlanadi
+    var keep = ss('mc-tab'), y = Number(ss('mc-y')) || 0; ss('mc-tab', null); ss('mc-y', null);
+    if (keep && keep.indexOf('i:') === 0) { openItem(keep.slice(2)); if (y > 0) window.scrollTo(0, y); } else goHome();
+  }
+
   var TAB_ICON = { 'p-mine': '🗓', 'p-today': '📋', 'p-orders': '📦', 'p-staff': '👥', 'p-report': '📊', 'p-settings': '⚙️', 'p-guide': '❔' };
   function setupTabs(tabs) {
     var nav = $('tabs');
     var all = ['p-mine', 'p-today', 'p-orders', 'p-staff', 'p-report', 'p-settings', 'p-guide'];
     function show(id) {
       CUR_TAB = id;
+      if (onTab) try { onTab(id); } catch (e) {}
       all.forEach(function (p) { $(p).hidden = p !== id; });
       Array.prototype.forEach.call(nav.children, function (b) { b.setAttribute('aria-selected', String(b.dataset.p === id)); });
       window.scrollTo(0, 0);
@@ -1222,7 +1538,7 @@
       tabs.forEach(function (t) {
         var b = btn(null); b.dataset.p = t[0]; b.setAttribute('role', 'tab'); b.id = 'tab-' + t[0].slice(2);
         // v17: katta belgi + nom (telefonda bosish oson)
-        b.appendChild(el('span', 'ti', TAB_ICON[t[0]] || '•')); b.appendChild(document.createTextNode(t[1]));
+        b.appendChild(ico({ 'p-mine': 'home', 'p-orders': 'box', 'p-guide': 'info' }[t[0]] || 'menu')); b.appendChild(document.createTextNode(t[1]));
         if (t[2]) b.appendChild(el('span', 'tc new', t[2]));
         b.addEventListener('click', function () { show(t[0]); });
         nav.appendChild(b);
@@ -1245,8 +1561,8 @@
       var nNew = ordersPanel(d, d.o);
       staffPanel(d); reportPanel(d);
       var tabs = [['p-today', 'Bugun'], ['p-orders', 'Buyurtmalar', nNew ? nNew + ' yangi' : ''], ['p-staff', 'Xodimlar'], ['p-report', 'Hisobot']];
-      if (ADM) { settingsPanel(d); tabs.push(['p-settings', 'Admin']); }
-      setupTabs(tabs);
+      if (ADM) { settingsPanel(d); tabs.push(['p-settings', 'Admin']); adminMenu(); }
+      appShell(d, nNew); // rebuild 13: pastki menyu va "Bugun" ekrani
     } else {
       var mine = {}; Object.keys(d).forEach(function (k) { mine[k] = d[k]; });
       delete mine.s; delete mine.ot; delete mine.ol; // xodimda bular jamoa jadvali emas

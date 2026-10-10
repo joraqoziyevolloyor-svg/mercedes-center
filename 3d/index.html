@@ -4461,21 +4461,29 @@ function parse(buf,onLoad,onErr){try{
   /* Decoded bitmaps are closed as soon as the GPU has them: they are a second full copy of every image (23 x 16 MB
      at 2048 px, about 370 MB) that Safari counts against the page and that nothing reads after the upload. Full
      resolution everywhere. Older Safari rejects some decode options, so a plain decode is the fallback. */
-  var bmp={},users={};
+  /* Phones closed the page while the body loaded: all 23 images (2048 px) were decoded at once (about 370 MB) and only
+     then sent to the GPU (about 520 MB more), so for a moment the page held both. Now the images go one at a time:
+     decode one, send it to the GPU, free the decoded copy, then the next. Same pixels on screen, lower peak.
+     "#lite=1" (devices that already lost the page once) draws each image at 1024 px. */
+  var LITE=/[#&]lite=1/.test(location.hash),R=typeof _3!=="undefined"&&_3&&_3.initTexture?_3:null,texCache={},need={};
   function decode(u8,type){var o={imageOrientation:"none",premultiplyAlpha:"none",colorSpaceConversion:"none"};
     return createImageBitmap(new Blob([u8],{type:type}),o).catch(function(){return createImageBitmap(new Blob([u8],{type:type}))})}
-  (G.textures||[]).forEach(function(td){var src=td.extensions&&td.extensions.EXT_texture_webp?td.extensions.EXT_texture_webp.source:td.source;
-    if(bmp[src])return;var img=G.images[src],bv=G.bufferViews[img.bufferView];
-    bmp[src]=decode(new Uint8Array(bin,bv.byteOffset||0,bv.byteLength),img.mimeType)});
-  var srcs=Object.keys(bmp);
-  Promise.all(srcs.map(function(k){return bmp[k]})).then(function(list){srcs.forEach(function(k,j){bmp[k]=list[j]});build()}).catch(function(e){onErr&&onErr(e)});
-  function build(){try{
-  var texCache={};
-  function texture(i,srgb){var key=i+(srgb?"s":"l");if(texCache[key])return texCache[key];var td=G.textures[i],src=td.extensions&&td.extensions.EXT_texture_webp?td.extensions.EXT_texture_webp.source:td.source;
-    var t=new T.CanvasTexture(bmp[src]);t.flipY=!1;if(srgb)t.colorSpace=T.SRGBColorSpace;t.needsUpdate=!0;
-    users[src]=(users[src]||0)+1;t.onUpdate=function(){t.onUpdate=null;if(--users[src]===0&&bmp[src]&&bmp[src].close){var b=bmp[src];setTimeout(function(){b.close()},0)}};
+  function shrink(b){if(!LITE||Math.max(b.width,b.height)<=1024)return b;var s=1024/Math.max(b.width,b.height),c=document.createElement("canvas");
+    c.width=Math.round(b.width*s);c.height=Math.round(b.height*s);c.getContext("2d").drawImage(b,0,0,c.width,c.height);if(b.close)b.close();return c}
+  function srcOf(i){var td=G.textures[i];return td.extensions&&td.extensions.EXT_texture_webp?td.extensions.EXT_texture_webp.source:td.source}
+  function req(t,srgb){if(!t)return;var k=srcOf(t.index),l=need[k]||(need[k]=[]);if(!l.some(function(x){return x[0]===t.index&&x[1]===srgb}))l.push([t.index,srgb])}
+  (G.materials||[]).forEach(function(md){var p=md.pbrMetallicRoughness||{};req(p.baseColorTexture,!0);req(p.metallicRoughnessTexture,!1);req(md.normalTexture,!1)});
+  function make(i,srgb,img){var td=G.textures[i],t=new T.CanvasTexture(img);t.flipY=!1;if(srgb)t.colorSpace=T.SRGBColorSpace;t.needsUpdate=!0;
     var sm=G.samplers&&td.sampler!=null?G.samplers[td.sampler]:{};if(sm.wrapS===10497||sm.wrapS==null)t.wrapS=T.RepeatWrapping;if(sm.wrapT===10497||sm.wrapT==null)t.wrapT=T.RepeatWrapping;
-    texCache[key]=t;return t}
+    texCache[i+(srgb?"s":"l")]=t;return t}
+  var srcs=Object.keys(need);
+  (function next(j){if(j>=srcs.length){build();return}var k=srcs[j],img=G.images[k],bv=G.bufferViews[img.bufferView];
+    decode(new Uint8Array(bin,bv.byteOffset||0,bv.byteLength),img.mimeType).then(function(b){var im=shrink(b),ts=need[k].map(function(x){return make(x[0],x[1],im)});
+      var up=!1;if(R)try{ts.forEach(function(t){R.initTexture(t)});up=!0}catch(e){R=null}
+      if(im.close){if(up)im.close();else{var n=ts.length;ts.forEach(function(t){t.onUpdate=function(){t.onUpdate=null;if(--n===0)setTimeout(function(){im.close()},0)}})}}
+      say("3D kuzov tayyorlanmoqda… "+Math.round((j+1)/srcs.length*100)+"%");setTimeout(function(){next(j+1)},0)}).catch(function(e){onErr&&onErr(e)})})(0);
+  function build(){try{
+  function texture(i,srgb){var t=texCache[i+(srgb?"s":"l")];if(t)return t;throw new Error("texture "+i)}
   var mats=(G.materials||[]).map(function(md){var p=md.pbrMetallicRoughness||{},m=new T.MeshStandardMaterial({name:md.name||""}),f=p.baseColorFactor||[1,1,1,1];
     m.color.setRGB(f[0],f[1],f[2],"srgb-linear");m.opacity=f[3];m.roughness=p.roughnessFactor!=null?p.roughnessFactor:1;m.metalness=p.metallicFactor!=null?p.metallicFactor:1;
     if(p.baseColorTexture)m.map=texture(p.baseColorTexture.index,!0);
@@ -4497,7 +4505,10 @@ function parse(buf,onLoad,onErr){try{
   var sd=G.scenes[G.scene||0],scene=new T.Group();scene.name=sd.name||"";sd.nodes.forEach(function(n){scene.add(node(n))});
   onLoad({scene:scene,scenes:[scene],animations:[]})}catch(e){onErr&&onErr(e)}}
   }catch(e){onErr&&onErr(e)}}
-function Loader(){}Loader.prototype.register=function(){return this};Loader.prototype.parse=function(buf,path,onLoad,onErr){parse(buf,onLoad,onErr)};
+/* the shop page keeps its "this device may crash" mark until the body is really in, not just until the page starts */
+function bodyDone(ok){try{if(parent!==window)parent.postMessage({t:"mc3d",a:"body",ok:!!ok},"*")}catch(e){}}
+function Loader(){}Loader.prototype.register=function(){return this};
+Loader.prototype.parse=function(buf,path,onLoad,onErr){parse(buf,function(g){onLoad(g);bodyDone(1)},function(e){bodyDone(0);onErr&&onErr(e)})};
 var three={Texture:T.CanvasTexture,Group:T.Group,Mesh:T.Mesh,BoxGeometry:T.BoxGeometry,MeshStandardMaterial:T.MeshStandardMaterial};
 /* GLB bytes -> window.__GLBBUF. Single-file build: decode the inline base64. Shop build (window.__GLBURL): fetch the
    binary file, retrying with a growing pause when the connection drops, and show the progress next to the legend. */

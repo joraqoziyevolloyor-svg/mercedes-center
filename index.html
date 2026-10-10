@@ -1546,7 +1546,7 @@ body.m3d-full .m3d .m3d-load{top:45px}
    Tovar sahifasida 3d/map.json bo'yicha "3D'da alohida ko'rish" havolasi chiqadi. */
 (function(){
   /* M3D_V changes with every 3D release, so browsers never pair the new shop page with a cached old 3d/ page */
-  const M3D_V = '20261009k';
+  const M3D_V = '20261010a';
   let PART = '', MAP = null, loadT = 0, job = 0, host = null, base = '', baseLite = false, navN = 0;
   const frame = () => host && host.querySelector('iframe');
   /* One 3D frame for the whole visit. It used to be rebuilt on every return to the 3D page, which reloaded the model
@@ -1587,10 +1587,12 @@ body.m3d-full .m3d .m3d-load{top:45px}
     const d = e.data; if (!d || d.t !== 'mc3d') return;
     if (d.a === 'ready') {
       PART = ''; clearTimeout(loadT); f.parentNode.classList.add('ready');
-      setTimeout(() => LSset('m3d-try', null), 15000);
       const prices = {};
       (Array.isArray(d.ids) ? d.ids : []).slice(0, 3000).forEach(id => { const p = byId[String(id)]; if (p) prices[p.id] = {price: p.price, stock: !!p.stock, title: p.title || ''}; });
       post({a:'init', prices, cart: cartNow()});
+    } else if (d.a === 'body') {
+      /* the body images are on the GPU: the heavy part is over. A crash before this point leaves the mark, so the next start uses #lite=1 */
+      setTimeout(() => LSset('m3d-try', null), 8000);
     } else if (d.a === 'add') {
       const id = String(d.id), n = Math.floor(+d.n) || 0, p = byId[id];
       if (!p || !p.stock || n < 1) return;

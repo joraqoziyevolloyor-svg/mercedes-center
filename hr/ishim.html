@@ -2,7 +2,7 @@
 <html lang="uz">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-eHmPD23zJl/34Lk2SL9Mvlo01qnRC3YQPZuu4MH/1Oo='; style-src 'self' 'sha256-en5OZ5sr4MIcH15FQG2JSW40tyJukHZb+i7T8LUZ37M='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-Ar9jHCBAXH+7J94Wb0J2H21topdSDhA3B9QdZotwJE0='; style-src 'self' 'sha256-augHpNSywAg7lckJHSZkP9jsMDp6xhxM3UjzwBPnrW4='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mening ishim</title>
 <script>window.__mcHash = String(location.hash || '');</script>
@@ -32,7 +32,7 @@
   ol.steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
   .hint.pad { padding: 10px 14px 0; }
 
-  /* rebuild 13: yangi ko'rinish (dizayn "Qayta ishlangan joylashuv"): oq/qora fon, chiziqli bo'limlar, yengil yumaloq tugmalar */
+  /* rebuild 14 (13: yangi ko'rinish, dizayn "Qayta ishlangan joylashuv"): oq/qora fon, chiziqli bo'limlar, yengil yumaloq tugmalar */
   :root{--bg:#ffffff;--surface:#ffffff;--ink:#111316;--muted:#5c6370;--line:#e3e5e8;--line-2:#111316;--accent:#1f5fa8;--accent-ink:#ffffff;--tile:#f6f7f8;--warn:#9a6200;--warn-bar:#c8860a;--ok:#1e7a4f;--off:#c9cdd3;--newbg:#f3f7fc}
   @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1013;--surface:#0e1013;--ink:#e8eaed;--muted:#9aa0a8;--line:#262a30;--line-2:#3a3f47;--accent:#7fb2e5;--accent-ink:#0e1013;--tile:#15181c;--warn:#e0a33a;--warn-bar:#e0a33a;--ok:#3fb37f;--off:#4a4f57;--newbg:#121a23}}
   :root[data-theme="dark"]{--bg:#0e1013;--surface:#0e1013;--ink:#e8eaed;--muted:#9aa0a8;--line:#262a30;--line-2:#3a3f47;--accent:#7fb2e5;--accent-ink:#0e1013;--tile:#15181c;--warn:#e0a33a;--warn-bar:#e0a33a;--ok:#3fb37f;--off:#4a4f57;--newbg:#121a23}
@@ -82,6 +82,24 @@
   th.t{font-weight:500}
   .kpi button,.att,.srow,.orow,.backb{border-radius:0!important;min-height:0}
   .backb{all:unset;cursor:pointer;display:flex;align-items:center;gap:6px;padding:12px 20px;color:var(--accent);font-size:15px;border-bottom:1px solid var(--line)}
+  /* rebuild 14: sozlamalar ro'yxati (nomi … qiymati ›), ko'rinish tanlovi, ochiladigan qatorlarga strelka */
+  .set{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:flex;align-items:center;gap:8px;padding:13px 20px;border-top:1px solid var(--line);-webkit-tap-highlight-color:transparent}
+  .set:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .set .k{flex:1;min-width:0;font-size:15px} .set .k small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+  .set .val{font-size:14px;color:var(--muted);font-family:var(--f-mono);text-align:right;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .set svg{flex:none;color:var(--muted)}
+  .set.open .val{color:var(--accent)}
+  .sed .form{padding:12px 20px 14px} .sed .acts{margin-top:10px}
+  .seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);margin:0 20px 14px;border:1px solid var(--line-2);border-radius:8px;overflow:hidden}
+  .seg button{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;min-height:40px;line-height:40px;font-size:14px;color:var(--muted);border-left:1px solid var(--line-2)}
+  .seg button:first-child{border-left:0}
+  .seg button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+  .srow .hr{display:inline-flex;align-items:center;gap:8px}
+  .srow .hr::after{content:'›';font-family:var(--f-body);font-size:20px;line-height:1;color:var(--muted)}
+  .ord.open>.srow .hr::after{content:'⌄'}
+  #p-settings .sec>.more{border-top:0;padding:4px 20px 10px}
+  button.addbtn{margin:12px 20px;width:calc(100% - 40px)}
+  #p-more .hint.pad,#p-settings .hint.pad{padding:12px 20px 4px}
 </style>
 </head>
 <body>
@@ -148,8 +166,28 @@
   if (tg) {
     try { tg.ready(); tg.expand(); } catch (e) {}
     // Telegram mavzusi (och/qorong'i) va grafit sarlavha rangi
-    try { if (inTg) document.documentElement.setAttribute('data-theme', tg.colorScheme === 'dark' ? 'dark' : 'light'); } catch (e) {}
-    try { if (inTg && tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) { var dk = tg.colorScheme === 'dark'; tg.setHeaderColor(dk ? '#08090b' : '#171a1e'); tg.setBackgroundColor(dk ? '#0d0f11' : '#f2f3f4'); } } catch (e) {}
+  }
+  // rebuild 14: ko'rinish (telefon bo'yicha / oq / qora) — tanlov telefonda saqlanadi
+  function themePref() { try { var v = localStorage.getItem('mc-theme'); return v === 'light' || v === 'dark' ? v : 'auto'; } catch (e) { return 'auto'; } }
+  function applyTheme(p) {
+    var dk;
+    if (p === 'dark' || p === 'light') dk = p === 'dark';
+    else { try { dk = inTg ? tg.colorScheme === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches); } catch (e) { dk = false; } }
+    document.documentElement.setAttribute('data-theme', dk ? 'dark' : 'light');
+    try { if (inTg && tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) { tg.setHeaderColor(dk ? '#0e1013' : '#ffffff'); tg.setBackgroundColor(dk ? '#0e1013' : '#ffffff'); } } catch (e) {}
+  }
+  function setTheme(p) { try { if (p === 'auto') localStorage.removeItem('mc-theme'); else localStorage.setItem('mc-theme', p); } catch (e) {} applyTheme(p); }
+  applyTheme(themePref());
+  try { if (inTg) tg.onEvent('themeChanged', function () { if (themePref() === 'auto') applyTheme('auto'); }); } catch (e) {}
+  function themeSeg() {
+    var seg = el('div', 'seg'), SB = {};
+    [['auto', 'Telefon bo\'yicha'], ['light', 'Oq'], ['dark', 'Qora']].forEach(function (x) {
+      var b = el('button', null, x[1]); b.type = 'button'; SB[x[0]] = b;
+      b.addEventListener('click', function () { setTheme(x[0]); Object.keys(SB).forEach(function (q) { SB[q].setAttribute('aria-selected', String(q === x[0])); }); });
+      seg.appendChild(b);
+    });
+    Object.keys(SB).forEach(function (q) { SB[q].setAttribute('aria-selected', String(q === themePref())); });
+    return seg;
   }
 
   function fail(msg) { $('error').textContent = msg; $('error').hidden = false; }
@@ -1013,7 +1051,7 @@
   function lavozimPanel(d, p) {
     var list = lvList(d), team = staffRows(d);
     var s = sec('Lavozimlar', String(list.length));
-    s.appendChild(el('p', 'more', "Har bir lavozimda nima qilish mumkinligini belgilang. Odamga lavozim berish: Admin → \"Kirish huquqi\"."));
+    s.appendChild(el('p', 'more', "Har bir lavozimda nima qilish mumkinligini belgilang. Odamga lavozim berish: Ko'proq → \"Kirish huquqi\"."));
     list.forEach(function (l) {
       var wrap = el('div', 'ord'), head = btn(null, 'srow'); head.setAttribute('aria-expanded', 'false');
       var nm = el('span', 'nm', str(l[1])), hr = el('span', 'hr'), sub = el('span', 'sub');
@@ -1166,8 +1204,8 @@
   function accessPanel(d, p) {
     var team = staffRows(d).filter(function (r) { return !r[17]; }), LV = lvList(d).filter(function (l) { return num(l[3]) !== 1; });
     var s = sec('Kirish huquqi', String(team.length));
-    s.appendChild(el('p', 'more', LV.length ? "Botga faqat ro'yxatdagi raqamlar kira oladi. To'xtatilgan odamga bot javob bermaydi, tarixi saqlanadi. Har kimning nima qila olishi lavozimiga bog'liq; Admin bo'limi faqat sizda."
-      : "Botga faqat ro'yxatdagi raqamlar kira oladi. To'xtatilgan odamga bot javob bermaydi, tarixi saqlanadi. Boshqaruvchi mini ilovada Bugun, Buyurtmalar, Xodimlar va Hisobotni ko'radi; Admin bo'limi faqat sizda."));
+    s.appendChild(el('p', 'more', LV.length ? "Botga faqat ro'yxatdagi raqamlar kira oladi. To'xtatilgan odamga bot javob bermaydi, tarixi saqlanadi. Har kimning nima qila olishi lavozimiga bog'liq; sozlamalar faqat sizda."
+      : "Botga faqat ro'yxatdagi raqamlar kira oladi. To'xtatilgan odamga bot javob bermaydi, tarixi saqlanadi. Boshqaruvchi mini ilovada Bugun, Buyurtmalar, Xodimlar va Hisobotni ko'radi; sozlamalar faqat sizda."));
     team.forEach(function (r) {
       var id = sid(r[0]), cur = { b: r[14] ? 1 : 0, p: r[15] ? 1 : 0, lv: sid(r[16]) };
       var wrap = el('div', 'ord'), head = btn(null, 'srow'); head.setAttribute('aria-expanded', 'false');
@@ -1192,7 +1230,7 @@
       }
       var acts = el('div', 'acts'), save = btn('Saqlash'), del = btn("Ro'yxatdan o'chirish", 'danger'), msg = el('p', 'amsg');
       acts.appendChild(save); acts.appendChild(del);
-      f.appendChild(c1); f.appendChild(LV.length ? field('Lavozim', lsel, "Lavozim huquqlari: Admin → Sozlamalar → Lavozimlar") : c2); f.appendChild(acts); f.appendChild(msg);
+      f.appendChild(c1); f.appendChild(LV.length ? field('Lavozim', lsel, "Lavozim huquqlari: Ko'proq → Lavozimlar") : c2); f.appendChild(acts); f.appendChild(msg);
       ed.appendChild(f);
       head.addEventListener('click', function () { ed.hidden = !ed.hidden; head.setAttribute('aria-expanded', String(!ed.hidden)); wrap.classList.toggle('open', !ed.hidden); });
       save.addEventListener('click', function () {
@@ -1266,6 +1304,8 @@
     s.appendChild(ol);
     s.appendChild(el('p', 'more', 'Bot har bir qadamdan keyin chatda javob beradi. Javob kelmasa, botga /start yozing.'));
     s.id = 'guide'; $('p-guide').appendChild(s);
+    // rebuild 14: xodimda ham ko'rinish tanlovi (Yo'riqnoma pastida)
+    var th = sec("Ko'rinish"); th.appendChild(themeSeg()); th.querySelector('.seg').style.marginTop = '12px'; th.id = 'themeBox'; $('p-guide').appendChild(th);
   }
 
   // --- rebuild 10: ixcham joylashuv (pastga cho'zilib ketmasin) ---
@@ -1350,12 +1390,13 @@
   function hmMin(x) { var m = /^(\d\d):(\d\d)$/.exec(str(x)); return m ? Number(m[1]) * 60 + Number(m[2]) : -1; }
   function appShell(d, nNew) {
     var main = $('p-today').parentNode, team = staffRows(d), now = hmMin(d.u);
-    var cameN = 0, lateN = 0, missN = 0, att = [];
+    var cameN = 0, lateN = 0, missN = 0, att = [], late = {};
+    // rebuild 14: "e'tibor bering" faqat chora kutayotgan narsalar (olinmagan buyurtma); kechikkan/kelmaganlar jadvalning o'zida, takror yo'q
     if (nNew) att.push({ c: 'var(--accent)', t1: nNew + " ta buyurtmani hech kim olmagan", t2: 'Buyurtmalar bo\'limida', go: 'orders' });
     team.forEach(function (r) {
       if (r[14] || r[7]) return;
-      if (r[2]) { cameN++; if (num(r[4]) > 0) { lateN++; att.push({ c: 'var(--warn-bar)', t1: str(r[1]) + ' ' + num(r[4]) + ' daqiqa kechikdi', t2: 'Keldi ' + str(r[2]) + ' · ish ' + str(r[8]) + ' da', go: 'staff' }); } }
-      else if (hmMin(r[8]) >= 0 && now >= hmMin(r[8])) { missN++; att.push({ c: 'var(--off)', t1: str(r[1]) + ' hali kelmadi', t2: 'Ish ' + str(r[8]) + ' da boshlangan', go: 'staff' }); }
+      if (r[2]) { cameN++; if (num(r[4]) > 0) { lateN++; late[sid(r[0])] = num(r[4]); } }
+      else if (hmMin(r[8]) >= 0 && now >= hmMin(r[8])) { missN++; late[sid(r[0])] = -1; }
     });
     // Bugun ekrani
     var home = el('div', 'panel'); home.id = 'p-home';
@@ -1365,7 +1406,7 @@
       b.addEventListener('click', function () { go('staff'); }); kpi.appendChild(b);
     });
     home.appendChild(kpi);
-    home.appendChild(el('div', 'lbl2', att.length ? "Hozir e'tibor bering" : 'Hammasi joyida'));
+    if (att.length) home.appendChild(el('div', 'lbl2', "Hozir e'tibor bering"));
     att.slice(0, 6).forEach(function (a) {
       var r = btn(null, 'att'), b4 = el('div', 'bar4'); b4.style.background = a.c;
       var g = el('div', 'gr'); g.appendChild(el('div', 't1', a.t1)); g.appendChild(el('div', 't2', a.t2));
@@ -1378,7 +1419,8 @@
       var row = el('div', 'trow'), n = el('div', 'n'), dt = el('div', 'dot');
       dt.style.background = r[14] ? 'var(--off)' : r[2] ? (num(r[4]) > 0 ? 'var(--warn-bar)' : 'var(--ok)') : (r[7] ? 'transparent' : 'var(--off)');
       if (r[7] && !r[2]) dt.style.border = '1px solid var(--off)';
-      n.appendChild(dt); n.appendChild(el('span', null, str(r[1]) + (r[7] && !r[2] ? ' · dam' : ''))); row.appendChild(n);
+      var lt = late[sid(r[0])], note = r[7] && !r[2] ? ' · dam' : lt > 0 ? ' · +' + lt + ' daq' : '';
+      n.appendChild(dt); n.appendChild(el('span', null, str(r[1]) + note)); row.appendChild(n);
       var a1 = el('div', 'tm2', str(r[2]) || '—'); a1.style.color = r[2] ? (num(r[4]) > 0 ? 'var(--warn)' : 'var(--ink)') : 'var(--muted)';
       var a2 = el('div', 'tm2', str(r[3]) || '—'); a2.style.color = 'var(--muted)';
       row.appendChild(a1); row.appendChild(a2); home.appendChild(row);
@@ -1394,27 +1436,81 @@
     if ($('teamBox')) $('teamBox').remove();
     foldBehind('p-today', 'taskForm', '+ Topshiriq berish');
     foldBehind('p-staff', 'addForm', "+ Xodim qo'shish");
-    // Ko'proq: hisobot va Admin bandlari
+    // Ko'proq (rebuild 14): ilova sozlamalari kabi — guruhlangan qatorlar, o'ngda hozirgi qiymat, bir bosishda o'zgaradi
     var more = el('div', 'panel'); more.id = 'p-more';
+    function setRow(title, sub, value, onClick) {
+      var b = btn(null, 'set'), k = el('span', 'k', title); if (sub) k.appendChild(el('small', null, sub)); b.appendChild(k);
+      var v = el('span', 'val', value || ''); b.appendChild(v); b.appendChild(ico('chev', 16));
+      if (onClick) b.addEventListener('click', onClick);
+      b.val = v; return b;
+    }
+    function lbl(text) { var h = el('div', 'lbl2'); h.appendChild(el('span', 'grow', text)); return h; }
+    // Ko'rinish
+    more.appendChild(lbl("Ko'rinish")); more.appendChild(themeSeg());
+    // Bo'limlar
     var items = [['report', 'Hisobot va Excel', "Oy bo'yicha keldi, kechikdi, kelmadi", 'p-report', null]];
     if (ADM) items = items.concat([
       ['acc', 'Kirish huquqi', "Kim botdan foydalanadi, lavozimi", 'p-settings', ['accList', 'nikList', 'joinList']],
-      ['lv', 'Lavozimlar', 'Har bir lavozim nima qila oladi', 'p-settings', ['lvList', 'lvAdd']],
-      ['rem', 'Eslatmalar', 'Ish boshlanishi va tugashidagi eslatmalar', 'p-settings', ['remList', 'remAdd']],
-      ['grp', 'Guruhlar', 'Buyurtmalar va eslatmalar guruhi', 'p-settings', ['grpBox', 'egBox']],
-      ['cfg', 'Asosiy sozlamalar', 'Radius, kechikish, hisobot vaqti, joylashuv', 'p-settings', ['cfgForm']]]);
+      ['lv', 'Lavozimlar', 'Har bir lavozim nima qila oladi', 'p-settings', ['lvAddBtn', 'lvAdd', 'lvList']],
+      ['rem', 'Eslatmalar', 'Ish boshlanishi va tugashidagi eslatmalar', 'p-settings', ['remAddBtn', 'remAdd', 'remList']],
+      ['grp', 'Guruhlar', 'Buyurtmalar va eslatmalar guruhi', 'p-settings', ['grpBox', 'egBox']]]);
     items = items.filter(function (x) { return !x[4] || x[4].some(function (id) { return $(id); }); });
-    var ms = sec(ADM ? "Hisobot va sozlamalar" : 'Hisobot');
-    items.forEach(function (x) {
-      var row = el('div', 'ord'), h = btn(null, 'srow');
-      h.appendChild(el('span', 'nm', x[1])); var cv = el('span', 'hr'); cv.appendChild(ico('chev', 16)); h.appendChild(cv); h.appendChild(el('span', 'sub', x[2]));
-      h.addEventListener('click', function () { openItem(x); }); row.appendChild(h); ms.appendChild(row);
+    var cnt = function (id) { var e = $(id), c = e && e.querySelector('h2 .cnt'); return c ? c.textContent : ''; };
+    var remOn = (arr(d.rm) || []).filter(function (r) { return Array.isArray(r) && r[3]; }).length;
+    var VAL = { acc: cnt('accList') ? cnt('accList') + ' kishi' : '', lv: cnt('lvList'), rem: $('remList') ? remOn + ' yoqilgan' : '',
+      grp: (function () { var all = [d.gr, d.eg].filter(function (x) { return x != null; }), on = all.filter(function (x) { return str(x); }).length;
+        return !all.length ? '' : on === all.length ? 'Ulangan' : !on ? 'Ulanmagan' : on + ' / ' + all.length + ' ulangan'; })() };
+    var GRP = [['Hisobot', ['report']], ['Odamlar', ['acc', 'lv']], ['Bot', ['rem', 'grp']]];
+    GRP.forEach(function (g) {
+      var its = items.filter(function (x) { return g[1].indexOf(x[0]) >= 0; }); if (!its.length) return;
+      more.appendChild(lbl(g[0]));
+      its.forEach(function (x) { more.appendChild(setRow(x[1], x[2], VAL[x[0]], function () { openItem(x); })); });
     });
-    more.appendChild(ms); main.insertBefore(more, $('p-today'));
+    // Ish tartibi: har bir qiymat alohida qator, bosilsa shu yerning o'zida o'zgartiriladi
+    if (ADM && d.cfg && typeof d.cfg === 'object') {
+      var c = d.cfg, cur = { g: num(c.g), r: num(c.r), am: hm(c.am), pm: hm(c.pm), lm: c.lm === 'button' ? 'button' : 'live' };
+      more.appendChild(lbl('Ish tartibi'));
+      var CF = [
+        ['g', 'Kechikish chegarasi', 'Shuncha daqiqagacha kechikish hisoblanmaydi', function () { return cur.g + ' daq'; }, function () { return input('number', String(cur.g), { min: '0', max: '60', step: '1', inputmode: 'numeric' }); }, '0–60 daqiqa',
+          function (v, x) { x.g = Number(v); if (v === '' || !Number.isInteger(x.g) || x.g < 0 || x.g > 60) return "Kechikish chegarasi 0–60 daqiqa bo'lsin."; }],
+        ['r', 'Radius', "Do'kondan shuncha metr ichida \"Keldim\" qabul qilinadi", function () { return cur.r + ' m'; }, function () { return input('number', String(cur.r), { min: '50', max: '1000', step: '10', inputmode: 'numeric' }); }, '50–1000 metr',
+          function (v, x) { x.r = Number(v); if (v === '' || !Number.isInteger(x.r) || x.r < 50 || x.r > 1000) return "Radius 50–1000 metr bo'lsin."; }],
+        ['am', 'Ertalabki hisobot', 'Sizga kim kelgani haqida xabar', function () { return cur.am || '—'; }, function () { return timeInput(cur.am); }, '06:00–12:00',
+          function (v, x) { x.am = v; if (!HM.test(v) || v < '06:00' || v > '12:00') return "Ertalabki hisobot 06:00–12:00 oralig'ida bo'lsin."; }],
+        ['pm', 'Kechki hisobot', 'Kun yakuni haqida xabar', function () { return cur.pm || '—'; }, function () { return timeInput(cur.pm); }, '15:00–23:30',
+          function (v, x) { x.pm = v; if (!HM.test(v) || v < '15:00' || v > '23:30') return "Kechki hisobot 15:00–23:30 oralig'ida bo'lsin."; }]];
+      if (BOT17) CF.push(['lm', 'Keldi-ketdi joylashuvi', 'Xodim joyini qanday tasdiqlaydi', function () { return cur.lm === 'button' ? 'Bir tugma' : 'Faqat jonli'; },
+        function () { var s = el('select'); [['button', 'Bir tugma (standart)'], ['live', 'Faqat jonli joylashuv']].forEach(function (o) { var p = el('option', null, o[1]); p.value = o[0]; s.appendChild(p); }); s.value = cur.lm; return s; },
+        "Bir tugma: telefonning hozirgi joyi bir bosishda; shubhali bo'lsa sizga ⚠️ bilan aytiladi. Faqat jonli: qattiqroq, xodim har safar 📎 orqali jonli joylashuv ulashadi.",
+        function (v, x) { x.lm = v === 'button' ? 'button' : 'live'; }]);
+      CF.forEach(function (f) {
+        var row = setRow(f[1], f[2], f[3]()), ed = el('div', 'sed'); ed.hidden = true; var inp = null;
+        row.addEventListener('click', function () {
+          if (ed.hidden) { while (ed.firstChild) ed.removeChild(ed.firstChild); var fm = el('div', 'form'); inp = f[4](); fm.appendChild(field(f[1], inp, f[5]));
+            var acts = el('div', 'acts'), sv = btn('Saqlash'), cn = btn('Bekor', 'ghost'), msg = el('p', 'amsg'); acts.appendChild(sv); acts.appendChild(cn); fm.appendChild(acts); fm.appendChild(msg); ed.appendChild(fm);
+            cn.addEventListener('click', function () { ed.hidden = true; row.classList.remove('open'); });
+            sv.addEventListener('click', function () {
+              var x = { t: 'cfg', g: cur.g, r: cur.r, am: cur.am, pm: cur.pm }; if (BOT17) x.lm = cur.lm;
+              var err = f[6](inp.value, x); if (err) return say(msg, err, true);
+              act(x, sv, msg, function () { cur = { g: x.g, r: x.r, am: x.am, pm: x.pm, lm: x.lm || cur.lm }; row.val.textContent = f[3](); sv.disabled = false; ed.hidden = true; row.classList.remove('open'); });
+            });
+            ed.hidden = false; row.classList.add('open'); try { inp.focus(); } catch (e) {} }
+          else { ed.hidden = true; row.classList.remove('open'); }
+        });
+        more.appendChild(row); more.appendChild(ed);
+      });
+      more.appendChild(el('p', 'hint pad', "Do'kon har kuni ishlaydi. Dam olish kuni har bir xodimga alohida: Xodimlar bo'limida."));
+    }
+    main.insertBefore(more, $('p-today'));
     var back = btn(null, 'backb'); back.appendChild(ico('back', 18)); back.appendChild(document.createTextNode("Ko'proq")); back.hidden = true; back.id = 'moreBack';
     main.insertBefore(back, $('p-today'));
-    ['lvAdd', 'remAdd'].forEach(function (id) { var e = $(id); if (e) e.dataset.fold = ''; });
-    ['lvAddBtn', 'remAddBtn', 'admMenu', 'admBack'].forEach(function (id) { var e = $(id); if (e) e.dataset.fold = '1'; });
+    // Lavozim/eslatma qo'shish formasi tugma orqasida, tugma ro'yxat tepasida; uzun izohlar ro'yxat pastida
+    [['lvAddBtn', 'lvAdd', 'lvList'], ['remAddBtn', 'remAdd', 'remList']].forEach(function (k) {
+      var b = $(k[0]), f = $(k[1]), l = $(k[2]); if (!b || !f || !l) return;
+      b.className = 'addbtn wide ghost'; b.textContent = b.textContent.replace('➕', '+'); l.parentNode.insertBefore(b, l); l.parentNode.insertBefore(f, l);
+    });
+    ['accList', 'lvList', 'remList'].forEach(function (id) { var s = $(id), m = s && s.querySelector(':scope > .more'); if (m) { m.className = 'hint pad'; s.appendChild(m); } });
+    ['admMenu', 'admBack'].forEach(function (id) { var e = $(id); if (e) e.dataset.fold = '1'; });
     var P = ['p-home', 'p-staff', 'p-orders', 'p-today', 'p-more', 'p-report', 'p-settings', 'p-mine', 'p-guide'];
     var TABS = [['home', 'Bugun', 'home', 'p-home'], ['staff', 'Xodimlar', 'users', 'p-staff'], ['orders', 'Buyurtma', 'box', 'p-orders'], ['tasks', 'Topshiriq', 'check', 'p-today'], ['more', "Ko'proq", 'menu', 'p-more']];
     var nav = $('tabs'); while (nav.firstChild) nav.removeChild(nav.firstChild);

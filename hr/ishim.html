@@ -2,7 +2,7 @@
 <html lang="uz">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-IgnGP4SsT619rNgguur6q973d3p+ZqmtsB4JGYvqzLo='; style-src 'self' 'sha256-t7VCfPHRaZOVuZQv2KSUlS9d545CaD0yVnRNK1tTwqY='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-R5WLVrHxaecJ+iYfm8tReq1KWbKIer9UYocWJNVjd8M='; style-src 'self' 'sha256-2Vpp2+XAe0g2cNCRVwk5ssjEOVxNem1AwumInVezKeI='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mening ishim</title>
 <script>window.__mcHash = String(location.hash || '');</script>
@@ -152,6 +152,19 @@
   .trow.sy{grid-template-columns:minmax(0,1fr) 92px 44px 48px;align-items:start} .trow.sy .tm2{font-size:13px} .trow.sy .n{align-items:flex-start} .trow.sy .dot{margin-top:6px}
   .trow .nmx{min-width:0} .trow .nmx span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .trow .nmx small{display:block;font-size:12px;color:var(--muted);white-space:normal}
   #p-sys>.empty .sysst{padding:0 0 10px;border:0}
+  .sheet{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}
+  .sheethd{display:flex;align-items:center;border-bottom:1px solid var(--line-2);min-height:52px} .sheethd .backb{border-bottom:0;padding-right:8px} .sheethd .grow{flex:1;min-width:0;font-weight:600;font-size:16px;padding-right:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sheetbd{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+  body.sheet-on{overflow:hidden}
+  body.has-tabs #foot{display:none}
+  body:not(.v-sys) #p-sys{display:none!important}
+  /* bitta ekranga sig'ishi uchun ixchamroq o'lchamlar */
+  .bar{padding:14px 20px 10px} .kpi button{padding:12px 0 10px 20px} .kpi b{font-size:30px} .mine2 .kpi .kc{padding:12px 0 10px 20px}
+  .lbl2{padding:12px 20px 6px} .att{padding:9px 20px} .att .bar4{height:30px} .abar{padding:8px 16px} .abar button{min-height:44px}
+  .set{padding:11px 20px} .set .k small{margin-top:1px} .trow{padding:9px 20px}
+  #p-today>.addbtn,#p-today>button.wide{margin-top:10px}
+  button.morebtn{all:unset;box-sizing:border-box;cursor:pointer;display:block;width:100%;padding:11px 20px;font-size:14px;color:var(--accent);border-top:1px solid var(--line);min-height:44px}
+  button.morebtn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .remday{padding:10px 20px 2px;font-size:12px;font-weight:600;color:var(--muted)}
   .pltoday .task.fromother{background:var(--newbg)}
   .pltoday{border-bottom:1px solid var(--line)}
@@ -273,7 +286,7 @@
   function td(cls, text) { return el('td', cls, text); }
   function tag(cls, text) { return el('span', 'tag' + (cls ? ' ' + cls : ''), text); }
   function cell(cls, node) { var c = el('td', cls); c.appendChild(node); return c; }
-  function hideAll() { ['worker', 'tasksBox', 'monthBox', 'teamBox', 'teamTasksBox'].forEach(function (k) { $(k).hidden = true; }); }
+  function hideAll() { ['worker', 'tasksBox', 'monthBox', 'teamBox', 'teamTasksBox'].forEach(function (k) { var e = $(k); if (e) e.hidden = true; }); } // rebuild 18: teamBox olib tashlangan bo'lishi mumkin — xato xabari baribir ko'rinsin
   function b64bytes(s) {
     var b = s.replace(/-/g, '+').replace(/_/g, '/');
     while (b.length % 4) b += '=';
@@ -1484,14 +1497,17 @@
     });
     home.appendChild(kpi);
     if (att.length) home.appendChild(el('div', 'lbl2', "Hozir e'tibor bering"));
-    att.slice(0, 6).forEach(function (a) {
+    var attRows = [];
+    att.slice(0, 12).forEach(function (a) {
       var r = btn(null, 'att'), b4 = el('div', 'bar4'); b4.style.background = a.c;
       var g = el('div', 'gr'); g.appendChild(el('div', 't1', a.t1)); g.appendChild(el('div', 't2', a.t2));
       r.appendChild(b4); r.appendChild(g); var cv = ico('chev', 16); cv.style.color = 'var(--muted)'; r.appendChild(cv);
-      r.addEventListener('click', function () { go(a.go); }); home.appendChild(r);
+      r.addEventListener('click', function () { go(a.go); }); attRows.push(r);
     });
-    var lh = el('div', 'lbl2'); lh.style.borderTop = '1px solid var(--line)'; lh.appendChild(el('span', 'grow', 'Xodimlar bugun')); home.appendChild(lh);
-    var hh = el('div', 'trow h'); hh.appendChild(el('div', null, 'Ism')); var k1 = el('div', 'tm2', 'Keldi'), k2 = el('div', 'tm2', 'Ketdi'); k1.style.font = 'inherit'; k2.style.font = 'inherit'; hh.appendChild(k1); hh.appendChild(k2); home.appendChild(hh);
+    foldNodes(home, attRows, 1, 'ogohlantirish');
+    var tbl = el('div'); tbl.hidden = true;
+    var hh = el('div', 'trow h'); hh.appendChild(el('div', null, 'Ism')); var k1 = el('div', 'tm2', 'Keldi'), k2 = el('div', 'tm2', 'Ketdi'); k1.style.font = 'inherit'; k2.style.font = 'inherit'; hh.appendChild(k1); hh.appendChild(k2); tbl.appendChild(hh);
+    var teamRows = [];
     team.forEach(function (r) {
       var row = el('div', 'trow'), n = el('div', 'n'), dt = el('div', 'dot');
       dt.style.background = r[14] ? 'var(--off)' : r[2] ? (num(r[4]) > 0 ? 'var(--warn-bar)' : 'var(--ok)') : (r[7] ? 'transparent' : 'var(--off)');
@@ -1500,9 +1516,12 @@
       n.appendChild(dt); n.appendChild(el('span', null, str(r[1]) + note)); row.appendChild(n);
       var a1 = el('div', 'tm2', str(r[2]) || '—'); a1.style.color = r[2] ? (num(r[4]) > 0 ? 'var(--warn)' : 'var(--ink)') : 'var(--muted)';
       var a2 = el('div', 'tm2', str(r[3]) || '—'); a2.style.color = 'var(--muted)';
-      row.appendChild(a1); row.appendChild(a2); home.appendChild(row);
+      row.appendChild(a1); row.appendChild(a2); teamRows.push(row);
     });
-    if (!team.length) home.appendChild(el('p', 'empty', "Xodim yo'q."));
+    teamRows.forEach(function (r) { tbl.appendChild(r); });
+    if (!team.length) tbl.appendChild(el('p', 'empty', "Xodim yo'q."));
+    tbl.__home = home; home.appendChild(tbl);
+    home.appendChild(drillRow('Xodimlar bugun', cameN + ' keldi' + (lateN ? ' · ' + lateN + ' kechikdi' : '') + (missN ? ' · ' + missN + ' kelmagan' : '') + ' · jami ' + team.length, 'var(--ok)', function () { openSheet('Xodimlar bugun', tbl); }));
     var abar = el('div', 'abar'), hasTask = !!$('taskForm'), hasAdd = !!$('addForm');
     if (hasTask) { var b1 = btn('Topshiriq berish'); b1.addEventListener('click', function () { go('tasks'); openFold('taskForm'); }); abar.appendChild(b1); }
     if (hasAdd) { var b2 = btn("Xodim qo'shish", 'ghost'); b2.addEventListener('click', function () { go('staff'); openFold('addForm'); }); abar.appendChild(b2); }
@@ -1513,7 +1532,7 @@
     if ($('teamBox')) $('teamBox').remove();
     foldBehind('p-today', 'taskForm', '+ Topshiriq berish');
     // Rejalar: Topshiriq bo'limining boshida (egasi ham, rahbar ham xodim sifatida reja qo'yadi)
-    if (d.pl) { try { var pcO = planCal(d), pT = $('p-today'), ph = el('div', 'lbl2'); ph.appendChild(el('span', 'grow', 'Rejalar')); pT.insertBefore(pcO.el, pT.firstChild); pT.insertBefore(ph, pcO.el); pcO.el.hidden = false; var hm = $('p-home'), kp = hm && hm.querySelector('.kpi'); if (kp) hm.insertBefore(pcO.todayEl, kp.nextSibling); } catch (e) { /* rejasiz qoladi */ } }
+    if (d.pl) { try { var pcO = planCal(d), pT = $('p-today'); pcO.el.__home = pT; pT.insertBefore(pcO.el, pT.firstChild); pcO.el.hidden = true; pT.insertBefore(drillRow('Rejalar kalendari', "Oy bo'yicha rejalar, reja qo'shish", 'var(--accent)', function () { openSheet('Rejalar', pcO.el); }), pcO.el); var homeP = $('p-home'), kp = homeP && homeP.querySelector('.kpi'); if (kp) homeP.insertBefore(pcO.todayEl, kp.nextSibling); } catch (e) { /* rejasiz qoladi */ } }
     foldBehind('p-staff', 'addForm', "+ Xodim qo'shish");
     // Ko'proq (rebuild 14): ilova sozlamalari kabi — guruhlangan qatorlar, o'ngda hozirgi qiymat, bir bosishda o'zgaradi
     var more = el('div', 'panel'); more.id = 'p-more';
@@ -1547,7 +1566,7 @@
     // Ish tartibi: har bir qiymat alohida qator, bosilsa shu yerning o'zida o'zgartiriladi
     if (ADM && d.cfg && typeof d.cfg === 'object') {
       var c = d.cfg, cur = { g: num(c.g), r: num(c.r), am: hm(c.am), pm: hm(c.pm), lm: c.lm === 'button' ? 'button' : 'live' };
-      more.appendChild(lbl('Ish tartibi'));
+      var itBox = el('div'); itBox.hidden = true; itBox.__home = more;
       var CF = [
         ['g', 'Kechikish chegarasi', 'Shuncha daqiqagacha kechikish hisoblanmaydi', function () { return cur.g + ' daq'; }, function () { return input('number', String(cur.g), { min: '0', max: '60', step: '1', inputmode: 'numeric' }); }, '0–60 daqiqa',
           function (v, x) { x.g = Number(v); if (v === '' || !Number.isInteger(x.g) || x.g < 0 || x.g > 60) return "Kechikish chegarasi 0–60 daqiqa bo'lsin."; }],
@@ -1575,9 +1594,11 @@
             ed.hidden = false; row.classList.add('open'); try { inp.focus(); } catch (e) {} }
           else { ed.hidden = true; row.classList.remove('open'); }
         });
-        more.appendChild(row); more.appendChild(ed);
+        itBox.appendChild(row); itBox.appendChild(ed);
       });
-      more.appendChild(el('p', 'hint pad', "Do'kon har kuni ishlaydi. Dam olish kuni har bir xodimga alohida: Xodimlar bo'limida."));
+      itBox.appendChild(el('p', 'hint pad', "Do'kon har kuni ishlaydi. Dam olish kuni har bir xodimga alohida: Xodimlar bo'limida."));
+      more.appendChild(lbl('Ish tartibi')); more.appendChild(itBox);
+      more.appendChild(setRow('Ish tartibi', 'Kechikish, radius, hisobot vaqtlari, joylashuv', cur.g + ' daq · ' + cur.r + ' m', function () { openSheet('Ish tartibi', itBox); }));
     }
     main.insertBefore(more, $('p-today'));
     var back = btn(null, 'backb'); back.appendChild(ico('back', 18)); back.appendChild(document.createTextNode("Ko'proq")); back.hidden = true; back.id = 'moreBack';
@@ -1726,6 +1747,41 @@
   }
 
 
+  // --- rebuild 18: uzun ro'yxatlar yig'iladi: dastlabki qatorlar ko'rinadi, qolgani "Yana N ta" ichida (o'sha joyda ochiladi) ---
+  // Ekran bitta sahifaga sig'adi: ko'proq ma'lumot ekran ustida ochiladigan oynada ("‹ Orqaga" bilan yopiladi)
+  var SHEET = null;
+  function closeSheet() {
+    if (!SHEET) return;
+    var n = SHEET.node; if (n.__home) { n.hidden = true; n.__home.appendChild(n); } else if (n.parentNode) n.parentNode.removeChild(n);
+    SHEET.el.remove(); SHEET = null; document.body.classList.remove('sheet-on');
+  }
+  function openSheet(title, node) {
+    closeSheet();
+    var sh = el('div', 'sheet'), hd = el('div', 'sheethd'), bk = btn(null, 'backb'), body = el('div', 'sheetbd');
+    bk.appendChild(ico('back', 18)); bk.appendChild(document.createTextNode('Orqaga')); bk.addEventListener('click', closeSheet);
+    hd.appendChild(bk); hd.appendChild(el('span', 'grow', title)); sh.appendChild(hd);
+    node.hidden = false; body.appendChild(node); sh.appendChild(body);
+    document.body.appendChild(sh); document.body.classList.add('sheet-on'); SHEET = { el: sh, node: node };
+  }
+  function drillRow(t1, t2, color, onClick) {
+    var r = btn(null, 'att'), b4 = el('div', 'bar4'); b4.style.background = color || 'var(--line)';
+    var g = el('div', 'gr'); g.appendChild(el('div', 't1', t1)); if (t2) g.appendChild(el('div', 't2', t2));
+    r.appendChild(b4); r.appendChild(g); var cv = ico('chev', 16); cv.style.color = 'var(--muted)'; r.appendChild(cv);
+    r.addEventListener('click', onClick); return r;
+  }
+  function foldBox(parent, rest, n, what) {
+    if (!n) return;
+    rest.hidden = true; rest.__home = parent; parent.appendChild(rest);
+    var b = btn('Yana ' + n + ' ta ' + what + ' ›', 'morebtn');
+    b.addEventListener('click', function () { openSheet(what.charAt(0).toUpperCase() + what.slice(1) + 'lar', rest); });
+    parent.appendChild(b);
+  }
+  function foldNodes(parent, nodes, keep, what) {
+    var rest = el('div');
+    nodes.forEach(function (x, i) { (i < keep ? parent : rest).appendChild(x); });
+    foldBox(parent, rest, Math.max(0, nodes.length - keep), what);
+  }
+
   // --- rebuild 17: ko'rinish almashtirish (Tizim / Boshqaruv / Xodim) va Tizim holati ---
   // Namuna sahifada (__PROTO) botga so'rov ketmaydi: shu nomdagi namunaviy javob olinadi
   function fetchX(a) { if (window.__PROTO && typeof window['__PROTO_' + a.t] === 'function') return Promise.resolve(window['__PROTO_' + a.t](a)); return fetchLive(a); }
@@ -1755,10 +1811,10 @@
       if (hd.le && hd.le[1]) { var le = el('p', 'syserr'); le.appendChild(el('b', null, 'Oxirgi xato · ' + agoTxt(num(hd.le[0]), nowS) + ': ')); le.appendChild(document.createTextNode(str(hd.le[1]))); body.appendChild(le); }
       if (pr.length) {
         body.appendChild(el('div', 'lbl2', 'Muammolar'));
-        pr.forEach(function (q) { var r = el('div', 'att'), b4 = el('div', 'bar4'); b4.style.background = 'var(--warn-bar)'; var gg = el('div', 'gr'); gg.appendChild(el('div', 't1', str(q[1]))); r.appendChild(b4); r.appendChild(gg); body.appendChild(r); });
+        foldNodes(body, pr.map(function (q) { var r = el('div', 'att'), b4 = el('div', 'bar4'); b4.style.background = 'var(--warn-bar)'; var gg = el('div', 'gr'); gg.appendChild(el('div', 't1', str(q[1]))); r.appendChild(b4); r.appendChild(gg); return r; }), 1, 'muammo');
       }
-      var lh = el('div', 'lbl2'); lh.style.borderTop = '1px solid var(--line)'; lh.appendChild(el('span', 'grow', 'Kim qancha foydalanyapti · 7 kun')); body.appendChild(lh);
-      var hh = el('div', 'trow sy h'); ['Ism', 'Oxirgi', 'Faol', 'Keldi'].forEach(function (s, i) { var c = el('div', i ? 'tm2' : null, s); if (i) c.style.font = 'inherit'; hh.appendChild(c); }); body.appendChild(hh);
+      var ppl = el('div'); ppl.hidden = true; ppl.__home = body;
+      var hh = el('div', 'trow sy h'); ['Ism', 'Oxirgi', 'Faol', 'Keldi'].forEach(function (s, i) { var c = el('div', i ? 'tm2' : null, s); if (i) c.style.font = 'inherit'; hh.appendChild(c); }); ppl.appendChild(hh);
       (arr(x.a) || []).forEach(function (r) {
         var row = el('div', 'trow sy'), n = el('div', 'n'), lowAct = !num(r[11]) && num(r[10]) && num(r[3]) <= 2, gone = !num(r[10]);
         var dt = el('div', 'dot'); dt.style.background = num(r[11]) ? 'var(--off)' : gone ? 'var(--off)' : lowAct ? 'var(--warn-bar)' : 'var(--ok)'; n.appendChild(dt);
@@ -1772,9 +1828,12 @@
         var a1 = el('div', 'tm2', agoTxt(num(r[2]), nowS)); a1.style.color = lowAct ? 'var(--warn)' : 'var(--muted)';
         var a2 = el('div', 'tm2', num(r[3]) + '/7'); a2.style.color = lowAct ? 'var(--warn)' : 'var(--ink)';
         var a3 = el('div', 'tm2', num(r[5]) ? num(r[4]) + '/' + num(r[5]) : '—'); a3.style.color = 'var(--muted)';
-        row.appendChild(a1); row.appendChild(a2); row.appendChild(a3); body.appendChild(row);
+        row.appendChild(a1); row.appendChild(a2); row.appendChild(a3); ppl.appendChild(row);
       });
-      body.appendChild(el('p', 'hint pad', "Faol — 7 kundan necha kuni botda biror ish qilgan (Keldim, tugma, topshiriq, buyurtma, reja). Sariq — 2 kundan kam. Keldi — Keldim bosgan kunlar / ish kunlari."));
+      ppl.appendChild(el('p', 'hint pad', "Faol — 7 kundan necha kuni botda biror ish qilgan (Keldim, tugma, topshiriq, buyurtma, reja). Sariq — 2 kundan kam. Keldi — Keldim bosgan kunlar / ish kunlari."));
+      body.appendChild(ppl);
+      var lowN = (arr(x.a) || []).filter(function (r) { return !num(r[11]) && num(r[10]) && num(r[3]) <= 2; }).length;
+      body.appendChild(drillRow('Kim qancha foydalanyapti', (arr(x.a) || []).filter(function (r) { return num(r[3]) > 0; }).length + ' kishi faol · 7 kun' + (lowN ? ' · ' + lowN + ' kishi kam' : ''), lowN ? 'var(--warn-bar)' : 'var(--ok)', function () { openSheet('Kim qancha foydalanyapti · 7 kun', ppl); }));
       var rb = btn('Yangilash', 'addbtn wide ghost'); rb.addEventListener('click', load); body.appendChild(rb);
     }
     function load() {
@@ -1865,7 +1924,7 @@
     prevB.appendChild(ico('back', 18)); nextB.appendChild(ico('chev', 18)); prevB.setAttribute('aria-label', 'Oldingi oy'); nextB.setAttribute('aria-label', 'Keyingi oy');
     nav.appendChild(prevB); nav.appendChild(title); nav.appendChild(nextB);
     var grid = el('div', 'cal'), detail = el('div', 'cdet'), msg = el('p', 'empty');
-    root.appendChild(nav); root.appendChild(msg); root.appendChild(grid); root.appendChild(detail);
+    root.appendChild(nav); root.appendChild(msg); root.appendChild(grid); root.appendChild(el('p', 'hint pad', "Kunni bosing — o'sha kunning rejalari va «+ Reja qo'shish»."));
     function shift(k) { var y = +state.m.slice(0, 4), mo = +state.m.slice(5, 7) + k; if (mo < 1) { mo = 12; y--; } if (mo > 12) { mo = 1; y++; } state.m = y + '-' + pad2(mo); ss('mc-pm', state.m); state.day = state.m === curM ? todayS : state.m + '-01'; ss('mc-pd', state.day); load(); }
     prevB.addEventListener('click', function () { shift(-1); }); nextB.addEventListener('click', function () { shift(1); });
     function nameOf(x, id) { var w = (x.w || []).filter(function (q) { return sid(q[0]) === id; })[0]; return w ? str(w[1]) : ''; }
@@ -1965,16 +2024,14 @@
         if (list.length) b.appendChild(el('i', 'pn', String(open || '✓')));
         b.setAttribute('aria-pressed', String(day === state.day));
         b.setAttribute('aria-label', n + ' ' + MONTHS[mo - 1] + (list.length ? ', ' + list.length + ' ta reja' : ''));
-        b.addEventListener('click', function () { state.day = day; ss('mc-pd', day); draw(x); });
+        b.addEventListener('click', function () { state.day = day; ss('mc-pd', day); draw(x); drawDay(x); var dn = new Date(day + 'T00:00:00Z'); openSheet(+day.slice(8, 10) + ' ' + MONTHS[+day.slice(5, 7) - 1] + ', ' + DAYS[dn.getUTCDay()], detail); });
         grid.appendChild(b);
       })(n);
-      drawDay(x);
+      if (detail.isConnected) drawDay(x);
     }
     function drawDay(x) {
       while (detail.firstChild) detail.removeChild(detail.firstChild);
       var day = state.day, n = +day.slice(8, 10), mo = +day.slice(5, 7);
-      var h = el('div', 'lbl2'); h.appendChild(el('span', 'grow', n + ' ' + MONTHS[mo - 1] + ', ' + DAYS[new Date(day + 'T00:00:00Z').getUTCDay()]));
-      detail.appendChild(h);
       var list = plansOn(x, day);
       if (!list.length) detail.appendChild(el('p', 'empty', "Bu kunga reja yo'q."));
       list.forEach(function (p) { detail.appendChild(planRow(x, p, day, function () { draw(x); paintToday(); })); });
@@ -2003,24 +2060,26 @@
       }
       var h = el('div', 'lbl2'); h.appendChild(el('span', 'grow', 'Eslatmalar')); h.appendChild(el('span', 'lsum', items.length ? items.length + ' ta · 7 kun' : '')); todayEl.appendChild(h);
       if (!items.length) { todayEl.appendChild(el('p', 'empty', "7 kun ichida sizga eslatma yo'q.")); return; }
-      var lastDay = '';
-      items.forEach(function (it) {
-        var day = it[0];
+      var lastDay = '', rest = el('div'), KEEP = 1;
+      items.forEach(function (it, idx) {
+        var day = it[0], box = idx < KEEP ? todayEl : rest;
+        if (idx === KEEP) lastDay = '';
         if (day !== lastDay) {
           lastDay = day; var dn = new Date(day + 'T00:00:00Z'), lbl = day === todayS ? 'Bugun' : day === addDayS(todayS, 1) ? 'Ertaga' : DAYS[dn.getUTCDay()] + ', ' + day.slice(8, 10) + '.' + day.slice(5, 7);
-          todayEl.appendChild(el('div', 'remday', lbl));
+          box.appendChild(el('div', 'remday', lbl));
         }
         var row = planRow(it[2], it[1], day, function () { paintToday(); if (state.data) draw(state.data); });
         if (sid(it[1][4]) !== me) row.classList.add('fromother');
-        todayEl.appendChild(row);
+        box.appendChild(row);
       });
+      foldBox(todayEl, rest, Math.max(0, items.length - KEEP), 'eslatma');
     }
     function load() {
-      msg.hidden = false; msg.textContent = 'Rejalar yuklanmoqda…'; grid.hidden = true; detail.hidden = true;
+      msg.hidden = false; msg.textContent = 'Rejalar yuklanmoqda…'; grid.hidden = true;
       var m = state.m;
       loadPlans(m).then(function (x) {
         if (m !== state.m) return;
-        state.data = x; msg.hidden = true; grid.hidden = false; detail.hidden = false; draw(x);
+        state.data = x; msg.hidden = true; grid.hidden = false; draw(x);
         if (m === curM) { todayData = x; paintToday(); }
         if (m === nextM) { nextData = x; paintToday(); }
       }, function () {
@@ -2084,18 +2143,19 @@
       views[x[0]] = el('div', 'v2'); views[x[0]].hidden = true;
     });
     box.appendChild(seg);
-    function taskList(list, empty) {
+    function taskList(list, empty, keep, what) {
       var w = el('div');
-      if (!list.length) w.appendChild(el('p', 'empty', empty));
-      list.forEach(function (t) { w.appendChild(taskRow(t, null, true)); });
+      if (!list.length) { if (empty) w.appendChild(el('p', 'empty', empty)); return w; }
+      var rows = list.map(function (t) { return taskRow(t, null, true); });
+      if (keep === undefined) rows.forEach(function (r) { w.appendChild(r); }); else foldNodes(w, rows, keep, what || 'topshiriq');
       return w;
     }
     // Bugun
     var vd = views.day, open = tasks.filter(function (t) { return !t[3]; });
     vd.appendChild(lblRow('Topshiriqlarim', open.length ? String(open.length) : ''));
-    vd.appendChild(taskList(open, "Ochiq topshiriq yo'q."));
+    vd.appendChild(taskList(open, "Ochiq topshiriq yo'q.", 1, 'topshiriq'));
     var doneT = tasks.filter(function (t) { return t[3]; });
-    if (doneT.length) { vd.appendChild(lblRow('Yaqinda bajarilgan', String(doneT.length))); vd.appendChild(taskList(doneT, '')); }
+    if (doneT.length) vd.appendChild(taskList(doneT, '', 0, 'bajarilgan topshiriq'));
     if (Number(d.ot) === 1 && (arr(d.ol) || []).length) {
       var ob = btn(null, 'att'), g = el('div', 'gr'), bar = el('div', 'bar4'); bar.style.background = 'var(--accent)';
       g.appendChild(el('div', 't1', (arr(d.ol) || []).length + ' ta buyurtma')); g.appendChild(el('div', 't2', 'Buyurtmalar bo\'limida'));
@@ -2138,12 +2198,12 @@
       var b = btn(null, 'cd s-' + st(n) + (n === today ? ' today' : '') + (n > today ? ' fut' : '')); b.appendChild(el('span', null, String(n)));
       if (TK[n]) b.appendChild(el('i', 'tk'));
       b.setAttribute('aria-label', n + ' ' + mi.name + (ST[st(n)] ? ', ' + ST[st(n)] : ''));
-      b.addEventListener('click', function () { pick(n); }); CB[n] = b; cal.appendChild(b);
+      b.addEventListener('click', function () { pick(n, true); }); CB[n] = b; cal.appendChild(b);
     })(n2);
     vm.appendChild(cal);
     var lg = el('div', 'clg'); [['ok', 'vaqtida'], ['late', 'kechikdi'], ['no', 'kelmadi'], ['off', 'dam']].forEach(function (x) { var s = el('span'); s.appendChild(el('i', 'sq s-' + x[0])); s.appendChild(document.createTextNode(x[1])); lg.appendChild(s); });
     var s5 = el('span'); s5.appendChild(el('i', 'tk')); s5.appendChild(document.createTextNode('berilgan topshiriq')); lg.appendChild(s5);
-    vm.appendChild(lg); vm.appendChild(detail);
+    vm.appendChild(lg); vm.appendChild(el('p', 'hint pad', "Kunni bosing — o'sha kun keldi-ketdi vaqti."));
     // Rejalar: Oy ko'rinishida [Keldi-ketdi | Rejalar], Bugun ko'rinishida bugungi rejalar (bot rejalarni bilsa: d.pl)
     if (d.pl) {
       var attBox = el('div'); while (vm.firstChild) attBox.appendChild(vm.firstChild);
@@ -2154,8 +2214,9 @@
       cm(ss('mc-cm') === 'pl' ? 'pl' : 'att');
       vd.appendChild(pc.todayEl);
     }
-    function pick(n) {
+    function pick(n, open) {
       Object.keys(CB).forEach(function (q) { CB[q].setAttribute('aria-pressed', String(+q === n)); });
+      if (!open) return;
       while (detail.firstChild) detail.removeChild(detail.firstChild);
       var r = D[n], s = st(n), h = el('div', 'lbl2'); h.appendChild(el('span', 'grow', n + ' ' + MONTHS[mo - 1] + ', ' + DAYS[new Date(Date.UTC(y, mo - 1, n)).getUTCDay()]));
       if (s !== 'none') h.appendChild(tag(s === 'late' ? 'warn' : s === 'no' ? 'no' : s === 'ok' ? 'ok' : null, s === 'late' ? '+' + num(r[3]) + ' daq' : ST[s]));
@@ -2168,6 +2229,8 @@
       }
       if (TK[n]) { detail.appendChild(lblRow('Shu kuni berilgan topshiriq', String(TK[n].length))); detail.appendChild(taskList(TK[n], '')); }
       ss('mc-day', String(n));
+      var hd0 = detail.firstChild; if (hd0) detail.removeChild(hd0); openSheet(n + ' ' + MONTHS[mo - 1] + ', ' + DAYS[new Date(Date.UTC(y, mo - 1, n)).getUTCDay()], detail);
+      if (hd0 && hd0.lastChild && hd0.lastChild.className && hd0.lastChild.className.indexOf('tag') === 0) { var sb = el('div', 'lbl2'); sb.appendChild(el('span', 'grow', 'Holati')); sb.appendChild(hd0.lastChild); detail.insertBefore(sb, detail.firstChild); }
     }
     var keepDay = num(ss('mc-day')); pick(keepDay >= 1 && keepDay <= nDays ? keepDay : today);
     function view(k) {

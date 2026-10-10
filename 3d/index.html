@@ -4865,7 +4865,7 @@ function offset(){if(!S){K2.clearViewOffset();return}var w=$7.clientWidth,h=$7.c
     if(r.width<v.width-40){var cw=Math.max(0,v.right-r.left+8);K2.setViewOffset(w+cw,h,cw,0,w,h);fw=w-cw}
     else{var sh=Math.max(0,v.bottom-r.top);K2.setViewOffset(w,h+sh,0,sh,w,h);fullH=h+sh;fh=h-sh}}else K2.clearViewOffset();
   fit(fullH,Math.max(80,fw),Math.max(80,fh));v9(4)}
-function fit(fullH,fw,fh){if(!S||!S.fc)return;var px=O0.degToRad(K2.fov)/fullH,ang=Math.min(fw,fh)*px*(fw<500?.75:.9),d=Math.max(.25,S.fr/Math.sin(ang/2));
+function fit(fullH,fw,fh){if(!S||!S.fc)return;var px=O0.degToRad(K2.fov)/fullH,ang=Math.min(fw,fh)*px*.95,d=Math.max(.25,S.fr/Math.sin(ang/2));
   var p1=S.fc.clone().add(S.fd.clone().multiplyScalar(d));
   if(a4&&a4.t1.equals(S.fc))a4.p1=p1;else a4={t0:performance.now(),dur:350,p0:K2.position.clone(),t0v:J3.target.clone(),p1:p1,t1:S.fc.clone()}}
 var _ro=new ResizeObserver(function(){S&&offset()});_ro.observe($7);_ro.observe(l4("#info"));
@@ -4882,8 +4882,10 @@ function enter(n){if(!n)return;var back=S?(S.mode==="section"?S.sec.id:S.back):n
   bar.querySelector("b").textContent=n.uz;bar.querySelector("button").textContent=S.back?"← Bo'limga qaytish":"← Butun mashina";bar.hidden=!1;secPressed(null);offset()}
 /* section */
 function openSection(id){var s=SECTIONS.filter(function(x){return x.id===id})[0];if(!s)return;var set=secParts(s);if(!set.length)return;
-  /* frame on the parts the shop sells (long brake lines or cables would pull the camera away), else on all of them */
-  var main=set.filter(function(p){return p.products.some(function(r){return N_[r]})});
+  /* frame the whole assembly, leaving out only parts far longer than the rest (brake lines, cables). Framing only the
+     parts with shop products zoomed onto one small part when a section had just one (engine: the oil filter). */
+  var dg=set.map(function(p){return new V2().setFromObject(p.b.left).getSize(new A).length()}),so=dg.slice().sort(function(a,b){return a-b}),med=so[so.length>>1]||0;
+  var main=set.filter(function(p,i){return dg[i]<=med*3});
   if(Ns)_ee(null);begin("section",set);S.part=null;S.sec=s;S.back=null;S.off=secOffsets(set);frame(main.length?main:set);
   bar.querySelector("b").textContent=s.uz;bar.querySelector("button").textContent="← Butun mashina";bar.hidden=!1;secPressed(id);renderSheet();offset()}
 function secPressed(id){sb.querySelectorAll("[data-sec]").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.sec===id?"true":"false")})}
@@ -4972,7 +4974,9 @@ var css=document.createElement("style");css.textContent="@media (max-width:760px
  "html body #info{max-height:46%;padding-top:0}html body #info .grab{display:flex}html body.sheet-min #info{max-height:52px;overflow:hidden}"+
  "html body #info .grab{position:sticky;top:0;z-index:2;margin:0 -16px 6px;width:calc(100% + 32px);align-items:center;justify-content:center;gap:8px;height:40px;background:var(--surface);border:0;border-bottom:1px solid var(--line);color:var(--ink);font:600 14px var(--f-body);cursor:pointer}"+
  "html body #info .grab:before{content:\"\";width:36px;height:4px;border-radius:2px;background:var(--muted);opacity:.6;margin-right:4px}}"+
- "#info .grab{display:none}";
+ "#info .grab{display:none}"+
+ /* scrolling the parts list must not drag the shop page along when the list reaches its end (iOS chains the scroll) */
+ "html,body{overscroll-behavior:none}#info{overscroll-behavior:contain}";
 document.head.appendChild(css);
 Vs=function(n){var t=new A(...n.tgt),e=new A(...n.pos),i=K2.aspect<1.8?Math.min(3.4,1.8/K2.aspect):1;return t.clone().add(e.sub(t).multiplyScalar(i))};
 /* handle on top of the card (phones only, hidden by CSS on wide screens); re-added whenever the card is redrawn */

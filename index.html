@@ -1523,6 +1523,9 @@ updCount(); render();
 #m3dHost iframe{display:block;width:100%;height:100%!important;min-height:0!important;box-sizing:border-box}
 #m3dHost.off{visibility:hidden;pointer-events:none;left:-300vw!important}
 body.m3d-full #m3dHost{top:0!important;left:0!important;width:auto!important;height:auto!important}
+/* phones: the 3D fills exactly the space between the sticky header and the bottom menu (place() sets the height),
+   so neither its top row nor its bottom row ends up hidden; the breadcrumb is one short line and the footer is hidden */
+@media (max-width:720px){body.v-m3d footer{display:none}.m3dcr{flex-wrap:nowrap;font-size:0;padding-block:8px 6px}.m3dcr>.back{font-size:14px}.m3dcr>button[data-go],.m3dcr>span{display:none}}
 .m3d .m3d-load{position:absolute;inset:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:#0f1418;color:#e8ecef;font-size:15px;text-align:center;padding:20px;pointer-events:none}
 .m3d.ready .m3d-load{display:none}
 .m3d-load i{width:42px;height:42px;border:3px solid #2a333b;border-top-color:#f5b53a;border-radius:50%;animation:m3dspin .9s linear infinite}
@@ -1546,7 +1549,7 @@ body.m3d-full .m3d .m3d-load{top:45px}
    Tovar sahifasida 3d/map.json bo'yicha "3D'da alohida ko'rish" havolasi chiqadi. */
 (function(){
   /* M3D_V changes with every 3D release, so browsers never pair the new shop page with a cached old 3d/ page */
-  const M3D_V = '20261010a';
+  const M3D_V = '20261010b';
   let PART = '', MAP = null, loadT = 0, job = 0, host = null, base = '', baseLite = false, navN = 0;
   const frame = () => host && host.querySelector('iframe');
   /* One 3D frame for the whole visit. It used to be rebuilt on every return to the 3D page, which reloaded the model
@@ -1566,6 +1569,11 @@ body.m3d-full .m3d .m3d-load{top:45px}
     if (!host) return;
     const s = state.view === 'model3d' && document.querySelector('.m3d-slot');
     if (!s) { host.classList.add('off'); return; }
+    if (innerWidth <= 720) {
+      const hd = document.querySelector('header'), nv = document.querySelector('nav.tabs'), cr = s.previousElementSibling;
+      const h = innerHeight - (hd ? hd.offsetHeight : 0) - (nv && nv.offsetHeight ? nv.offsetHeight : 0) - (cr ? cr.offsetHeight : 0) - 6;
+      s.style.height = Math.max(300, Math.round(h)) + 'px'; s.style.minHeight = '0';
+    } else { s.style.height = ''; s.style.minHeight = ''; }
     const r = s.getBoundingClientRect();
     host.style.top = (r.top + scrollY) + 'px'; host.style.left = (r.left + scrollX) + 'px';
     host.style.width = r.width + 'px'; host.style.height = r.height + 'px';
@@ -1613,7 +1621,7 @@ body.m3d-full .m3d .m3d-load{top:45px}
      at once; the body model (3d/body.glb.gz) streams in afterwards inside the 3D page, with its own progress and retries. */
   const m3dBase = m3dView;
   m3dView = function(){
-    return m3dBase().replace(/<div class="m3d"><iframe[^>]*><\/iframe><\/div>/, '<div class="m3d-slot"></div>')
+    return m3dBase().replace('<div class="crumbs">', '<div class="crumbs m3dcr">').replace(/<div class="m3d"><iframe[^>]*><\/iframe><\/div>/, '<div class="m3d-slot"></div>')
       .replace('<span>3D model</span></div>', '<span>3D model</span><button type="button" class="back m3d-fsbtn" data-m3dfs="1">⛶ To\'liq ekran</button></div>');
   };
   function get(url, onBytes){
@@ -1677,9 +1685,12 @@ body.m3d-full .m3d .m3d-load{top:45px}
   }
   const renderBase = render;
   render = function(){ renderBase.apply(this, arguments); addLink();
-    if (state.view === 'model3d') { startM3D(); place(); if (base) post({a:'cart', cart: cartNow()}); }
+    document.body.classList.toggle('v-m3d', state.view === 'model3d');
+    if (state.view === 'model3d') { startM3D(); place(); if (base) post({a:'cart', cart: cartNow()}); toTop(); }
     else { place(); document.body.classList.remove('m3d-full'); } };
-  if (state.view === 'model3d') { startM3D(); place(); }
+  /* phones: scroll the notice line away so the header sits on top and the whole 3D is in view */
+  function toTop(){ if (innerWidth > 720) return; const p = document.querySelector('.proto'); requestAnimationFrame(() => { scrollTo(0, p ? p.offsetHeight : 0); place(); }); }
+  if (state.view === 'model3d') { document.body.classList.add('v-m3d'); startM3D(); place(); toTop(); }
   fetch('3d/map.json', {cache:'no-cache'}).then(r => r.ok ? r.json() : {}).then(m => { MAP = m || {}; addLink(); }).catch(() => { MAP = {}; });
 })();
 </script>

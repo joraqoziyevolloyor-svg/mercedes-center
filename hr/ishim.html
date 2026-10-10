@@ -2,7 +2,7 @@
 <html lang="uz">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-r4uZfsflzBAiM2tZi1EQ1rEgkoIESbOJAZaJkijbcM8='; style-src 'self' 'sha256-zV6xGx/L02ldJmX5GqCservCIkWTA++rVIdnqo6Njug='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-PQP7didjvNJI9DdtB5grZRPnF4OsQxL6HrJHarEqduY='; style-src 'self' 'sha256-NzMgVPklwjDjmS3LJp4njbep6JoyMGJsZhie2FSHv0U='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mening ishim</title>
 <script>window.__mcHash = String(location.hash || '');</script>
@@ -106,9 +106,8 @@
   .mine2 .kpi .kc{padding:16px 0 14px 20px;border-right:1px solid var(--line)} .mine2 .kpi .kc:last-child{border-right:0}
   .mine2 .kpi .kc b{display:block;font-family:var(--f-mono);font-weight:500;font-size:28px;line-height:1}
   .mine2 .kpi .kc span{display:block;font-size:13px;color:var(--muted);margin-top:6px}
-  .mine2 .kpi.k2{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .mine2 .kpi.k2 .kc b{font-size:34px}
-  .mine2 .kpi .kc .kl{font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 6px}
+  .att1{display:flex;align-items:center;gap:10px;padding:12px 20px;border-bottom:1px solid var(--line);font-size:14px;color:var(--muted)}
+  .att1 .dot{width:8px;height:8px;border-radius:2px;flex:none} .att1 .gr{flex:1;min-width:0}
   .tabs2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-bottom:1px solid var(--line)}
   .tabs2 button{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;min-height:44px;font-size:14px;color:var(--muted);border-bottom:2px solid transparent;border-radius:0!important}
   .tabs2 button[aria-selected="true"]{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
@@ -1701,21 +1700,24 @@
     function wdOf(n) { return (new Date(Date.UTC(y, mo - 1, n)).getUTCDay() + 6) % 7; } // 0 = Dushanba
     var WDS = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];
     function nowMin() { var t = new Date(Date.now() + 5 * 3600000); return t.getUTCHours() * 60 + t.getUTCMinutes(); }
-    function hmm(m) { m = Math.max(0, m); var h = Math.floor(m / 60); return (h ? h + ' soat ' : '') + (m % 60) + ' daq'; }
     var p = $('p-mine'), box = el('div', 'mine2'); box.id = 'mine2';
-    // Bugun: keldim / ketaman
-    var tr = D[today], two = el('div', 'kpi k2');
-    var c1 = el('div', 'kc'), c2 = el('div', 'kc');
-    c1.appendChild(el('span', 'kl', 'Keldim'));
-    var inB = el('b', null, tr && tr[1] ? str(tr[1]) : '—'); inB.style.color = tr && tr[1] ? (num(tr[3]) > 0 ? 'var(--warn)' : 'var(--ok)') : 'var(--muted)'; c1.appendChild(inB);
-    c1.appendChild(el('span', null, tr && tr[1] ? (num(tr[3]) > 0 ? '+' + num(tr[3]) + ' daq kechikdi' : 'vaqtida') : tr && tr[4] ? 'bugun dam olish' : (startT ? 'ish ' + startT + ' da' : 'hali belgilanmagan')));
-    var done = tr && tr[2];
-    c2.appendChild(el('span', 'kl', done ? 'Ketdim' : 'Ketaman'));
-    var outB = el('b', null, done ? str(tr[2]) : (endT || '—')); outB.style.color = done ? 'var(--ink)' : 'var(--muted)'; c2.appendChild(outB);
-    var left = el('span', null, done ? 'ish tugadi' : ''); c2.appendChild(left);
-    function tick() { if (done || !endT || !(tr && tr[1])) return; var m = hmMin(endT) - nowMin(); left.textContent = m > 0 ? hmm(m) + ' qoldi' : '«Ketdim» ni bosing'; }
-    tick(); setInterval(tick, 60000);
-    two.appendChild(c1); two.appendChild(c2); box.appendChild(two);
+    // Bugun: keldi-ketdi faqat kichik tasdiq qatori (sanoq yo'q) — ekranning boshida ish turadi
+    var tr = D[today], line = el('div', 'att1'), dot = el('i', 'dot'), txt = el('span', 'gr');
+    line.appendChild(dot); line.appendChild(txt);
+    function paintLine() {
+      var m = nowMin(), endM = endT ? hmMin(endT) : -1, startM = startT ? hmMin(startT) : -1, c = 'var(--off)', t;
+      if (tr && tr[2]) { c = 'var(--ok)'; t = 'Bugun ' + str(tr[1]) + ' da keldingiz, ' + str(tr[2]) + ' da ketdingiz'; }
+      else if (tr && tr[1]) {
+        c = 'var(--ok)'; t = 'Bugun ' + str(tr[1]) + ' da keldingiz';
+        if (endM >= 0 && m >= endM) { c = 'var(--accent)'; t = 'Ish tugadi — ketayotganda botda «Ketdim» ni bosing'; }
+      }
+      else if (tr && tr[4]) t = 'Bugun dam olish kuni';
+      else if (startM >= 0 && m >= startM - 30) { c = 'var(--accent)'; t = 'Kelganingizda botda «Keldim» ni bosing'; }
+      else t = startT ? 'Ish bugun ' + startT + ' da boshlanadi' : '';
+      dot.style.background = c; txt.textContent = t || ''; line.hidden = !t;
+    }
+    paintLine(); setInterval(paintLine, 60000);
+    box.appendChild(line);
     // Bugun / Hafta / Oy
     var seg = el('div', 'tabs2'), views = {}, SB = {};
     [['day', 'Bugun'], ['week', 'Hafta'], ['month', 'Oy']].forEach(function (x) {

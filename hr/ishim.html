@@ -2,7 +2,7 @@
 <html lang="uz">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-Bq4C0tDgPmYrxhFc66ce3MGXrLjQdDQk5COr+0zXvws='; style-src 'self' 'sha256-UzEDYlVa9WWIQ9J+dl5LXUXYti5xfPTdzMwtELaUR9U='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-r4uZfsflzBAiM2tZi1EQ1rEgkoIESbOJAZaJkijbcM8='; style-src 'self' 'sha256-zV6xGx/L02ldJmX5GqCservCIkWTA++rVIdnqo6Njug='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mening ishim</title>
 <script>window.__mcHash = String(location.hash || '');</script>
@@ -99,6 +99,42 @@
   .ord.open>.srow .hr::after{content:'⌄'}
   #p-settings .sec>.more{border-top:0;padding:4px 20px 10px}
   button.addbtn{margin:12px 20px;width:calc(100% - 40px)}
+  /* rebuild 15: xodim ekrani — Bugun / Hafta / Oy, kalendar */
+  :root{--c-ok:#dcefe4;--c-ok-ink:#155c3a;--c-late:#f7e7c6;--c-late-ink:#7a4e00;--c-no:#f6d9d6;--c-no-ink:#8c1d16;--c-off:#f4f5f6;--c-tk:#1f5fa8}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--c-ok:#173a2a;--c-ok-ink:#7fdbae;--c-late:#3a2c10;--c-late-ink:#f0c26a;--c-no:#3a1c1c;--c-no-ink:#f4a2a2;--c-off:#15181c;--c-tk:#7fb2e5}}
+  :root[data-theme="dark"]{--c-ok:#173a2a;--c-ok-ink:#7fdbae;--c-late:#3a2c10;--c-late-ink:#f0c26a;--c-no:#3a1c1c;--c-no-ink:#f4a2a2;--c-off:#15181c;--c-tk:#7fb2e5}
+  .mine2 .kpi .kc{padding:16px 0 14px 20px;border-right:1px solid var(--line)} .mine2 .kpi .kc:last-child{border-right:0}
+  .mine2 .kpi .kc b{display:block;font-family:var(--f-mono);font-weight:500;font-size:28px;line-height:1}
+  .mine2 .kpi .kc span{display:block;font-size:13px;color:var(--muted);margin-top:6px}
+  .mine2 .kpi.k2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mine2 .kpi.k2 .kc b{font-size:34px}
+  .mine2 .kpi .kc .kl{font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 6px}
+  .tabs2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-bottom:1px solid var(--line)}
+  .tabs2 button{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;min-height:44px;font-size:14px;color:var(--muted);border-bottom:2px solid transparent;border-radius:0!important}
+  .tabs2 button[aria-selected="true"]{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
+  .tabs2 button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .mine2 .task{padding:12px 20px}
+  .trow.w{grid-template-columns:minmax(0,1fr) 56px 56px 74px} .trow.w .tm2:last-child{text-align:right}
+  .trow.w.now{background:var(--tile)}
+  .trow.w .wdn{color:var(--muted);font-size:13px;width:22px} .trow .tdot{font-size:11px;color:var(--c-tk);border:1px solid currentColor;border-radius:4px;padding:0 4px;white-space:nowrap}
+  .trow.d{grid-template-columns:minmax(0,1fr) 80px}
+  .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;padding:0 20px}
+  .cal .cw{font-size:11px;color:var(--muted);text-align:center;padding-bottom:2px}
+  .cal button.cd{all:unset;box-sizing:border-box;cursor:pointer;position:relative;height:38px;border-radius:6px!important;display:flex;align-items:center;justify-content:center;font-family:var(--f-mono);font-size:13px;background:var(--c-off);color:var(--muted);min-height:0}
+  .cal .cd.empty{height:38px}
+  .cal .cd.s-ok{background:var(--c-ok);color:var(--c-ok-ink)} .cal .cd.s-late{background:var(--c-late);color:var(--c-late-ink)} .cal .cd.s-no{background:var(--c-no);color:var(--c-no-ink)}
+  .cal .cd.s-none{background:transparent;border:1px solid var(--line)} .cal .cd.fut{color:var(--muted);opacity:.6}
+  .cal .cd.today{outline:2px solid var(--accent);outline-offset:-2px}
+  .cal .cd[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--ink)}
+  .cal .cd:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .cal .cd .tk,.clg .tk{position:absolute;bottom:4px;left:50%;margin-left:-2.5px;width:5px;height:5px;border-radius:50%;background:var(--c-tk)}
+  .clg{display:flex;flex-wrap:wrap;gap:6px 14px;padding:10px 20px 4px;font-size:12px;color:var(--muted)}
+  .clg span{display:inline-flex;align-items:center;gap:6px;position:relative} .clg .tk{position:static;margin:0}
+  .clg .sq{width:10px;height:10px;border-radius:2px;display:inline-block} .clg .sq.s-ok{background:var(--c-ok-ink)} .clg .sq.s-late{background:var(--c-late-ink)} .clg .sq.s-no{background:var(--c-no-ink)} .clg .sq.s-off{background:var(--c-off);border:1px solid var(--line)}
+  .cdet{border-top:1px solid var(--line);margin-top:10px}
+  .lbl2 .lsum{text-transform:none;letter-spacing:0;font-size:13px}
+  .wsum{margin:0;padding:0 20px 10px;font-size:14px;color:var(--ink)}
+  .tag.ok{color:var(--ok)}
   #p-more .hint.pad,#p-settings .hint.pad{padding:12px 20px 4px}
 </style>
 </head>
@@ -1644,6 +1680,138 @@
     if (keep && y > 0) window.scrollTo(0, y);
   }
 
+  // --- rebuild 15: xodim ekrani — Bugun / Hafta / Oy (kalendar). Keldi-ketdi va berilgan topshiriqlar bir joyda ---
+  function mineV2(d) {
+    var mi = monthInfo(d); if (!mi.mm) return;
+    var y = mi.y, mo = mi.mo, nDays = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+    var D = {}, today = 0;
+    (arr(d.d) || []).forEach(function (r) { if (Array.isArray(r) && num(r[0]) >= 1 && num(r[0]) <= 31) { D[num(r[0])] = r; today = Math.max(today, num(r[0])); } });
+    if (!today) return;
+    var tasks = (arr(d.t) || []).filter(Array.isArray), TK = {};
+    tasks.forEach(function (t) { var m = /^(\d\d)\.(\d\d)$/.exec(str(t[2])); if (m && +m[2] === mo) (TK[+m[1]] = TK[+m[1]] || []).push(t); });
+    var hrs = /^(\d\d:\d\d)\D+(\d\d:\d\d)$/.exec(str(d.h)), startT = hrs ? hrs[1] : '', endT = hrs ? hrs[2] : '';
+    // kun holati: ok / late / no / off / none (ma'lumot yo'q, kelajak, bugun hali kelmagan — rangsiz)
+    function st(n) {
+      var r = D[n]; if (!r || n > today) return 'none';
+      if (r[1]) return num(r[3]) > 0 ? 'late' : 'ok';
+      if (r[4]) return 'off';
+      return n < today ? 'no' : 'none';
+    }
+    var ST = { ok: 'vaqtida', late: 'kechikdi', no: 'kelmadi', off: 'dam olish', none: '' };
+    function wdOf(n) { return (new Date(Date.UTC(y, mo - 1, n)).getUTCDay() + 6) % 7; } // 0 = Dushanba
+    var WDS = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];
+    function nowMin() { var t = new Date(Date.now() + 5 * 3600000); return t.getUTCHours() * 60 + t.getUTCMinutes(); }
+    function hmm(m) { m = Math.max(0, m); var h = Math.floor(m / 60); return (h ? h + ' soat ' : '') + (m % 60) + ' daq'; }
+    var p = $('p-mine'), box = el('div', 'mine2'); box.id = 'mine2';
+    // Bugun: keldim / ketaman
+    var tr = D[today], two = el('div', 'kpi k2');
+    var c1 = el('div', 'kc'), c2 = el('div', 'kc');
+    c1.appendChild(el('span', 'kl', 'Keldim'));
+    var inB = el('b', null, tr && tr[1] ? str(tr[1]) : '—'); inB.style.color = tr && tr[1] ? (num(tr[3]) > 0 ? 'var(--warn)' : 'var(--ok)') : 'var(--muted)'; c1.appendChild(inB);
+    c1.appendChild(el('span', null, tr && tr[1] ? (num(tr[3]) > 0 ? '+' + num(tr[3]) + ' daq kechikdi' : 'vaqtida') : tr && tr[4] ? 'bugun dam olish' : (startT ? 'ish ' + startT + ' da' : 'hali belgilanmagan')));
+    var done = tr && tr[2];
+    c2.appendChild(el('span', 'kl', done ? 'Ketdim' : 'Ketaman'));
+    var outB = el('b', null, done ? str(tr[2]) : (endT || '—')); outB.style.color = done ? 'var(--ink)' : 'var(--muted)'; c2.appendChild(outB);
+    var left = el('span', null, done ? 'ish tugadi' : ''); c2.appendChild(left);
+    function tick() { if (done || !endT || !(tr && tr[1])) return; var m = hmMin(endT) - nowMin(); left.textContent = m > 0 ? hmm(m) + ' qoldi' : '«Ketdim» ni bosing'; }
+    tick(); setInterval(tick, 60000);
+    two.appendChild(c1); two.appendChild(c2); box.appendChild(two);
+    // Bugun / Hafta / Oy
+    var seg = el('div', 'tabs2'), views = {}, SB = {};
+    [['day', 'Bugun'], ['week', 'Hafta'], ['month', 'Oy']].forEach(function (x) {
+      var b = btn(x[1]); b.setAttribute('aria-selected', 'false'); SB[x[0]] = b; seg.appendChild(b);
+      b.addEventListener('click', function () { view(x[0]); });
+      views[x[0]] = el('div', 'v2'); views[x[0]].hidden = true;
+    });
+    box.appendChild(seg);
+    function taskList(list, empty) {
+      var w = el('div');
+      if (!list.length) w.appendChild(el('p', 'empty', empty));
+      list.forEach(function (t) { w.appendChild(taskRow(t, null, true)); });
+      return w;
+    }
+    // Bugun
+    var vd = views.day, open = tasks.filter(function (t) { return !t[3]; });
+    vd.appendChild(lblRow('Topshiriqlarim', open.length ? String(open.length) : ''));
+    vd.appendChild(taskList(open, "Ochiq topshiriq yo'q."));
+    var doneT = tasks.filter(function (t) { return t[3]; });
+    if (doneT.length) { vd.appendChild(lblRow('Yaqinda bajarilgan', String(doneT.length))); vd.appendChild(taskList(doneT, '')); }
+    if (Number(d.ot) === 1 && (arr(d.ol) || []).length) {
+      var ob = btn(null, 'att'), g = el('div', 'gr'), bar = el('div', 'bar4'); bar.style.background = 'var(--accent)';
+      g.appendChild(el('div', 't1', (arr(d.ol) || []).length + ' ta buyurtma')); g.appendChild(el('div', 't2', 'Buyurtmalar bo\'limida'));
+      ob.appendChild(bar); ob.appendChild(g); var cv = ico('chev', 16); cv.style.color = 'var(--muted)'; ob.appendChild(cv);
+      ob.addEventListener('click', function () { var t = $('tab-orders'); if (t) t.click(); });
+      vd.appendChild(ob);
+    }
+    // Hafta (Dushanbadan bugungacha va hafta oxirigacha)
+    var vw = views.week, ws = today - wdOf(today), wCame = 0, wLate = 0, wTask = 0;
+    var wrows = el('div');
+    var hh = el('div', 'trow w h'); ['Kun', 'Keldi', 'Ketdi', ''].forEach(function (s, i) { hh.appendChild(el('div', i ? 'tm2' : null, s)); }); wrows.appendChild(hh);
+    for (var i = 0; i < 7; i++) {
+      var n = ws + i, row = el('div', 'trow w' + (n === today ? ' now' : ''));
+      var inMonth = n >= 1 && n <= nDays, r = inMonth ? D[n] : null, s = inMonth ? st(n) : 'none';
+      var dc = el('div', 'n'); dc.appendChild(el('span', 'wdn', WDS[i])); dc.appendChild(el('span', 'mono', inMonth ? String(n) : '—'));
+      if (inMonth && TK[n]) { dc.appendChild(el('span', 'tdot', TK[n].length + ' top.')); wTask += TK[n].length; }
+      row.appendChild(dc);
+      var a1 = el('div', 'tm2', r && r[1] ? str(r[1]) : '—'); a1.style.color = s === 'late' ? 'var(--warn)' : r && r[1] ? 'var(--ink)' : 'var(--muted)';
+      var a2 = el('div', 'tm2', r && r[2] ? str(r[2]) : '—'); a2.style.color = 'var(--muted)';
+      var a3 = el('div', 'tm2'); if (s !== 'none') a3.appendChild(tag(s === 'late' ? 'warn' : s === 'no' ? 'no' : s === 'ok' ? 'ok' : null, s === 'late' ? '+' + num(r[3]) : ST[s]));
+      row.appendChild(a1); row.appendChild(a2); row.appendChild(a3); wrows.appendChild(row);
+      if (s === 'ok' || s === 'late') wCame++; if (s === 'late') wLate += num(r[3]);
+    }
+    vw.appendChild(lblRow('Shu hafta', ''));
+    vw.appendChild(el('p', 'wsum', wCame + ' kun keldi' + (wLate ? ' · ' + wLate + ' daq kechikish' : '') + (wTask ? ' · ' + wTask + ' ta topshiriq berildi' : '')));
+    vw.appendChild(wrows);
+    // Oy: raqamlar + kalendar + tanlangan kun
+    var vm = views.month, mCame = 0, mLate = 0, mNo = 0;
+    for (var k = 1; k <= today; k++) { var s2 = st(k); if (s2 === 'ok' || s2 === 'late') mCame++; if (s2 === 'late') mLate += num(D[k][3]); if (s2 === 'no') mNo++; }
+    var mk = el('div', 'kpi'); [[mCame, 'kun keldi', 'var(--ink)'], [mLate, 'daq kechikdi', mLate ? 'var(--warn)' : 'var(--ink)'], [mNo, 'kun kelmadi', mNo ? 'var(--no)' : 'var(--ink)']].forEach(function (x) {
+      var c = el('div', 'kc'), b = el('b', null, String(x[0])); b.style.color = x[2]; c.appendChild(b); c.appendChild(el('span', null, x[1])); mk.appendChild(c);
+    });
+    vm.appendChild(mk);
+    vm.appendChild(lblRow(mi.name, ''));
+    var cal = el('div', 'cal');
+    WDS.forEach(function (w) { cal.appendChild(el('div', 'cw', w)); });
+    for (var e0 = 0; e0 < wdOf(1); e0++) cal.appendChild(el('div', 'cd empty'));
+    var detail = el('div', 'cdet'), CB = {};
+    for (var n2 = 1; n2 <= nDays; n2++) (function (n) {
+      var b = btn(null, 'cd s-' + st(n) + (n === today ? ' today' : '') + (n > today ? ' fut' : '')); b.appendChild(el('span', null, String(n)));
+      if (TK[n]) b.appendChild(el('i', 'tk'));
+      b.setAttribute('aria-label', n + ' ' + mi.name + (ST[st(n)] ? ', ' + ST[st(n)] : ''));
+      b.addEventListener('click', function () { pick(n); }); CB[n] = b; cal.appendChild(b);
+    })(n2);
+    vm.appendChild(cal);
+    var lg = el('div', 'clg'); [['ok', 'vaqtida'], ['late', 'kechikdi'], ['no', 'kelmadi'], ['off', 'dam']].forEach(function (x) { var s = el('span'); s.appendChild(el('i', 'sq s-' + x[0])); s.appendChild(document.createTextNode(x[1])); lg.appendChild(s); });
+    var s5 = el('span'); s5.appendChild(el('i', 'tk')); s5.appendChild(document.createTextNode('berilgan topshiriq')); lg.appendChild(s5);
+    vm.appendChild(lg); vm.appendChild(detail);
+    function pick(n) {
+      Object.keys(CB).forEach(function (q) { CB[q].setAttribute('aria-pressed', String(+q === n)); });
+      while (detail.firstChild) detail.removeChild(detail.firstChild);
+      var r = D[n], s = st(n), h = el('div', 'lbl2'); h.appendChild(el('span', 'grow', n + ' ' + MONTHS[mo - 1] + ', ' + DAYS[new Date(Date.UTC(y, mo - 1, n)).getUTCDay()]));
+      if (s !== 'none') h.appendChild(tag(s === 'late' ? 'warn' : s === 'no' ? 'no' : s === 'ok' ? 'ok' : null, s === 'late' ? '+' + num(r[3]) + ' daq' : ST[s]));
+      detail.appendChild(h);
+      if (n > today) detail.appendChild(el('p', 'empty', "Bu kun hali kelmagan."));
+      else if (!r) detail.appendChild(el('p', 'empty', "Bu kun bo'yicha ma'lumot yo'q."));
+      else {
+        var rr = el('div', 'trow d'); rr.appendChild(el('div', null, 'Keldi')); var x1 = el('div', 'tm2', r[1] ? str(r[1]) : '—'); rr.appendChild(x1); detail.appendChild(rr);
+        var r2 = el('div', 'trow d'); r2.appendChild(el('div', null, 'Ketdi')); r2.appendChild(el('div', 'tm2', r[2] ? str(r[2]) : '—')); detail.appendChild(r2);
+      }
+      if (TK[n]) { detail.appendChild(lblRow('Shu kuni berilgan topshiriq', String(TK[n].length))); detail.appendChild(taskList(TK[n], '')); }
+      ss('mc-day', String(n));
+    }
+    var keepDay = num(ss('mc-day')); pick(keepDay >= 1 && keepDay <= nDays ? keepDay : today);
+    function view(k) {
+      Object.keys(views).forEach(function (q) { views[q].hidden = q !== k; SB[q].setAttribute('aria-selected', String(q === k)); });
+      ss('mc-seg', k);
+    }
+    Object.keys(views).forEach(function (q) { box.appendChild(views[q]); });
+    var keepSeg = ss('mc-seg'); view(views[keepSeg] ? keepSeg : 'day');
+    // eski bloklar joyida qoladi (yashirin), yangi ko'rinish ularning o'rnida
+    p.insertBefore(box, p.firstChild);
+    ['worker', 'tasksBox', 'monthBox'].forEach(function (id) { var x = $(id); if (x) x.hidden = true; });
+    function lblRow(a, b) { var h = el('div', 'lbl2'); h.appendChild(el('span', 'grow', a)); if (b) h.appendChild(el('span', 'lsum', b)); return h; }
+  }
+
   function renderV2(d) {
     V = d; doneFn = doneV2;
     BOT17 = !!(d.cfg && typeof d.cfg === 'object' && typeof d.cfg.lm === 'string');
@@ -1660,6 +1828,7 @@
       var mine = {}; Object.keys(d).forEach(function (k) { mine[k] = d[k]; });
       delete mine.s; delete mine.ot; delete mine.ol; // xodimda bular jamoa jadvali emas
       render(mine);
+      try { mineV2(d); } catch (e) { /* yangi ko'rinish chizilmasa eski jadval qoladi */ }
       var tabs = [['p-mine', 'Mening ishim']];
       if (Number(d.ot) === 1) { var nn = ordersPanel(d, d.ol); tabs.push(['p-orders', 'Buyurtmalar', nn ? nn + ' yangi' : '']); }
       guidePanel(d); tabs.push(['p-guide', "Yo'riqnoma"]);

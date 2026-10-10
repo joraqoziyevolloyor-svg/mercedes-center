@@ -2,7 +2,7 @@
 <html lang="uz">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-Ar9jHCBAXH+7J94Wb0J2H21topdSDhA3B9QdZotwJE0='; style-src 'self' 'sha256-augHpNSywAg7lckJHSZkP9jsMDp6xhxM3UjzwBPnrW4='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-Bq4C0tDgPmYrxhFc66ce3MGXrLjQdDQk5COr+0zXvws='; style-src 'self' 'sha256-UzEDYlVa9WWIQ9J+dl5LXUXYti5xfPTdzMwtELaUR9U='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mening ishim</title>
 <script>window.__mcHash = String(location.hash || '');</script>
@@ -90,10 +90,10 @@
   .set svg{flex:none;color:var(--muted)}
   .set.open .val{color:var(--accent)}
   .sed .form{padding:12px 20px 14px} .sed .acts{margin-top:10px}
-  .seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);margin:0 20px 14px;border:1px solid var(--line-2);border-radius:8px;overflow:hidden}
-  .seg button{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;min-height:40px;line-height:40px;font-size:14px;color:var(--muted);border-left:1px solid var(--line-2)}
-  .seg button:first-child{border-left:0}
-  .seg button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+  .bar-row{display:flex;align-items:center;gap:8px}
+  .bar-row h1{flex:1;min-width:0}
+  button.themebtn{all:unset;box-sizing:border-box;cursor:pointer;width:40px;height:40px;min-height:0;margin:-8px -8px -8px 0;display:flex;align-items:center;justify-content:center;color:var(--muted);border-radius:8px!important}
+  button.themebtn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .srow .hr{display:inline-flex;align-items:center;gap:8px}
   .srow .hr::after{content:'›';font-family:var(--f-body);font-size:20px;line-height:1;color:var(--muted)}
   .ord.open>.srow .hr::after{content:'⌄'}
@@ -104,7 +104,7 @@
 </head>
 <body>
 <header class="bar">
-  <h1 id="title">Mening ishim</h1>
+  <div class="bar-row"><h1 id="title">Mening ishim</h1><button type="button" id="themeBtn" class="themebtn" aria-label="Kun / tun" title="Kun / tun" hidden></button></div>
   <div class="meta" id="sub"></div>
 </header>
 <main>
@@ -179,15 +179,12 @@
   function setTheme(p) { try { if (p === 'auto') localStorage.removeItem('mc-theme'); else localStorage.setItem('mc-theme', p); } catch (e) {} applyTheme(p); }
   applyTheme(themePref());
   try { if (inTg) tg.onEvent('themeChanged', function () { if (themePref() === 'auto') applyTheme('auto'); }); } catch (e) {}
-  function themeSeg() {
-    var seg = el('div', 'seg'), SB = {};
-    [['auto', 'Telefon bo\'yicha'], ['light', 'Oq'], ['dark', 'Qora']].forEach(function (x) {
-      var b = el('button', null, x[1]); b.type = 'button'; SB[x[0]] = b;
-      b.addEventListener('click', function () { setTheme(x[0]); Object.keys(SB).forEach(function (q) { SB[q].setAttribute('aria-selected', String(q === x[0])); }); });
-      seg.appendChild(b);
-    });
-    Object.keys(SB).forEach(function (q) { SB[q].setAttribute('aria-selected', String(q === themePref())); });
-    return seg;
+  // Sarlavhadagi kichik belgi: oy (qoraga o'tish) / quyosh (oqqa o'tish)
+  function themeBtn() {
+    var b = $('themeBtn'); if (!b) return;
+    function paint() { var dk = document.documentElement.getAttribute('data-theme') === 'dark'; while (b.firstChild) b.removeChild(b.firstChild); b.appendChild(ico(dk ? 'sun' : 'moon', 20)); b.setAttribute('aria-label', dk ? 'Oq rejim' : 'Qora rejim'); }
+    b.addEventListener('click', function () { setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); paint(); });
+    paint(); b.hidden = false;
   }
 
   function fail(msg) { $('error').textContent = msg; $('error').hidden = false; }
@@ -274,6 +271,7 @@
     return { mm: mm, y: y, mo: mo, name: mm ? MONTHS[mo - 1] + ' ' + y : str(d.m) };
   }
   function header(d) {
+    themeBtn();
     $('title').textContent = (d.r === 'o' ? 'Ish holati' : 'Mening ishim');
     var mi = monthInfo(d);
     var sub = $('sub');
@@ -1304,8 +1302,6 @@
     s.appendChild(ol);
     s.appendChild(el('p', 'more', 'Bot har bir qadamdan keyin chatda javob beradi. Javob kelmasa, botga /start yozing.'));
     s.id = 'guide'; $('p-guide').appendChild(s);
-    // rebuild 14: xodimda ham ko'rinish tanlovi (Yo'riqnoma pastida)
-    var th = sec("Ko'rinish"); th.appendChild(themeSeg()); th.querySelector('.seg').style.marginTop = '12px'; th.id = 'themeBox'; $('p-guide').appendChild(th);
   }
 
   // --- rebuild 10: ixcham joylashuv (pastga cho'zilib ketmasin) ---
@@ -1378,7 +1374,9 @@
     menu: ['M4 7h16M4 12h16M4 17h16'],
     cal: ['M4 5h16v16H4z', 'M4 10h16M9 3v4M15 3v4'],
     info: ['M12 3a9 9 0 1 1 0 18a9 9 0 0 1 0-18z', 'M12 16v-4M12 8h.01'],
-    chev: ['M9 6l6 6l-6 6'], back: ['M15 6l-6 6l6 6']
+    chev: ['M9 6l6 6l-6 6'], back: ['M15 6l-6 6l6 6'],
+    sun: ['M12 8a4 4 0 1 1 0 8a4 4 0 0 1 0-8z', 'M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4'],
+    moon: ['M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z']
   };
   function ico(name, size) {
     var NS = 'http://www.w3.org/2000/svg', v = document.createElementNS(NS, 'svg');
@@ -1446,7 +1444,6 @@
     }
     function lbl(text) { var h = el('div', 'lbl2'); h.appendChild(el('span', 'grow', text)); return h; }
     // Ko'rinish
-    more.appendChild(lbl("Ko'rinish")); more.appendChild(themeSeg());
     // Bo'limlar
     var items = [['report', 'Hisobot va Excel', "Oy bo'yicha keldi, kechikdi, kelmadi", 'p-report', null]];
     if (ADM) items = items.concat([

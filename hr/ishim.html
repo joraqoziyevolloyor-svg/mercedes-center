@@ -2,7 +2,7 @@
 <html lang="uz">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-PQP7didjvNJI9DdtB5grZRPnF4OsQxL6HrJHarEqduY='; style-src 'self' 'sha256-NzMgVPklwjDjmS3LJp4njbep6JoyMGJsZhie2FSHv0U='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-CPIC8AlBGW4vgmUNG8puH38JE4229RM9qsKBoCdsf1g='; style-src 'self' 'sha256-/YA1bHVnSk3IU80kTtFKelg1hWoyWLb7bRWwcuJQ9V8='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mening ishim</title>
 <script>window.__mcHash = String(location.hash || '');</script>
@@ -135,6 +135,29 @@
   .wsum{margin:0;padding:0 20px 10px;font-size:14px;color:var(--ink)}
   .tag.ok{color:var(--ok)}
   #p-more .hint.pad,#p-settings .hint.pad{padding:12px 20px 4px}
+  /* rebuild 16: rejalar */
+  .tabs2.cm{margin:0 20px 12px;border:1px solid var(--line-2);border-radius:8px;overflow:hidden;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tabs2.cm button{min-height:38px;border-bottom:0;border-left:1px solid var(--line-2)} .tabs2.cm button:first-child{border-left:0}
+  .tabs2.cm button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+  .mine2 .v2>.tabs2.cm{margin-top:14px}
+  .plnav{display:flex;align-items:center;gap:4px;padding:6px 12px 8px}
+  .plnav .grow{flex:1;text-align:center;font-size:15px;font-weight:600}
+  button.plarr{all:unset;box-sizing:border-box;cursor:pointer;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:var(--ink);border-radius:8px!important;min-height:0}
+  button.plarr:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .cal button.cd.pd{background:transparent;border:1px solid var(--line);color:var(--ink)}
+  .cal button.cd.pd.past{color:var(--muted)}
+  .cal button.cd.pd.has{background:var(--newbg);border-color:var(--accent);color:var(--ink)}
+  .cal button.cd.pd.alldone{background:var(--c-off)}
+  .cal .cd .pn{position:absolute;top:2px;right:3px;font-style:normal;font-family:var(--f-body);font-size:10px;font-weight:600;line-height:1;color:var(--accent)}
+  .cal .cd.alldone .pn{color:var(--ok)}
+  .placts{display:flex;flex-direction:column;gap:6px;flex:none} .placts button{min-height:40px;padding:0 12px}
+  button.ghost.danger{color:var(--no);border-color:var(--no)}
+  .plform{padding:12px 20px 16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+  .plform textarea{width:100%;resize:vertical;min-height:64px}
+  .plwho{display:flex;flex-direction:column;gap:8px} .plwho .lbl{font-size:13px;font-weight:600;color:var(--muted)}
+  .plc .empty{padding:12px 20px}
+  .plc .empty button{min-height:36px;margin-left:6px;padding:0 10px}
+  #p-today>.plc{border-bottom:1px solid var(--line);padding-bottom:6px}
 </style>
 </head>
 <body>
@@ -1468,6 +1491,8 @@
     // Topshiriq va Xodim qo'shish formalari tugma orqasida; Bugun jadvali yangi ekranda
     if ($('teamBox')) $('teamBox').remove();
     foldBehind('p-today', 'taskForm', '+ Topshiriq berish');
+    // Rejalar: Topshiriq bo'limining boshida (egasi ham, rahbar ham xodim sifatida reja qo'yadi)
+    if (d.pl) { try { var pcO = planCal(d), pT = $('p-today'), ph = el('div', 'lbl2'); ph.appendChild(el('span', 'grow', 'Rejalar')); pT.insertBefore(pcO.el, pT.firstChild); pT.insertBefore(ph, pcO.el); pcO.el.hidden = false; } catch (e) { /* rejasiz qoladi */ } }
     foldBehind('p-staff', 'addForm', "+ Xodim qo'shish");
     // Ko'proq (rebuild 14): ilova sozlamalari kabi — guruhlangan qatorlar, o'ngda hozirgi qiymat, bir bosishda o'zgaradi
     var more = el('div', 'panel'); more.id = 'p-more';
@@ -1679,6 +1704,195 @@
     if (keep && y > 0) window.scrollTo(0, y);
   }
 
+  // --- rebuild 16: Rejalar (kalendar). Ma'lumot botdan alohida so'raladi (pget), oyma-oy. Kim ko'rishi va kim qila olishini bot tekshiradi ---
+  // Reja: [id, boshlanish kuni, vaqt, matn, qo'ygan id, [belgilanganlar], vis 0/1/2, rep 0-3, rem]
+  // occursOn bot (src/reja.js) bilan aynan bir xil bo'lishi kerak
+  function validDayS(x) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str(x)); if (!m) return false; var t = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])); return t.getUTCFullYear() === +m[1] && t.getUTCMonth() === +m[2] - 1 && t.getUTCDate() === +m[3]; }
+  function occursOn(p, day) {
+    if (!validDayS(day) || !validDayS(p.day) || day < p.day) return false;
+    var rep = Number(p.rep) || 0;
+    if (rep === 0) return day === p.day;
+    if (rep === 1) return true;
+    if (rep === 2) return new Date(day + 'T00:00:00Z').getUTCDay() === new Date(p.day + 'T00:00:00Z').getUTCDay();
+    if (rep === 3) return day.slice(8, 10) === p.day.slice(8, 10);
+    return false;
+  }
+  var PL_CACHE = {};
+  function loadPlans(m) {
+    if (PL_CACHE[m]) return PL_CACHE[m];
+    var pr = window.__PROTO && window.__PROTO_PLANS ? Promise.resolve(window.__PROTO_PLANS(m)) : fetchLive({ t: 'pget', m: m });
+    PL_CACHE[m] = pr.then(function (x) { if (!x || x.x !== 'p') throw new Error('bad'); return x; });
+    PL_CACHE[m].catch(function () { delete PL_CACHE[m]; });
+    return PL_CACHE[m];
+  }
+  var VIS = ["Faqat o'zim", 'Men va belgilanganlar', 'Hamma'], REP = ['Bir marta', 'Har kuni', 'Har hafta', 'Har oy'];
+  var REMS = [[-1, 'Kerak emas'], [0, 'Vaqtida'], [10, '10 daqiqa oldin'], [30, '30 daqiqa oldin'], [60, '1 soat oldin']];
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function planCal(d) {
+    var mi = monthInfo(d), curM = str(d.m), todayN = 0;
+    (arr(d.d) || []).forEach(function (r) { if (Array.isArray(r)) todayN = Math.max(todayN, num(r[0])); });
+    if (!todayN) todayN = num(d.dn) || 1;
+    var todayS = curM + '-' + pad2(todayN);
+    var root = el('div', 'plc'), todayEl = el('div', 'pltoday'); root.hidden = true;
+    var state = { m: ss('mc-pm') || curM, day: ss('mc-pd') || todayS, data: null };
+    if (!/^\d{4}-\d{2}$/.test(state.m)) state.m = curM;
+    var nav = el('div', 'plnav'), prevB = btn(null, 'plarr'), nextB = btn(null, 'plarr'), title = el('span', 'grow');
+    prevB.appendChild(ico('back', 18)); nextB.appendChild(ico('chev', 18)); prevB.setAttribute('aria-label', 'Oldingi oy'); nextB.setAttribute('aria-label', 'Keyingi oy');
+    nav.appendChild(prevB); nav.appendChild(title); nav.appendChild(nextB);
+    var grid = el('div', 'cal'), detail = el('div', 'cdet'), msg = el('p', 'empty');
+    root.appendChild(nav); root.appendChild(msg); root.appendChild(grid); root.appendChild(detail);
+    function shift(k) { var y = +state.m.slice(0, 4), mo = +state.m.slice(5, 7) + k; if (mo < 1) { mo = 12; y--; } if (mo > 12) { mo = 1; y++; } state.m = y + '-' + pad2(mo); ss('mc-pm', state.m); state.day = state.m === curM ? todayS : state.m + '-01'; ss('mc-pd', state.day); load(); }
+    prevB.addEventListener('click', function () { shift(-1); }); nextB.addEventListener('click', function () { shift(1); });
+    function nameOf(x, id) { var w = (x.w || []).filter(function (q) { return sid(q[0]) === id; })[0]; return w ? str(w[1]) : ''; }
+    function plansOn(x, day) { return (x.p || []).filter(function (p) { return occursOn({ day: p[1], rep: p[7] }, day); }).sort(function (a, b) { return str(a[2] || '99').localeCompare(str(b[2] || '99')); }); }
+    function isDone(x, id, day) { return (x.dn || []).some(function (q) { return sid(q[0]) === id && q[1] === day; }); }
+    function planRow(x, p, day, onChange) {
+      var me = sid(x.me), who = (p[5] || []).map(sid), done = isDone(x, sid(p[0]), day);
+      var row = el('div', 'task' + (done ? ' done' : '')), txt = el('div', 'txt');
+      txt.appendChild(el('div', null, (p[2] ? p[2] + ' · ' : '') + str(p[3])));
+      var meta = [];
+      var others = who.filter(function (q) { return q !== me; });
+      if (sid(p[4]) !== me) meta.push("qo'ydi: " + nameOf(x, sid(p[4])));
+      if (others.length) meta.push(others.map(function (q) { return nameOf(x, q); }).join(', '));
+      if (num(p[6]) === 0) meta.push('shaxsiy'); else if (num(p[6]) === 2) meta.push("hamma ko'radi");
+      if (num(p[7])) meta.push(REP[num(p[7])].toLowerCase());
+      txt.appendChild(el('div', 'muted', meta.filter(Boolean).join(' · ')));
+      var box = el('p', 'amsg'); txt.appendChild(box);
+      row.appendChild(txt);
+      var acts = el('div', 'placts');
+      if (!sid(p[0])) { txt.appendChild(el('div', 'muted', 'saqlanmoqda…')); return row; } // hali bazada yo'q (sahifa birozdan keyin yangilanadi)
+      if (who.indexOf(me) >= 0) {
+        var b = btn(done ? 'Qaytarish' : 'Bajarildi', done ? 'ghost' : null);
+        b.addEventListener('click', function () {
+          act({ t: 'pdone', id: sid(p[0]), d: day, u: done ? 1 : undefined }, b, box, function () {
+            if (done) x.dn = (x.dn || []).filter(function (q) { return !(sid(q[0]) === sid(p[0]) && q[1] === day); }); else (x.dn = x.dn || []).push([sid(p[0]), day, me]);
+            onChange();
+          });
+        });
+        acts.appendChild(b);
+      }
+      if (sid(p[4]) === me) {
+        var del = btn("O'chirish", 'ghost danger');
+        del.addEventListener('click', function () { ask("Bu reja o'chirilsinmi?" + (num(p[7]) ? ' (hamma takrorlari bilan)' : ''), function (y) { if (y) act({ t: 'pdel', id: sid(p[0]) }, del, box, function () { x.p = x.p.filter(function (q) { return q !== p; }); onChange(); }); }); });
+        acts.appendChild(del);
+      }
+      if (acts.children.length) row.appendChild(acts);
+      return row;
+    }
+    function addForm(x, day, onDone) {
+      var f = el('div', 'form plform'), me = sid(x.me);
+      var text = el('textarea'); text.rows = 2; text.maxLength = 200; text.placeholder = 'Masalan: ombordagi moy filtrlarini sanash';
+      var date = input('date', day, { min: todayS }), tm = timeInput('');
+      var rem = el('select'); REMS.forEach(function (r) { var o = el('option', null, r[1]); o.value = String(r[0]); rem.appendChild(o); });
+      var rep = el('select'); REP.forEach(function (r, i) { var o = el('option', null, r); o.value = String(i); rep.appendChild(o); });
+      var vis = el('select'); VIS.forEach(function (r, i) { var o = el('option', null, r); o.value = String(i); vis.appendChild(o); }); vis.value = '1';
+      f.appendChild(field('Nima qilish kerak', text));
+      var r1 = el('div', 'row2'); r1.appendChild(field('Sana', date)); r1.appendChild(field('Vaqt', tm, 'shart emas')); f.appendChild(r1);
+      var boxes = [];
+      if (num(x.ca)) {
+        var wl = el('div', 'plwho'); wl.appendChild(el('span', 'lbl', 'Kim uchun'));
+        (x.w || []).filter(function (w) { return w[2] !== 0; }).forEach(function (w) {
+          var c = el('label', 'chk'), b = input('checkbox'); b.checked = sid(w[0]) === me; b.dataset.id = String(sid(w[0]));
+          c.appendChild(b); c.appendChild(document.createTextNode(sid(w[0]) === me ? str(w[1]) + ' (o\'zim)' : str(w[1]))); wl.appendChild(c); boxes.push(b);
+          b.addEventListener('change', sync);
+        });
+        f.appendChild(wl);
+      }
+      f.appendChild(field('Kim ko\'radi', vis));
+      var r2 = el('div', 'row2'); r2.appendChild(field('Takror', rep)); r2.appendChild(field('Eslatish', rem)); f.appendChild(r2);
+      f.appendChild(el('p', 'hint', "Vaqt yozilsa, bot belgilangan odam(lar)ga Telegram'da eslatadi va «Bajarildi» tugmasini beradi."));
+      var acts = el('div', 'acts'), save = btn('Saqlash'), cancel = btn('Bekor', 'ghost'), msg2 = el('p', 'amsg');
+      acts.appendChild(save); acts.appendChild(cancel); f.appendChild(acts); f.appendChild(msg2);
+      function sel() { var w = boxes.filter(function (b) { return b.checked; }).map(function (b) { return sid(b.dataset.id); }); return w.length ? w : [me]; }
+      function sync() {
+        var others = sel().some(function (q) { return q !== me; });
+        vis.options[0].disabled = others; if (others && vis.value === '0') vis.value = '1';
+        rem.disabled = !HM.test(tm.value); if (rem.disabled) rem.value = '-1';
+      }
+      tm.addEventListener('input', sync); tm.addEventListener('blur', sync); sync();
+      cancel.addEventListener('click', function () { onDone(false); });
+      save.addEventListener('click', function () {
+        var a = { t: 'pset', text: text.value.replace(/\s+/g, ' ').trim(), day: date.value, tm: tm.value, vis: Number(vis.value), rep: Number(rep.value), rem: Number(rem.value), who: sel() };
+        if (!a.text) return say(msg2, 'Nima qilish kerakligini yozing.', true);
+        if (!validDayS(a.day)) return say(msg2, 'Sanani tanlang.', true);
+        if (a.tm && !HM.test(a.tm)) return say(msg2, 'Vaqtni SS:DD ko\'rinishida yozing yoki bo\'sh qoldiring.', true);
+        if (!a.tm) { a.tm = ''; a.rem = -1; }
+        act(a, save, msg2, function () {
+          (x.p = x.p || []).push([-Date.now(), a.day, a.tm, a.text, me, a.who, a.vis, a.rep, a.rem]);
+          setTimeout(function () { onDone(true, a.day); }, 600);
+        });
+      });
+      setTimeout(function () { try { text.focus(); } catch (e) {} }, 50);
+      return f;
+    }
+    function draw(x) {
+      var y = +state.m.slice(0, 4), mo = +state.m.slice(5, 7), nD = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+      title.textContent = MONTHS[mo - 1] + ' ' + y;
+      while (grid.firstChild) grid.removeChild(grid.firstChild);
+      ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'].forEach(function (w) { grid.appendChild(el('div', 'cw', w)); });
+      var off = (new Date(Date.UTC(y, mo - 1, 1)).getUTCDay() + 6) % 7;
+      for (var i = 0; i < off; i++) grid.appendChild(el('div', 'cd empty'));
+      if (state.day.slice(0, 7) !== state.m) state.day = state.m + '-01';
+      for (var n = 1; n <= nD; n++) (function (n) {
+        var day = state.m + '-' + pad2(n), list = plansOn(x, day), open = list.filter(function (p) { return !isDone(x, sid(p[0]), day); }).length;
+        var b = btn(null, 'cd pd' + (list.length ? (open ? ' has' : ' alldone') : '') + (day === todayS ? ' today' : '') + (day < todayS ? ' past' : ''));
+        b.appendChild(el('span', null, String(n)));
+        if (list.length) b.appendChild(el('i', 'pn', String(open || '✓')));
+        b.setAttribute('aria-pressed', String(day === state.day));
+        b.setAttribute('aria-label', n + ' ' + MONTHS[mo - 1] + (list.length ? ', ' + list.length + ' ta reja' : ''));
+        b.addEventListener('click', function () { state.day = day; ss('mc-pd', day); draw(x); });
+        grid.appendChild(b);
+      })(n);
+      drawDay(x);
+    }
+    function drawDay(x) {
+      while (detail.firstChild) detail.removeChild(detail.firstChild);
+      var day = state.day, n = +day.slice(8, 10), mo = +day.slice(5, 7);
+      var h = el('div', 'lbl2'); h.appendChild(el('span', 'grow', n + ' ' + MONTHS[mo - 1] + ', ' + DAYS[new Date(day + 'T00:00:00Z').getUTCDay()]));
+      detail.appendChild(h);
+      var list = plansOn(x, day);
+      if (!list.length) detail.appendChild(el('p', 'empty', "Bu kunga reja yo'q."));
+      list.forEach(function (p) { detail.appendChild(planRow(x, p, day, function () { draw(x); paintToday(); })); });
+      {
+        var add = btn("+ Reja qo'shish", 'addbtn wide ghost');
+        add.addEventListener('click', function () {
+          add.hidden = true;
+          var f = addForm(x, day < todayS ? todayS : day, function (saved, d2) { f.remove(); add.hidden = false; if (saved) { if (d2) { state.day = d2; ss('mc-pd', d2); } if (d2 && d2.slice(0, 7) !== state.m) { state.m = d2.slice(0, 7); ss('mc-pm', state.m); load(); } else draw(x); paintToday(); } });
+          detail.appendChild(f);
+        });
+        detail.appendChild(add);
+      }
+      if (num(x.more)) detail.appendChild(el('p', 'hint pad', "Bu oyda rejalar ko'p: hammasi sig'madi."));
+    }
+    var todayData = null;
+    function paintToday() {
+      while (todayEl.firstChild) todayEl.removeChild(todayEl.firstChild);
+      if (!todayData) return;
+      var list = plansOn(todayData, todayS);
+      if (!list.length) return;
+      var h = el('div', 'lbl2'); h.appendChild(el('span', 'grow', 'Bugungi rejalar')); h.appendChild(el('span', 'lsum', String(list.length))); todayEl.appendChild(h);
+      list.forEach(function (p) { todayEl.appendChild(planRow(todayData, p, todayS, function () { paintToday(); if (state.data === todayData) draw(todayData); })); });
+    }
+    function load() {
+      msg.hidden = false; msg.textContent = 'Rejalar yuklanmoqda…'; grid.hidden = true; detail.hidden = true;
+      var m = state.m;
+      loadPlans(m).then(function (x) {
+        if (m !== state.m) return;
+        state.data = x; msg.hidden = true; grid.hidden = false; detail.hidden = false; draw(x);
+        if (m === curM) { todayData = x; paintToday(); }
+      }, function () {
+        if (m !== state.m) return;
+        msg.textContent = ''; msg.appendChild(document.createTextNode("Rejalarni olib bo'lmadi. "));
+        var r = btn('Qayta urinish', 'ghost'); r.addEventListener('click', load); msg.appendChild(r);
+      });
+    }
+    if (INIT || window.__PROTO) {
+      load();
+      if (state.m !== curM) loadPlans(curM).then(function (x) { todayData = x; paintToday(); }, function () {});
+    } else { msg.textContent = 'Rejalar uchun sahifani chat pastidagi menyu tugmasidan oching.'; }
+    return { el: root, todayEl: todayEl };
+  }
+
   // --- rebuild 15: xodim ekrani — Bugun / Hafta / Oy (kalendar). Keldi-ketdi va berilgan topshiriqlar bir joyda ---
   function mineV2(d) {
     var mi = monthInfo(d); if (!mi.mm) return;
@@ -1786,6 +2000,16 @@
     var lg = el('div', 'clg'); [['ok', 'vaqtida'], ['late', 'kechikdi'], ['no', 'kelmadi'], ['off', 'dam']].forEach(function (x) { var s = el('span'); s.appendChild(el('i', 'sq s-' + x[0])); s.appendChild(document.createTextNode(x[1])); lg.appendChild(s); });
     var s5 = el('span'); s5.appendChild(el('i', 'tk')); s5.appendChild(document.createTextNode('berilgan topshiriq')); lg.appendChild(s5);
     vm.appendChild(lg); vm.appendChild(detail);
+    // Rejalar: Oy ko'rinishida [Keldi-ketdi | Rejalar], Bugun ko'rinishida bugungi rejalar (bot rejalarni bilsa: d.pl)
+    if (d.pl) {
+      var attBox = el('div'); while (vm.firstChild) attBox.appendChild(vm.firstChild);
+      var pc = planCal(d), cmSeg = el('div', 'tabs2 cm'), CM = {};
+      [['att', 'Keldi-ketdi'], ['pl', 'Rejalar']].forEach(function (x) { var b = btn(x[1]); CM[x[0]] = b; b.addEventListener('click', function () { cm(x[0]); }); cmSeg.appendChild(b); });
+      vm.appendChild(cmSeg); vm.appendChild(attBox); vm.appendChild(pc.el);
+      var cm = function (k) { attBox.hidden = k !== 'att'; pc.el.hidden = k !== 'pl'; Object.keys(CM).forEach(function (q) { CM[q].setAttribute('aria-selected', String(q === k)); }); ss('mc-cm', k); };
+      cm(ss('mc-cm') === 'pl' ? 'pl' : 'att');
+      vd.appendChild(pc.todayEl);
+    }
     function pick(n) {
       Object.keys(CB).forEach(function (q) { CB[q].setAttribute('aria-pressed', String(+q === n)); });
       while (detail.firstChild) detail.removeChild(detail.firstChild);

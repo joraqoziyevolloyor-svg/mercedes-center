@@ -2,7 +2,7 @@
 <html lang="uz">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-CPIC8AlBGW4vgmUNG8puH38JE4229RM9qsKBoCdsf1g='; style-src 'self' 'sha256-/YA1bHVnSk3IU80kTtFKelg1hWoyWLb7bRWwcuJQ9V8='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-IgnGP4SsT619rNgguur6q973d3p+ZqmtsB4JGYvqzLo='; style-src 'self' 'sha256-t7VCfPHRaZOVuZQv2KSUlS9d545CaD0yVnRNK1tTwqY='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mening ishim</title>
 <script>window.__mcHash = String(location.hash || '');</script>
@@ -136,6 +136,25 @@
   .tag.ok{color:var(--ok)}
   #p-more .hint.pad,#p-settings .hint.pad{padding:12px 20px 4px}
   /* rebuild 16: rejalar */
+  /* rebuild 17: ko'rinish almashtirish va Tizim */
+  .bar{position:relative}
+  .bar-row button.themebtn+button.themebtn{margin-left:0}
+  .vmenu{position:absolute;right:12px;top:52px;z-index:20;background:var(--bg);border:1px solid var(--line-2);border-radius:8px;display:flex;flex-direction:column;min-width:180px;overflow:hidden}
+  .vmenu button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 14px;font-size:15px;color:var(--ink);border-top:1px solid var(--line)}
+  .vmenu button:first-child{border-top:0} .vmenu button[aria-checked="true"]{font-weight:600;color:var(--accent)}
+  .vmenu button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  body.v-sys main>:not(#p-sys):not(#error){display:none!important} body.v-sys #tabs{display:none!important}
+  body.v-mine main>:not(#p-mine):not(#error){display:none!important} body.v-mine #tabs{display:none!important} body.v-mine #p-mine{display:contents!important}
+  body.v-sys main,body.v-mine main{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+  .sysst{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line)} .sysst .dot{width:10px;height:10px;border-radius:50%!important;flex:none} .sysst .t1{font-size:16px;font-weight:600} .sysst .t2{font-size:13px;color:var(--muted)} .sysst .gr{flex:1;min-width:0}
+  #p-sys .kpi .kc{padding:14px 0 12px 20px;border-right:1px solid var(--line)} #p-sys .kpi .kc:last-child{border-right:0} #p-sys .kpi b{display:block;font-family:var(--f-mono);font-weight:500;font-size:26px;line-height:1} #p-sys .kpi span{display:block;font-size:12px;color:var(--muted);margin-top:6px}
+  .syserr{margin:0;padding:10px 20px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);overflow-wrap:anywhere} .syserr b{color:var(--ink);font-weight:500}
+  .trow.sy{grid-template-columns:minmax(0,1fr) 92px 44px 48px;align-items:start} .trow.sy .tm2{font-size:13px} .trow.sy .n{align-items:flex-start} .trow.sy .dot{margin-top:6px}
+  .trow .nmx{min-width:0} .trow .nmx span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .trow .nmx small{display:block;font-size:12px;color:var(--muted);white-space:normal}
+  #p-sys>.empty .sysst{padding:0 0 10px;border:0}
+  .remday{padding:10px 20px 2px;font-size:12px;font-weight:600;color:var(--muted)}
+  .pltoday .task.fromother{background:var(--newbg)}
+  .pltoday{border-bottom:1px solid var(--line)}
   .tabs2.cm{margin:0 20px 12px;border:1px solid var(--line-2);border-radius:8px;overflow:hidden;grid-template-columns:repeat(2,minmax(0,1fr))}
   .tabs2.cm button{min-height:38px;border-bottom:0;border-left:1px solid var(--line-2)} .tabs2.cm button:first-child{border-left:0}
   .tabs2.cm button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
@@ -162,7 +181,7 @@
 </head>
 <body>
 <header class="bar">
-  <div class="bar-row"><h1 id="title">Mening ishim</h1><button type="button" id="themeBtn" class="themebtn" aria-label="Kun / tun" title="Kun / tun" hidden></button></div>
+  <div class="bar-row"><h1 id="title">Mening ishim</h1><button type="button" id="viewBtn" class="themebtn" aria-label="Ko'rinishni almashtirish" title="Ko'rinish" hidden></button><button type="button" id="themeBtn" class="themebtn" aria-label="Kun / tun" title="Kun / tun" hidden></button></div>
   <div class="meta" id="sub"></div>
 </header>
 <main>
@@ -1434,7 +1453,9 @@
     info: ['M12 3a9 9 0 1 1 0 18a9 9 0 0 1 0-18z', 'M12 16v-4M12 8h.01'],
     chev: ['M9 6l6 6l-6 6'], back: ['M15 6l-6 6l6 6'],
     sun: ['M12 8a4 4 0 1 1 0 8a4 4 0 0 1 0-8z', 'M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4'],
-    moon: ['M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z']
+    moon: ['M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z'],
+    grid: ['M4 4h7v7H4z', 'M13 4h7v7h-7z', 'M4 13h7v7H4z', 'M13 13h7v7h-7z'],
+    pulse: ['M3 12h4l2-6l4 12l2-6h6']
   };
   function ico(name, size) {
     var NS = 'http://www.w3.org/2000/svg', v = document.createElementNS(NS, 'svg');
@@ -1492,7 +1513,7 @@
     if ($('teamBox')) $('teamBox').remove();
     foldBehind('p-today', 'taskForm', '+ Topshiriq berish');
     // Rejalar: Topshiriq bo'limining boshida (egasi ham, rahbar ham xodim sifatida reja qo'yadi)
-    if (d.pl) { try { var pcO = planCal(d), pT = $('p-today'), ph = el('div', 'lbl2'); ph.appendChild(el('span', 'grow', 'Rejalar')); pT.insertBefore(pcO.el, pT.firstChild); pT.insertBefore(ph, pcO.el); pcO.el.hidden = false; } catch (e) { /* rejasiz qoladi */ } }
+    if (d.pl) { try { var pcO = planCal(d), pT = $('p-today'), ph = el('div', 'lbl2'); ph.appendChild(el('span', 'grow', 'Rejalar')); pT.insertBefore(pcO.el, pT.firstChild); pT.insertBefore(ph, pcO.el); pcO.el.hidden = false; var hm = $('p-home'), kp = hm && hm.querySelector('.kpi'); if (kp) hm.insertBefore(pcO.todayEl, kp.nextSibling); } catch (e) { /* rejasiz qoladi */ } }
     foldBehind('p-staff', 'addForm', "+ Xodim qo'shish");
     // Ko'proq (rebuild 14): ilova sozlamalari kabi — guruhlangan qatorlar, o'ngda hozirgi qiymat, bir bosishda o'zgaradi
     var more = el('div', 'panel'); more.id = 'p-more';
@@ -1704,6 +1725,110 @@
     if (keep && y > 0) window.scrollTo(0, y);
   }
 
+
+  // --- rebuild 17: ko'rinish almashtirish (Tizim / Boshqaruv / Xodim) va Tizim holati ---
+  // Namuna sahifada (__PROTO) botga so'rov ketmaydi: shu nomdagi namunaviy javob olinadi
+  function fetchX(a) { if (window.__PROTO && typeof window['__PROTO_' + a.t] === 'function') return Promise.resolve(window['__PROTO_' + a.t](a)); return fetchLive(a); }
+  function agoTxt(ts, nowS) {
+    if (!(ts > 0)) return '—';
+    var t = new Date((ts + 5 * 3600) * 1000), n = new Date((nowS + 5 * 3600) * 1000), hm = pad2(t.getUTCHours()) + ':' + pad2(t.getUTCMinutes());
+    var dd = Math.round((Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()) - Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate())) / 86400000);
+    return dd <= 0 ? 'bugun ' + hm : dd === 1 ? 'kecha ' + hm : dd + ' kun oldin';
+  }
+  function upTxt(s) { s = num(s); var dd = Math.floor(s / 86400), hh = Math.floor(s % 86400 / 3600), mm = Math.floor(s % 3600 / 60); return dd ? dd + ' kun ' + hh + ' soat' : hh ? hh + ' soat ' + mm + ' daq' : mm + ' daq'; }
+  function sysPanel() {
+    var p = el('div', 'panel'); p.id = 'p-sys';
+    var body = el('div'), msg = el('p', 'empty', 'Tizim holati yuklanmoqda…');
+    p.appendChild(msg); p.appendChild(body);
+    function draw(x) {
+      while (body.firstChild) body.removeChild(body.firstChild);
+      var hd = x.h || {}, nowS = num(x.at) || Math.floor(Date.now() / 1000), pr = arr(x.pr) || [];
+      var st = el('div', 'sysst'), dot = el('i', 'dot'); dot.style.background = pr.length ? 'var(--warn-bar)' : 'var(--ok)';
+      var g = el('div', 'gr'); g.appendChild(el('div', 't1', pr.length ? 'Bot ishlayapti · ' + pr.length + ' ta muammo' : 'Bot ishlayapti, muammo yo\'q'));
+      g.appendChild(el('div', 't2', (hd.up ? 'To\'xtamasdan ' + upTxt(hd.up) + ' · ' : '') + (hd.ver ? 'versiya ' + str(hd.ver) + ' · ' : '') + 'tekshirildi ' + agoTxt(nowS, nowS).replace('bugun ', '')));
+      st.appendChild(dot); st.appendChild(g); body.appendChild(st);
+      var k = el('div', 'kpi');
+      [[num(hd.net), 'internet uzilishi bugun', num(hd.net) >= 30 ? 'var(--warn)' : 'var(--ink)'], [num(hd.err), 'xato bugun', num(hd.err) ? 'var(--warn)' : 'var(--ink)'], [(arr(x.a) || []).filter(function (r) { return num(r[3]) > 0; }).length + '/' + (arr(x.a) || []).length, 'faol odam (7 kun)', 'var(--ink)']].forEach(function (q) {
+        var c = el('div', 'kc'), b = el('b', null, String(q[0])); b.style.color = q[2]; c.appendChild(b); c.appendChild(el('span', null, q[1])); k.appendChild(c);
+      });
+      body.appendChild(k);
+      if (hd.le && hd.le[1]) { var le = el('p', 'syserr'); le.appendChild(el('b', null, 'Oxirgi xato · ' + agoTxt(num(hd.le[0]), nowS) + ': ')); le.appendChild(document.createTextNode(str(hd.le[1]))); body.appendChild(le); }
+      if (pr.length) {
+        body.appendChild(el('div', 'lbl2', 'Muammolar'));
+        pr.forEach(function (q) { var r = el('div', 'att'), b4 = el('div', 'bar4'); b4.style.background = 'var(--warn-bar)'; var gg = el('div', 'gr'); gg.appendChild(el('div', 't1', str(q[1]))); r.appendChild(b4); r.appendChild(gg); body.appendChild(r); });
+      }
+      var lh = el('div', 'lbl2'); lh.style.borderTop = '1px solid var(--line)'; lh.appendChild(el('span', 'grow', 'Kim qancha foydalanyapti · 7 kun')); body.appendChild(lh);
+      var hh = el('div', 'trow sy h'); ['Ism', 'Oxirgi', 'Faol', 'Keldi'].forEach(function (s, i) { var c = el('div', i ? 'tm2' : null, s); if (i) c.style.font = 'inherit'; hh.appendChild(c); }); body.appendChild(hh);
+      (arr(x.a) || []).forEach(function (r) {
+        var row = el('div', 'trow sy'), n = el('div', 'n'), lowAct = !num(r[11]) && num(r[10]) && num(r[3]) <= 2, gone = !num(r[10]);
+        var dt = el('div', 'dot'); dt.style.background = num(r[11]) ? 'var(--off)' : gone ? 'var(--off)' : lowAct ? 'var(--warn-bar)' : 'var(--ok)'; n.appendChild(dt);
+        var nm = el('div', 'nmx'); nm.appendChild(el('span', null, str(r[0])));
+        var sub = [];
+        if (str(r[1])) sub.push(str(r[1]));
+        if (num(r[11])) sub.push("to'xtatilgan"); else if (gone) sub.push('botga kirmagan');
+        if (num(r[6])) sub.push(num(r[6]) + ' topshiriq berdi'); if (num(r[7])) sub.push(num(r[7]) + ' bajardi');
+        if (num(r[8])) sub.push(num(r[8]) + ' buyurtma'); if (num(r[9])) sub.push(num(r[9]) + ' reja');
+        nm.appendChild(el('small', null, sub.join(' · '))); n.appendChild(nm); row.appendChild(n);
+        var a1 = el('div', 'tm2', agoTxt(num(r[2]), nowS)); a1.style.color = lowAct ? 'var(--warn)' : 'var(--muted)';
+        var a2 = el('div', 'tm2', num(r[3]) + '/7'); a2.style.color = lowAct ? 'var(--warn)' : 'var(--ink)';
+        var a3 = el('div', 'tm2', num(r[5]) ? num(r[4]) + '/' + num(r[5]) : '—'); a3.style.color = 'var(--muted)';
+        row.appendChild(a1); row.appendChild(a2); row.appendChild(a3); body.appendChild(row);
+      });
+      body.appendChild(el('p', 'hint pad', "Faol — 7 kundan necha kuni botda biror ish qilgan (Keldim, tugma, topshiriq, buyurtma, reja). Sariq — 2 kundan kam. Keldi — Keldim bosgan kunlar / ish kunlari."));
+      var rb = btn('Yangilash', 'addbtn wide ghost'); rb.addEventListener('click', load); body.appendChild(rb);
+    }
+    function load() {
+      msg.hidden = false; msg.textContent = 'Tizim holati yuklanmoqda…';
+      fetchX({ t: 'sget' }).then(function (x) { if (!x || x.x !== 's') throw new Error('bad'); msg.hidden = true; draw(x); }, function () {
+        while (body.firstChild) body.removeChild(body.firstChild);
+        msg.textContent = ''; var st = el('div', 'sysst'), dot = el('i', 'dot'); dot.style.background = 'var(--no)';
+        var g = el('div', 'gr'); g.appendChild(el('div', 't1', 'Bot 30 soniyada javob bermadi')); g.appendChild(el('div', 't2', "Bot o'chiq yoki internet yo'q bo'lishi mumkin."));
+        st.appendChild(dot); st.appendChild(g); msg.appendChild(st);
+        var r = btn('Qayta urinish', 'ghost'); r.addEventListener('click', load); msg.appendChild(r);
+      });
+    }
+    return { el: p, load: load };
+  }
+  function setupViews(d, kind) {
+    var V2 = kind === 'o' ? [['boss', 'Boshqaruv', 'grid']] : [['mine', 'Xodim', 'home']];
+    if (num(d.tz)) V2.unshift(['sys', 'Tizim', 'pulse']);
+    if (kind === 'o' && num(d.mw)) V2.push(['mine', 'Xodim', 'home']);
+    var b = $('viewBtn'); if (!b || V2.length < 2 || !INIT && !window.__PROTO) return;
+    var main = $('p-today') ? $('p-today').parentNode : document.querySelector('main');
+    var sys = null, mineDone = kind === 's', titleKeep = '', menu = null;
+    function pref() { try { var v = localStorage.getItem('mc-view'); return V2.some(function (x) { return x[0] === v; }) ? v : null; } catch (e) { return null; } }
+    function set(v) {
+      try { localStorage.setItem('mc-view', v); } catch (e) {}
+      var base = kind === 'o' ? 'boss' : 'mine';
+      document.body.classList.toggle('v-sys', v === 'sys');
+      document.body.classList.toggle('v-mine', v === 'mine' && kind === 'o');
+      if (v === 'sys') { if (!sys) { sys = sysPanel(); main.insertBefore(sys.el, main.firstChild.nextSibling); sys.load(); } if (!titleKeep) titleKeep = $('title').textContent; $('title').textContent = 'Tizim'; }
+      else if (v === 'mine' && kind === 'o') {
+        if (!titleKeep) titleKeep = $('title').textContent; $('title').textContent = 'Mening ishim';
+        if (!mineDone) { mineDone = true; var w = $('p-mine'), ld = el('p', 'empty', 'Yuklanmoqda…'); ld.id = 'mineLoad'; w.insertBefore(ld, w.firstChild);
+          fetchX({ t: 'mget' }).then(function (x) { ld.remove(); if (!x || x.v !== 2 || x.r !== 's') throw new Error('bad'); x.pl = d.pl; x.ot = 0; mineV2(x); }, function () { ld.textContent = "Ma'lumotni olib bo'lmadi. Keyinroq qayta oching."; mineDone = false; }); }
+      }
+      else if (titleKeep) { $('title').textContent = titleKeep; titleKeep = ''; }
+      if (v === base && kind === 'o') { var cur = document.querySelector('#tabs button[aria-selected="true"]'); if (cur) cur.click(); }
+      while (b.firstChild) b.removeChild(b.firstChild);
+      var cur2 = V2.filter(function (x) { return x[0] === v; })[0]; b.appendChild(ico(cur2 ? cur2[2] : 'grid', 20)); b.setAttribute('aria-label', "Ko'rinish: " + (cur2 ? cur2[1] : ''));
+      window.scrollTo(0, 0);
+    }
+    function closeMenu() { if (menu) { menu.remove(); menu = null; } }
+    b.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var v = pref() || V2[0][0];
+      if (V2.length === 2) { set(V2[0][0] === v ? V2[1][0] : V2[0][0]); return; }
+      if (menu) return closeMenu();
+      menu = el('div', 'vmenu'); menu.setAttribute('role', 'menu');
+      V2.forEach(function (x) { var it = btn(null); it.setAttribute('role', 'menuitemradio'); it.setAttribute('aria-checked', String(x[0] === v)); it.appendChild(ico(x[2], 18)); it.appendChild(document.createTextNode(x[1])); it.addEventListener('click', function () { closeMenu(); set(x[0]); }); menu.appendChild(it); });
+      document.querySelector('.bar').appendChild(menu);
+    });
+    document.addEventListener('click', function (e) { if (menu && !menu.contains(e.target)) closeMenu(); });
+    b.hidden = false;
+    set(pref() || (kind === 'o' && d.r === 'o' && num(d.adm) ? V2[0][0] : (kind === 'o' ? 'boss' : 'mine')));
+  }
+
   // --- rebuild 16: Rejalar (kalendar). Ma'lumot botdan alohida so'raladi (pget), oyma-oy. Kim ko'rishi va kim qila olishini bot tekshiradi ---
   // Reja: [id, boshlanish kuni, vaqt, matn, qo'ygan id, [belgilanganlar], vis 0/1/2, rep 0-3, rem]
   // occursOn bot (src/reja.js) bilan aynan bir xil bo'lishi kerak
@@ -1720,7 +1845,7 @@
   var PL_CACHE = {};
   function loadPlans(m) {
     if (PL_CACHE[m]) return PL_CACHE[m];
-    var pr = window.__PROTO && window.__PROTO_PLANS ? Promise.resolve(window.__PROTO_PLANS(m)) : fetchLive({ t: 'pget', m: m });
+    var pr = fetchX({ t: 'pget', m: m });
     PL_CACHE[m] = pr.then(function (x) { if (!x || x.x !== 'p') throw new Error('bad'); return x; });
     PL_CACHE[m].catch(function () { delete PL_CACHE[m]; });
     return PL_CACHE[m];
@@ -1732,7 +1857,7 @@
     var mi = monthInfo(d), curM = str(d.m), todayN = 0;
     (arr(d.d) || []).forEach(function (r) { if (Array.isArray(r)) todayN = Math.max(todayN, num(r[0])); });
     if (!todayN) todayN = num(d.dn) || 1;
-    var todayS = curM + '-' + pad2(todayN);
+    var todayS = curM + '-' + pad2(todayN), nextM = (function () { var y = +curM.slice(0, 4), mo = +curM.slice(5, 7) + 1; if (mo > 12) { mo = 1; y++; } return y + '-' + pad2(mo); })();
     var root = el('div', 'plc'), todayEl = el('div', 'pltoday'); root.hidden = true;
     var state = { m: ss('mc-pm') || curM, day: ss('mc-pd') || todayS, data: null };
     if (!/^\d{4}-\d{2}$/.test(state.m)) state.m = curM;
@@ -1864,14 +1989,31 @@
       }
       if (num(x.more)) detail.appendChild(el('p', 'hint pad', "Bu oyda rejalar ko'p: hammasi sig'madi."));
     }
-    var todayData = null;
+    // Eslatmalar: menga belgilangan, bajarilmagan rejalar — bugundan 7 kun oldinga (oy oxiri o'tsa keyingi oy ham olinadi)
+    var todayData = null, nextData = null, REM_DAYS = 7;
+    function addDayS(s, n) { return new Date(Date.parse(s + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10); }
     function paintToday() {
       while (todayEl.firstChild) todayEl.removeChild(todayEl.firstChild);
       if (!todayData) return;
-      var list = plansOn(todayData, todayS);
-      if (!list.length) return;
-      var h = el('div', 'lbl2'); h.appendChild(el('span', 'grow', 'Bugungi rejalar')); h.appendChild(el('span', 'lsum', String(list.length))); todayEl.appendChild(h);
-      list.forEach(function (p) { todayEl.appendChild(planRow(todayData, p, todayS, function () { paintToday(); if (state.data === todayData) draw(todayData); })); });
+      var me = sid(todayData.me), items = [];
+      for (var i = 0; i < REM_DAYS; i++) {
+        var day = addDayS(todayS, i), x = day.slice(0, 7) === curM ? todayData : nextData;
+        if (!x) continue;
+        plansOn(x, day).forEach(function (p) { if ((p[5] || []).map(sid).indexOf(me) >= 0 && !isDone(x, sid(p[0]), day)) items.push([day, p, x]); });
+      }
+      var h = el('div', 'lbl2'); h.appendChild(el('span', 'grow', 'Eslatmalar')); h.appendChild(el('span', 'lsum', items.length ? items.length + ' ta · 7 kun' : '')); todayEl.appendChild(h);
+      if (!items.length) { todayEl.appendChild(el('p', 'empty', "7 kun ichida sizga eslatma yo'q.")); return; }
+      var lastDay = '';
+      items.forEach(function (it) {
+        var day = it[0];
+        if (day !== lastDay) {
+          lastDay = day; var dn = new Date(day + 'T00:00:00Z'), lbl = day === todayS ? 'Bugun' : day === addDayS(todayS, 1) ? 'Ertaga' : DAYS[dn.getUTCDay()] + ', ' + day.slice(8, 10) + '.' + day.slice(5, 7);
+          todayEl.appendChild(el('div', 'remday', lbl));
+        }
+        var row = planRow(it[2], it[1], day, function () { paintToday(); if (state.data) draw(state.data); });
+        if (sid(it[1][4]) !== me) row.classList.add('fromother');
+        todayEl.appendChild(row);
+      });
     }
     function load() {
       msg.hidden = false; msg.textContent = 'Rejalar yuklanmoqda…'; grid.hidden = true; detail.hidden = true;
@@ -1880,6 +2022,7 @@
         if (m !== state.m) return;
         state.data = x; msg.hidden = true; grid.hidden = false; detail.hidden = false; draw(x);
         if (m === curM) { todayData = x; paintToday(); }
+        if (m === nextM) { nextData = x; paintToday(); }
       }, function () {
         if (m !== state.m) return;
         msg.textContent = ''; msg.appendChild(document.createTextNode("Rejalarni olib bo'lmadi. "));
@@ -1889,6 +2032,7 @@
     if (INIT || window.__PROTO) {
       load();
       if (state.m !== curM) loadPlans(curM).then(function (x) { todayData = x; paintToday(); }, function () {});
+      if (addDayS(todayS, REM_DAYS - 1).slice(0, 7) !== curM && state.m !== nextM) loadPlans(nextM).then(function (x) { nextData = x; paintToday(); }, function () {});
     } else { msg.textContent = 'Rejalar uchun sahifani chat pastidagi menyu tugmasidan oching.'; }
     return { el: root, todayEl: todayEl };
   }
@@ -2048,8 +2192,10 @@
       var nNew = ordersPanel(d, d.o);
       staffPanel(d); reportPanel(d);
       var tabs = [['p-today', 'Bugun'], ['p-orders', 'Buyurtmalar', nNew ? nNew + ' yangi' : ''], ['p-staff', 'Xodimlar'], ['p-report', 'Hisobot']];
+      if (d.pl && !PERMS.some(function (x) { return x[0] === 'tiz'; })) PERMS.push(['tiz', "Tizim holatini ko'radi (bot ishlayaptimi, kim qancha foydalanyapti)"]); // bot v23
       if (ADM) { settingsPanel(d); tabs.push(['p-settings', 'Admin']); adminMenu(); }
       appShell(d, nNew); // rebuild 13: pastki menyu va "Bugun" ekrani
+      try { setupViews(d, 'o'); } catch (e) { /* almashtirish tugmasisiz qoladi */ }
     } else {
       var mine = {}; Object.keys(d).forEach(function (k) { mine[k] = d[k]; });
       delete mine.s; delete mine.ot; delete mine.ol; // xodimda bular jamoa jadvali emas
@@ -2059,6 +2205,7 @@
       if (Number(d.ot) === 1) { var nn = ordersPanel(d, d.ol); tabs.push(['p-orders', 'Buyurtmalar', nn ? nn + ' yangi' : '']); }
       guidePanel(d); tabs.push(['p-guide', "Yo'riqnoma"]);
       setupTabs(tabs);
+      try { setupViews(d, 's'); } catch (e) { /* almashtirish tugmasisiz qoladi */ }
     }
   }
 

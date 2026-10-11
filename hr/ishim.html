@@ -2,7 +2,7 @@
 <html lang="uz">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-R5WLVrHxaecJ+iYfm8tReq1KWbKIer9UYocWJNVjd8M='; style-src 'self' 'sha256-2Vpp2+XAe0g2cNCRVwk5ssjEOVxNem1AwumInVezKeI='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-denFd0Ko26fhd8YrpWs8labpstVYk2vQk37Q6GFPO6Y='; style-src 'self' 'sha256-2Vpp2+XAe0g2cNCRVwk5ssjEOVxNem1AwumInVezKeI='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mening ishim</title>
 <script>window.__mcHash = String(location.hash || '');</script>
@@ -2256,6 +2256,7 @@
       staffPanel(d); reportPanel(d);
       var tabs = [['p-today', 'Bugun'], ['p-orders', 'Buyurtmalar', nNew ? nNew + ' yangi' : ''], ['p-staff', 'Xodimlar'], ['p-report', 'Hisobot']];
       if (d.pl && !PERMS.some(function (x) { return x[0] === 'tiz'; })) PERMS.push(['tiz', "Tizim holatini ko'radi (bot ishlayaptimi, kim qancha foydalanyapti)"]); // bot v23
+      if (d.px && !PERMS.some(function (x) { return x[0] === 'xab'; })) PERMS.push(['xab', 'Ogohlantirish va hisobotlarni oladi (kelmadi, keldi-ketdi, ertalabki/kechki hisobot, topshiriq bajarildi)']); // bot v24
       if (ADM) { settingsPanel(d); tabs.push(['p-settings', 'Admin']); adminMenu(); }
       appShell(d, nNew); // rebuild 13: pastki menyu va "Bugun" ekrani
       try { setupViews(d, 'o'); } catch (e) { /* almashtirish tugmasisiz qoladi */ }

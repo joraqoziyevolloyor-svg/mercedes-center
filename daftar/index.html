@@ -54,6 +54,7 @@ tr.void td{text-decoration:line-through;color:var(--mut)}
 .md{background:#fff;border-radius:12px;width:100%;max-width:760px;padding:16px 18px}
 .md h3{margin:0 0 12px;font-size:17px}
 .md .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px}
+.md .row input,.md .row select{width:100%}
 .md label{display:block;font-size:12px;color:var(--mut);margin-bottom:3px}
 .md .ft{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
 .lines{width:100%;border-collapse:collapse;table-layout:fixed}
@@ -83,6 +84,25 @@ tr.void td{text-decoration:line-through;color:var(--mut)}
 .box .ci{border-bottom:1px solid #efefeb}
 .prod tr.cl{cursor:pointer}.prod tr.cl:hover{background:#f6f6f3}
 .pd{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+.cp{max-width:900px}
+.cph{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px}
+.cph h2{margin:0;font-size:20px;font-weight:600}.cph .meta{color:var(--mut);font-size:13px}
+.cph .bal{margin-left:auto;text-align:right;font-size:26px;font-weight:600;line-height:1.1}.cph .bal small{display:block;font-size:12px;font-weight:400;color:var(--mut);margin-top:3px}
+.kp{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.kp div{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:7px 10px}.kp span{font-size:12px;color:var(--mut)}.kp b{display:block;font-weight:600}
+.prom{display:flex;gap:10px;align-items:center;padding:8px 12px;border-radius:var(--r);background:var(--ambbg);color:var(--amb);margin-bottom:10px}.prom.bad{background:var(--redbg);color:var(--red)}.prom button{margin-left:auto}
+.mon{display:flex;gap:6px;align-items:center;margin:4px 0 8px;flex-wrap:wrap}
+.mon span{padding:5px 11px;border-radius:14px;border:1px solid var(--line2);cursor:pointer;background:#fff}.mon span.on{background:var(--accbg);color:var(--acc);border-color:var(--acc)}
+.mon input{margin-left:auto;width:180px}
+.tl{background:#fff;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.tr{display:grid;grid-template-columns:84px minmax(0,1fr) 100px 90px;gap:10px;align-items:center;padding:8px 12px;border-bottom:1px solid #efefeb;cursor:pointer}
+.tr:hover,.tr.on{background:#f8f8f5}.tr.call{background:#fffaf0}.tr.void{opacity:.5;text-decoration:line-through}
+.tr .d{color:var(--mut);font-size:13px}.tr .tt b{font-weight:500}.tr .tt small{display:block;color:var(--mut);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tr .num{text-align:right;white-space:nowrap}.num.r{color:var(--red);font-weight:600}.num.g{color:var(--grn);font-weight:600}.mut{color:var(--mut)}.a{color:var(--amb)}
+.ex{padding:6px 12px 10px 106px;background:#fafaf7;border-bottom:1px solid #efefeb;font-size:13px}.ex table{width:100%;border-collapse:collapse}.ex td{padding:2px 4px;border-bottom:1px solid #f0f0ec}.ex td.r{text-align:right}.exa{margin-top:6px;font-size:12px}
+.opts{display:flex;gap:6px;flex-wrap:wrap}.opts button{border-radius:16px;padding:8px 14px}.opts button.on{background:var(--accbg);color:var(--acc);border-color:var(--acc);font-weight:600}
+@media (max-width:760px){.tr{grid-template-columns:64px minmax(0,1fr) 80px}.tr .num.mut{display:none}.ex{padding-left:12px}.cph .bal{margin-left:0;text-align:left}.mon input{margin-left:0;width:100%}}
+.cgrid{display:grid;grid-template-columns:360px minmax(0,1fr);gap:14px;align-items:start}@media (max-width:900px){.cgrid{grid-template-columns:1fr}}
 .chk{display:flex;gap:8px;align-items:center;padding:4px 0;border-top:1px solid #efefeb;font-size:13px}
 .chk input[type=number]{width:70px}
 @media (max-width:760px){.lay{grid-template-columns:1fr}.side{max-height:40vh;border-right:none;border-bottom:1px solid var(--line)}.hd .bal{margin-left:0}}
@@ -95,12 +115,15 @@ tr.void td{text-decoration:line-through;color:var(--mut)}
   <button class="tab on" data-tab="home">Bosh sahifa</button>
   <button class="tab" data-tab="cust">Mijozlar</button>
   <button class="tab" data-tab="prod">Mahsulotlar</button>
+  <button class="tab" data-tab="call">Qo'ng'iroqlar</button>
   <button class="tab" data-tab="srch">Qidiruv</button>
   <span style="margin-left:auto" class="hint">Kurs</span><input id="rate" type="number" style="width:90px" value="12450">
   <span class="hint">Sotuvchi</span><select id="user"><option>Olloyor</option><option>Sotuvchi 1</option><option>Sotuvchi 2</option></select>
 </div>
 
 <div id="homeTab" class="main" style="max-width:none;padding:14px 18px"></div>
+
+<div id="callTab" class="main" style="display:none;max-width:none;padding:14px 18px"></div>
 
 <div id="srchTab" class="main" style="display:none;max-width:none;padding:14px 18px">
   <div class="acts"><input id="sq" placeholder="Hamma daftarlardan qidirish: tovar, izoh, summa, mijoz" style="flex:1;min-width:260px;padding:9px"></div>
@@ -148,8 +171,8 @@ const daysAgo=d=>d?Math.round((new Date(TODAY)-new Date(d))/864e5):9999;
 const KINDS={naqd:'Naqd',plastik:'Plastik',klik:'Klik',perevod:'Perevod',skidka:'Skidka'};
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function newEvents(c){return (S.ev[c.id]||[])}
-function balance(c){let b=c.excel_balance||0;for(const e of newEvents(c)){if(e.void)continue;if(e.t==='sale')b+=e.lines.reduce((a,l)=>a+l.s,0);else if(e.t==='return')b-=e.lines.reduce((a,l)=>a+l.s,0);else if(e.t==='other')b+=e.amt;else b-=e.amt;}return b}
-function lastDate(c){let l=c.last||'';for(const e of newEvents(c))if(!e.void&&e.d>l)l=e.d;return l}
+function balance(c){let b=c.excel_balance||0;for(const e of newEvents(c)){if(e.void||e.t==='call')continue;if(e.t==='sale')b+=e.lines.reduce((a,l)=>a+l.s,0);else if(e.t==='return')b-=e.lines.reduce((a,l)=>a+l.s,0);else if(e.t==='other')b+=e.amt;else b-=e.amt;}return b}
+function lastDate(c){let l=c.last||'';for(const e of newEvents(c))if(!e.void&&e.t!=='call'&&e.d>l)l=e.d;return l}
 let cur=null, order='new';
 const cities=[...new Set(CUST.map(c=>c.city).filter(Boolean))].sort();
 for(const x of cities) city.insertAdjacentHTML('beforeend',`<option>${esc(x)}</option>`);
@@ -177,35 +200,99 @@ function archiveBlocks(c){
   }
   return blocks;
 }
-function archRow(r){
-  if(r.r==='i')return `<tr><td>${esc(r.n)}</td><td class="r">${fmt(r.q)}</td><td class="r">${fmt(r.p)}</td><td class="r">${fmt(r.s)}</td></tr>`;
-  if(r.r==='x')return `<tr><td colspan="3">${esc(r.n)} <span class="tag flag">tekshirish</span></td><td class="r">${fmt(r.s)}</td></tr>`;
-  if(r.r==='t')return `<tr><td colspan="4" style="color:var(--mut)">${esc(r.text)}</td></tr>`;
-  if(r.r==='l'){const isb=['КОЛДИ','ХАКДОР','ОБШИЙ','ОБЩИЙ'].includes(r.l),iss=['ЖАМИ','ОСТАТКА'].includes(r.l);
-    return `<tr class="${isb?'bal':iss?'sum':''}"><td colspan="2">${r.d?fd(r.d):''} ${r.note?'<span style="color:var(--mut)">'+esc(r.note)+'</span>':''} ${r.flag?'<span class="tag flag">sana xato</span>':''}</td><td class="lbl">${esc(r.l)}</td><td class="r">${fmt(r.v)}</td></tr>`}
-  return '';
+// ---------- customer page: one line per entry, Excel archive + new entries + calls ----------
+const PAYL=['БЕРДИ','ПЛАСТИК','КЛИК','ПЕРЕВОД','БЕРГАН','ПЛАТСИК','СЧЕТГА','СЧЕТ РАКАМ','НАКД','КАРГО'];
+const BALL=['КОЛДИ','ХАКДОР','ОБШИЙ','ОБЩИЙ'];
+const PAYNAME={'БЕРДИ':'naqd','ПЛАСТИК':'plastik','ПЛАТСИК':'plastik','КЛИК':'klik','ПЕРЕВОД':'perevod','СЧЕТГА':'perevod','СЧЕТ РАКАМ':'perevod'};
+const CALLR={vada:"Va'da berdi",toladi:"To'ladi",javob:'Javob bermadi',boshqa:'Boshqa'};
+function timeline(c){
+  const out=[];let n=0,prevBal=c.excel_balance||0;
+  for(const bk of archiveBlocks(c)){const d=bk.d||'';const items=[],ret=[];let isRet=false,bal=null;const start=out.length;
+    for(const r of bk.rows){
+      if(r.r==='t'&&/^(ВОЗВРАТ|КАЙТ)/i.test(r.text))isRet=true;
+      else if(r.r==='i')(isRet?ret:items).push(r);
+      else if(r.r==='l'){if(r.l==='ЖАМИ')isRet=false;if(BALL.includes(r.l))bal=r.v;
+        if(PAYL.includes(r.l))out.push({id:'a'+(n++),d:r.d||d,t:'pay',kind:PAYNAME[r.l]||'naqd',amt:r.v,note:r.note||'',arch:1});
+        else if(r.l==='СКИДКА')out.push({id:'a'+(n++),d:r.d||d,t:'disc',amt:r.v,note:r.note||'',arch:1})}
+      else if(r.r==='x')out.push({id:'a'+(n++),d,t:'other',amt:r.s,note:r.n,arch:1});
+      else if(r.r==='t')out.push({id:'a'+(n++),d,t:'text',note:r.text,arch:1});
+    }
+    if(items.length)out.splice(start,0,{id:'a'+(n++),d,t:'sale',lines:items,amt:items.reduce((a,r)=>a+r.s,0),arch:1,flag:bk.flag});
+    if(ret.length)out.push({id:'a'+(n++),d,t:'return',lines:ret,amt:ret.reduce((a,r)=>a+r.s,0),arch:1});
+    if(bal!=null)prevBal=bal;for(let i=start;i<out.length;i++)out[i].run=bal;
+  }
+  let run=c.excel_balance||0;
+  for(const e of newEvents(c)){const x={...e};if(e.t==='sale'||e.t==='return')x.amt=e.lines.reduce((a,l)=>a+l.s,0);
+    if(!e.void&&e.t!=='call'){run+=e.t==='sale'?x.amt:e.t==='return'?-x.amt:e.t==='other'?e.amt:-e.amt;x.run=run}out.push(x)}
+  return out.sort((a,b)=>(a.d||'').localeCompare(b.d||''));
 }
-function newBlock(e,c,run){
-  let body='',title='';
-  if(e.t==='sale'||e.t==='return'){title=e.t==='sale'?'Savdo':'Qaytarish';const t=e.lines.reduce((a,l)=>a+l.s,0);body=e.lines.map(l=>`<tr><td>${esc(l.n)}</td><td class="r">${fmt(l.q)}</td><td class="r">${fmt(l.p)}</td><td class="r">${fmt(l.s)}</td></tr>`).join('')+`<tr class="sum"><td colspan="3" class="lbl">ЖАМИ</td><td class="r">${e.t==='return'?'−':''}${fmt(t)}</td></tr>`}
-  else if(e.t==='pay'){title='To\'lov · '+(KINDS[e.kind]||e.kind);body=`<tr><td colspan="2">${e.note?esc(e.note):''}</td><td class="lbl">БЕРДИ</td><td class="r" style="color:var(--grn)">−${fmt(e.amt)}</td></tr>`}
-  else if(e.t==='disc'){title='Skidka';body=`<tr><td colspan="2">${esc(e.note||'')}</td><td class="lbl">СКИДКА</td><td class="r">−${fmt(e.amt)}</td></tr>`}
-  else{title='Boshqa';body=`<tr><td colspan="2">${esc(e.note||'')}</td><td class="lbl">${e.amt>=0?'qarzga':'qarzdan'}</td><td class="r">${e.amt>=0?'+':'−'}${fmt(Math.abs(e.amt))}</td></tr>`}
-  body+=`<tr class="bal"><td colspan="3" class="lbl">КОЛДИ</td><td class="r">${fmt(run)}</td></tr>`;
-  return `<div class="blk"><div class="bh"><b>${fd(e.d)}</b> · ${title} <span class="tag new">yangi</span> ${e.void?'<span class="tag void">bekor qilingan</span>':''}<span style="margin-left:auto" class="hint">${esc(e.by)} ${e.at||''}</span>${e.void?'':`<button class="sm" onclick="voidEv('${e.id}')">Bekor qilish</button>`}</div><table class="${e.void?'void':''}"><colgroup><col style="width:52%"><col style="width:12%"><col style="width:16%"><col style="width:20%"></colgroup>${body}</table></div>`;
-}
+function oldestUnpaid(c,tl){let left=balance(c);if(left<=0.5)return null;for(let i=tl.length-1;i>=0;i--){const e=tl[i];if(e.void||e.t!=='sale')continue;left-=e.amt;if(left<=0.5)return e.d}return tl.find(e=>e.t==='sale')?.d||null}
+function avgPayDays(tl){const q=[];let days=0,amt=0;for(const e of tl){if(e.void||!e.d)continue;if(e.t==='sale')q.push({d:e.d,a:e.amt});else if(e.t==='pay'){let left=e.amt;while(left>0&&q.length){const h=q[0],t=Math.min(h.a,left);days+=t*Math.max(0,(new Date(e.d)-new Date(h.d))/864e5);amt+=t;h.a-=t;left-=t;if(h.a<=0.01)q.shift()}}}return amt?Math.round(days/amt):null}
+// promise status: payments from the call date up to the promised date cover the promised amount
+function promiseStatus(c,call,tl){if(call.result!=='vada'||!call.pdate)return null;if(call.done)return{s:'ok',t:'bajarildi'};
+  const paid=(tl||timeline(c)).filter(e=>!e.void&&e.t==='pay'&&e.d>=call.d&&e.d<=call.pdate).reduce((a,e)=>a+e.amt,0);
+  if(call.pamt?paid>=call.pamt*0.95:paid>0)return{s:'ok',t:'bajarildi',paid};
+  if(call.pdate<TODAY)return{s:'no',t:'buzildi',paid};return{s:'w',t:'kutilmoqda',paid}}
+function calls(c){return newEvents(c).filter(e=>e.t==='call'&&!e.void)}
+let mFilter='all',tq='',openIds=new Set(),shown=40;
+function tlRow(e,c,tl){
+  const v=e.void?' void':'',op=openIds.has(e.id);
+  if(e.t==='text')return '';
+  let title,sub='',amt='',cls='',run=e.run!=null?fmt(e.run):'';
+  if(e.t==='call'){const ps=promiseStatus(c,e,tl);title=`☎ ${CALLR[e.result]||'Qo\'ng\'iroq'}${e.pdate?' · '+fd(e.pdate)+(e.pamt?' · '+fmt(e.pamt)+' $':''):''}${ps?` <span class="tag ${ps.s==='ok'?'new':ps.s==='no'?'void':'flag'}">${ps.t}</span>`:''}`;sub=e.note?'“'+e.note+'”':'';run=''}
+  else if(e.t==='sale'||e.t==='return'){title=`${e.t==='sale'?'Savdo':'Qaytarish'} · ${e.lines.length} nom`;sub=e.lines.slice(0,2).map(l=>l.n).join(', ')+(e.lines.length>2?' …':'');amt=(e.t==='sale'?'+':'−')+fmt(e.amt);cls=e.t==='sale'?'r':'g'}
+  else if(e.t==='pay'||e.t==='disc'){title=e.t==='pay'?`To'lov · ${KINDS[e.kind]||'naqd'}`:'Skidka';sub=e.note||'';amt='−'+fmt(e.amt);cls='g'}
+  else{title='Boshqa';sub=e.note||'';amt=(e.amt>=0?'+':'−')+fmt(Math.abs(e.amt));cls=e.amt>=0?'r':'g'}
+  let h=`<div class="tr${v}${op?' on':''}${e.t==='call'?' call':''}" onclick="tgl('${e.id}')"><span class="d">${fd(e.d)}</span><span class="tt"><b>${title}</b>${sub?`<small>${esc(sub)}</small>`:''}</span><span class="num ${cls}">${amt}</span><span class="num mut">${run}</span></div>`;
+  if(op){h+=`<div class="ex">`;if(e.lines)h+=`<table>${e.lines.map(l=>`<tr><td>${esc(l.n)}</td><td class="r">${fmt(l.q)}</td><td class="r">${fmt(l.p)}</td><td class="r">${fmt(l.s)}</td></tr>`).join('')}</table>`;
+    const links=[];if(e.t==='sale')links.push(`<a href="javascript:repeatSale('${e.id}')">takrorlash</a>`);if(e.t==='call'&&!e.void)links.push(`<a href="javascript:mCall('${e.id}')">o'zgartirish</a>`);if(e.t==='call'&&e.result==='vada'&&!e.done&&!e.void)links.push(`<a href="javascript:doneCall('${e.id}')">to'landi deb belgilash</a>`);if(!e.arch&&!e.void)links.push(`<a href="javascript:voidEv('${e.id}')">bekor qilish</a>`,`<span class="mut">${esc(e.by||'')} ${e.at||''}</span>`);
+    h+=links.length?`<div class="exa">${links.join(' · ')}</div>`:'';h+=`</div>`}
+  return h}
+function tgl(id){openIds.has(id)?openIds.delete(id):openIds.add(id);renderMain()}
+function repeatSale(id){const e=timeline(cur).find(x=>x.id===id);if(!e)return;mSale('sale');const tb=document.getElementById('ltb');tb.innerHTML='';for(const l of e.lines){addLine(false);const tr=tb.lastElementChild;const n=tr.querySelector('.n');n.value=l.n;if(l.k)n.dataset.k=l.k;tr.querySelector('.q').value=l.q;tr.querySelector('.p').value=lastPriceFor(cur,l.k)??l.p;tr.querySelector('.s').value=fmt(l.q*(+tr.querySelector('.p').value||0))}addLine(false);tot()}
 function renderMain(){
   const c=cur;if(!c){main.innerHTML='<div class="empty">Chapdan mijozni tanlang</div>';return}
-  const b=balance(c),a=daysAgo(lastDate(c));
-  let html=`<div class="hd"><div><h2>${esc(c.name)} ${c.kind==='sherik'?'<span class="tag">sherik</span>':''}</h2><div class="meta">${esc(c.city||'shahar kiritilmagan')} · oxirgi harakat ${lastDate(c)?fd(lastDate(c))+' ('+a+' kun)':'—'} · manba: ${esc(c.src||'yangi')} ${c.flags?`· <span class="tag flag">${c.flags} ta tekshirish</span>`:''}</div></div><div class="bal ${b>0&&a>60?'old':''}">${fmt(b)} $<small>${b>0?'mijoz qarzdor':b<0?'do\'kon qarzdor':'qarz yo\'q'} · Excel qoldig\'i ${fmt(c.excel_balance||0)}</small></div></div>`;
-  html+=`<div class="acts"><button class="pri" onclick="mSale('sale')">+ Savdo</button><button onclick="mPay()">To'lov</button><button onclick="mSale('return')">Qaytarish</button><button onclick="mOther()">Boshqa</button><button onclick="mAkt()">Akt sverka</button><button onclick="csv()">Excel (CSV)</button><span style="margin-left:auto"></span><button class="sm" onclick="order=order==='new'?'old':'new';renderMain()">${order==='new'?'Yangi tepada':'Eski tepada'}</button></div>`;
-  let run=c.excel_balance||0;const evs=newEvents(c).map(e=>{if(!e.void){if(e.t==='sale')run+=e.lines.reduce((x,l)=>x+l.s,0);else if(e.t==='return')run-=e.lines.reduce((x,l)=>x+l.s,0);else if(e.t==='other')run+=e.amt;else run-=e.amt}return newBlock(e,c,run)});
-  const arch=archiveBlocks(c).map(bk=>`<div class="blk"><div class="bh"><b>${bk.d?fd(bk.d):'sanasiz'}</b> <span class="tag">arxiv (Excel)</span> ${bk.flag?'<span class="tag flag">sana kelajakda</span>':''}</div><table><colgroup><col style="width:52%"><col style="width:12%"><col style="width:16%"><col style="width:20%"></colgroup>${bk.rows.map(archRow).join('')}</table></div>`);
-  const all=order==='new'?[...evs.reverse(),...arch.reverse()]:[...arch,...evs];
-  html+=all.join('')||'<div class="empty">Yozuv yo\'q</div>';
-  main.innerHTML=html;
+  const tl=timeline(c);const b=balance(c);const ou=oldestUnpaid(c,tl);const ouD=ou?daysAgo(ou):0;const avg=avgPayDays(tl);
+  const lp=[...tl].reverse().find(e=>e.t==='pay'&&!e.void);const cl=calls(c);const lc=cl[cl.length-1];
+  const yr=TODAY.slice(0,4);const sY=tl.filter(e=>!e.void&&e.t==='sale'&&(e.d||'').startsWith(yr)).reduce((a,e)=>a+e.amt,0),pY=tl.filter(e=>!e.void&&e.t==='pay'&&(e.d||'').startsWith(yr)).reduce((a,e)=>a+e.amt,0);
+  const m=S.meta&&S.meta[c.id]||{};
+  let html=`<div class="cp"><div class="cph"><div><h2>${esc(c.name)}</h2><div class="meta">${esc(m.city||c.city||'')}${(m.tel||c.tel)?' · '+esc(m.tel||c.tel):''}${m.note?' · '+esc(m.note):''} <a href="javascript:mEditCust()">✎</a></div></div>
+   <div class="bal ${b>0&&ouD>60?'old':''}">${fmt(b)} $<small>${b>0?(ou?'qarz · '+ouD+' kunlik':'qarz'):b<0?'do\'kon qarzdor':'qarz yo\'q'}</small></div></div>
+   <div class="kp"><div><span>Oxirgi to'lov</span><b>${lp?fd(lp.d)+' · '+fmt(lp.amt)+' $':'—'}</b></div><div><span>Oxirgi qo'ng'iroq</span><b>${lc?fd(lc.d)+' · '+(CALLR[lc.result]||''):'—'}</b></div></div>`;
+  const act=[...cl].reverse().find(x=>x.result==='vada'&&x.pdate);const aps=act?promiseStatus(c,act,tl):null;
+  if(act&&aps&&aps.s!=='ok'){const dl=Math.round((new Date(act.pdate)-new Date(TODAY))/864e5);html+=`<div class="prom ${aps.s==='no'?'bad':''}"><span>Va'da: <b>${fd(act.pdate)}</b> gacha ${act.pamt?'<b>'+fmt(act.pamt)+' $</b>':''} · ${dl>=0?dl+' kun qoldi':(-dl)+' kun o\'tdi'}</span><button class="sm" onclick="doneCall('${act.id}')">To'landi</button></div>`}
+  html+=`<div class="acts"><button class="pri" onclick="mSale('sale')">+ Savdo</button><button onclick="mPay()">To'lov</button><button onclick="mCall()">☎ Qo'ng'iroq</button><button onclick="moreMenu()">⋯</button></div>`;
+  const MN=['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentyabr','Oktyabr','Noyabr','Dekabr'];
+  const months=[...new Set(tl.map(e=>(e.d||'').slice(0,7)).filter(Boolean))].sort().reverse();
+  html+=`<div class="mon"><select onchange="setMF(this.value)"><option value="all">Hamma vaqt</option>${months.map(x=>`<option value="${x}" ${mFilter===x?'selected':''}>${MN[+x.slice(5)-1]} ${x.slice(0,4)}</option>`).join('')}</select><span class="${mFilter==='call'?'on':''}" onclick="setMF(mFilter==='call'?'all':'call')">☎ Qo'ng'iroqlar</span><input id="tqi" placeholder="qidirish" value="${esc(tq)}"></div>`;
+  const q=tq.trim().toLowerCase(),qc=lat2cyr(q);
+  let rows=tl.filter(e=>{if(mFilter==='call')return e.t==='call';if(mFilter==='pay')return e.t==='pay'||e.t==='disc';if(mFilter!=='all'&&!(e.d||'').startsWith(mFilter))return false;return true});
+  if(q)rows=rows.filter(e=>{const s=((e.note||'')+' '+(e.lines||[]).map(l=>l.n).join(' ')).toLowerCase();return s.includes(q)||s.includes(qc)});
+  rows=rows.reverse();const total=rows.length;
+  html+=`<div class="tl">${rows.slice(0,shown).map(e=>tlRow(e,c,tl)).join('')||'<div class="empty">Yozuv topilmadi</div>'}</div>`;
+  if(total>shown)html+=`<div style="text-align:center;margin:10px"><button onclick="shown+=60;renderMain()">Yana ko'rsatish (${total-shown})</button></div>`;
+  html+=`</div>`;main.innerHTML=html;
+  const ti=document.getElementById('tqi');ti.oninput=()=>{tq=ti.value;shown=tq?9999:40;renderMain();const t=document.getElementById('tqi');t.focus();t.setSelectionRange(99,99)};
 }
+function setMF(f){mFilter=f;shown=f==='all'?40:9999;renderMain()}
 function voidEv(id){const e=newEvents(cur).find(x=>x.id===id);if(e&&confirm('Bekor qilinsinmi? Yozuv o\'chmaydi, chizilgan holda qoladi.')){e.void=1;e.voidBy=user.value;save();renderList();renderMain()}}
+function doneCall(id){const e=newEvents(cur).find(x=>x.id===id);if(!e)return;e.done=1;e.doneAt=TODAY;e.doneBy=user.value;save();renderMain()}
+function mEditCust(){S.meta=S.meta||{};const m=S.meta[cur.id]||{};modal(`<h3>Mijoz ma'lumoti · ${esc(cur.name)}</h3><div class="row"><div><label>Shahar</label><input id="e_city" value="${esc(m.city||cur.city||'')}"></div><div><label>Telefon</label><input id="e_tel" value="${esc(m.tel||cur.tel||'')}"></div></div><div class="row"><div><label>Izoh (qanday to'laydi, qachon keladi)</label><input id="e_note" value="${esc(m.note||'')}"></div></div><div class="ft"><span></span><span><button onclick="closeM()">Bekor</button> <button class="pri" onclick="S.meta[cur.id]={city:e_city.value.trim(),tel:e_tel.value.trim(),note:e_note.value.trim()};save();closeM();renderMain()">Saqlash</button></span></div>`)}
+// ---------- call log ----------
+function mCall(id){const e=id?newEvents(cur).find(x=>x.id===id):null;const r0=e?e.result:'vada';
+  modal(`<h3>☎ ${esc(cur.name)} <span class="hint" style="font-weight:400">· qarz ${fmt(balance(cur))} $</span></h3>
+  <div class="opts" id="c_r">${Object.entries(CALLR).map(([k,v])=>`<button type="button" data-k="${k}" class="${r0===k?'on':''}">${v}</button>`).join('')}</div>
+  <div class="row" id="c_pr" style="margin-top:12px"><div><label>Qachon to'laydi</label><input id="c_pd" type="date" value="${e&&e.pdate||''}"></div><div><label>Qancha $</label><input id="c_pa" type="number" step="any" inputmode="decimal" value="${e&&e.pamt||''}"></div></div>
+  <div class="row"><div style="grid-column:1/-1"><label>Nima dedi</label><input id="c_n" value="${esc(e?e.note:'')}"></div></div>
+  <div class="ft"><span></span><span><button onclick="closeM()">Bekor</button> <button class="pri" onclick="saveCall(${e?"'"+e.id+"'":'null'})">Saqlash</button></span></div>`);
+  const sync=()=>{c_pr.style.display=document.querySelector('#c_r .on').dataset.k==='vada'?'':'none'};
+  c_r.onclick=ev=>{const b=ev.target.closest('button');if(!b)return;c_r.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));sync();(b.dataset.k==='vada'?c_pd:c_n).focus()};sync();(r0==='vada'&&!e?c_pd:c_n).focus()}
+function saveCall(id){const k=document.querySelector('#c_r .on').dataset.k;if(k==='vada'&&!c_pd.value){c_pd.focus();return}
+  const nx=new Date(TODAY);nx.setDate(nx.getDate()+2);
+  const e={t:'call',d:TODAY,result:k,note:c_n.value.trim(),pdate:k==='vada'?c_pd.value:'',pamt:k==='vada'?(+c_pa.value||0):0,next:k==='vada'?c_pd.value:k==='javob'?nx.toISOString().slice(0,10):''};
+  if(id){const o=newEvents(cur).find(x=>x.id===id);Object.assign(o,e,{d:o.d});save();closeM();renderMain();return}
+  pushEv(e);closeM()}
+function moreMenu(){modal(`<h3>${esc(cur.name)}</h3><div style="display:grid;gap:8px"><button onclick="closeM();mSale('return')">Qaytarish</button><button onclick="closeM();mOther()">Boshqa yozuv (skidka, yulkira…)</button><button onclick="closeM();mAkt()">Akt sverka</button><button onclick="closeM();csv()">Excel yuklash</button><button onclick="closeM();mEditCust()">Mijoz ma'lumoti</button><button onclick="closeM()">Yopish</button></div>`)}
 function pushEv(e){e.id='e'+(S.seq++);e.by=user.value;e.at=new Date().toLocaleString('ru-RU').slice(0,16);(S.ev[cur.id]=S.ev[cur.id]||[]).push(e);save();renderList();renderMain()}
 
 // ---------- modals ----------
@@ -275,13 +362,13 @@ function mAkt(){
 function aktRender(){
   const f=a_from.value,t=a_to.value;let rows=[];
   let d=null;for(const r of cur.rows){if(r.r==='d')d=r.d;const dd=r.d||d;if(!dd||dd<f||dd>t)continue;if(r.r==='i')rows.push([dd,'Savdo: '+r.n,r.q,r.p,r.s,'']);else if(r.r==='l'&&!['ЖАМИ','ОСТАТКА','ОБШИЙ','КОЛДИ','ХАКДОР','ОБЩИЙ','АСТ','КАРЗ'].includes(r.l))rows.push([dd,(r.note?r.note+' · ':'')+r.l,'','','',r.v]);else if(r.r==='x')rows.push([dd,r.n,'','','',r.s])}
-  for(const e of newEvents(cur)){if(e.void||e.d<f||e.d>t)continue;if(e.t==='sale')e.lines.forEach(l=>rows.push([e.d,'Savdo: '+l.n,l.q,l.p,l.s,'']));else if(e.t==='return')e.lines.forEach(l=>rows.push([e.d,'Qaytarish: '+l.n,l.q,l.p,'',l.s]));else if(e.t==='other')rows.push([e.d,e.note,'','',e.amt>0?e.amt:'',e.amt<0?-e.amt:'']);else rows.push([e.d,(KINDS[e.kind]||'')+' '+(e.note||''),'','','',e.amt])}
+  for(const e of newEvents(cur)){if(e.void||e.t==='call'||e.d<f||e.d>t)continue;if(e.t==='sale')e.lines.forEach(l=>rows.push([e.d,'Savdo: '+l.n,l.q,l.p,l.s,'']));else if(e.t==='return')e.lines.forEach(l=>rows.push([e.d,'Qaytarish: '+l.n,l.q,l.p,'',l.s]));else if(e.t==='other')rows.push([e.d,e.note,'','',e.amt>0?e.amt:'',e.amt<0?-e.amt:'']);else rows.push([e.d,(KINDS[e.kind]||'')+' '+(e.note||''),'','','',e.amt])}
   rows.sort((a,b)=>a[0].localeCompare(b[0]));
   const deb=rows.reduce((s,r)=>s+(+r[4]||0),0),cre=rows.reduce((s,r)=>s+(+r[5]||0),0);
   akt.innerHTML=`<p><b>Mercedes Center</b> — ${esc(cur.name)} — ${fd(f)} dan ${fd(t)} gacha</p><table class="lines" style="font-size:13px"><thead><tr><th>Sana</th><th>Yozuv</th><th>Soni</th><th>Narx</th><th>Qarzga</th><th>To'landi</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${fd(r[0])}</td><td>${esc(r[1])}</td><td>${r[2]||''}</td><td>${r[3]||''}</td><td style="text-align:right">${r[4]!==''?fmt(r[4]):''}</td><td style="text-align:right">${r[5]!==''?fmt(r[5]):''}</td></tr>`).join('')}</tbody></table><p><b>Davr ichida:</b> qarzga ${fmt(deb)} $, to'landi ${fmt(cre)} $. <b>Hozirgi qoldiq: ${fmt(balance(cur))} $</b> ${balance(cur)>0?'(mijoz qarzdor)':''}</p>`;
 }
 function csv(){const out=[['Sana','Tur','Nom','Soni','Narx','Summa','Izoh','Manba']];let d='';for(const r of cur.rows){if(r.r==='d')d=r.d;if(r.r==='i')out.push([d,'tovar',r.n,r.q,r.p,r.s,'','excel']);else if(r.r==='l')out.push([r.d||d,r.l,'','','',r.v,r.note||'','excel']);else if(r.r==='x')out.push([d,'boshqa',r.n,'','',r.s,'','excel'])}
-  for(const e of newEvents(cur)){if(e.t==='sale'||e.t==='return')e.lines.forEach(l=>out.push([e.d,e.t==='sale'?'tovar':'qaytarish',l.n,l.q,l.p,l.s,e.void?'BEKOR':'',e.by]));else out.push([e.d,e.t==='pay'?'to\'lov '+e.kind:e.t,'','','',e.amt,(e.note||'')+(e.void?' BEKOR':''),e.by])}
+  for(const e of newEvents(cur)){if(e.t==='call'){out.push([e.d,'qo\'ng\'iroq: '+(CALLR[e.result]||''),'','','',e.pamt||'',(e.pdate?'va\'da '+e.pdate+' · ':'')+(e.note||''),e.by]);continue}if(e.t==='sale'||e.t==='return')e.lines.forEach(l=>out.push([e.d,e.t==='sale'?'tovar':'qaytarish',l.n,l.q,l.p,l.s,e.void?'BEKOR':'',e.by]));else out.push([e.d,e.t==='pay'?'to\'lov '+e.kind:e.t,'','','',e.amt,(e.note||'')+(e.void?' BEKOR':''),e.by])}
   const txt='﻿'+out.map(r=>r.map(x=>`"${String(x??'').replace(/"/g,'""')}"`).join(';')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/csv'}));a.download=`${cur.name}.csv`;a.click()}
 
 // ---------- products tab ----------
@@ -306,14 +393,15 @@ function evSum(e){return e.t==='sale'?e.lines.reduce((a,l)=>a+l.s,0):e.t==='retu
 function renderHome(){
   const rows=CUST.filter(c=>c.kind!=='sherik');const tot=rows.reduce((t,c)=>t+Math.max(0,balance(c)),0);
   const over=rows.filter(c=>balance(c)>0&&daysAgo(lastDate(c))>60);const overS=over.reduce((t,c)=>t+balance(c),0);
-  let tS=0,tP=0,todayEv=[];for(const c of CUST)for(const e of newEvents(c))if(!e.void&&e.d===TODAY){todayEv.push([c,e]);if(e.t==='sale')tS+=evSum(e);if(e.t==='pay')tP+=e.amt}
-  const M=TODAY.slice(0,7);let mS=0,mP=0;for(const c of CUST){let d='';for(const r of c.rows){if(r.r==='d')d=r.d;const dd=r.d||d;if(!dd||!dd.startsWith(M))continue;if(r.r==='i')mS+=r.s;if(r.r==='l'&&['БЕРДИ','ПЛАСТИК','КЛИК','ПЕРЕВОД','БЕРГАН','ПЛАТСИК'].includes(r.l))mP+=r.v}for(const e of newEvents(c))if(!e.void&&e.d.startsWith(M)){if(e.t==='sale')mS+=evSum(e);if(e.t==='pay')mP+=e.amt}}
+  let tS=0,tP=0,todayEv=[];for(const c of CUST)for(const e of newEvents(c))if(!e.void&&e.t!=='call'&&e.d===TODAY){todayEv.push([c,e]);if(e.t==='sale')tS+=evSum(e);if(e.t==='pay')tP+=e.amt}
+  const M=TODAY.slice(0,7);let mS=0,mP=0;for(const c of CUST){let d='';for(const r of c.rows){if(r.r==='d')d=r.d;const dd=r.d||d;if(!dd||!dd.startsWith(M))continue;if(r.r==='i')mS+=r.s;if(r.r==='l'&&['БЕРДИ','ПЛАСТИК','КЛИК','ПЕРЕВОД','БЕРГАН','ПЛАТСИК'].includes(r.l))mP+=r.v}for(const e of newEvents(c))if(!e.void&&e.t!=='call'&&e.d.startsWith(M)){if(e.t==='sale')mS+=evSum(e);if(e.t==='pay')mP+=e.amt}}
   const top=[...rows].sort((a,b)=>balance(b)-balance(a)).slice(0,10);
   homeTab.innerHTML=`<div class="cards">
    <div class="card"><div class="l">Jami qarz</div><div class="v">${fmt(tot)} $</div><div class="s">${rows.filter(c=>balance(c)>0.5).length} ta mijoz</div></div>
    <div class="card"><div class="l">Kechikkan (60 kun+)</div><div class="v old">${fmt(overS)} $</div><div class="s">${over.length} ta mijoz</div></div>
    <div class="card"><div class="l">Bugun savdo</div><div class="v">${fmt(tS)} $</div><div class="s">${todayEv.filter(x=>x[1].t==='sale').length} ta</div></div>
    <div class="card"><div class="l">Bugun to'lov</div><div class="v" style="color:var(--grn)">${fmt(tP)} $</div><div class="s">${todayEv.filter(x=>x[1].t==='pay').length} ta</div></div>
+   <div class="card" style="cursor:pointer" onclick="showTab('call')"><div class="l">Bugun qo'ng'iroq qilish</div><div class="v a">${callList().length} kishi</div><div class="s">Qo'ng'iroqlar bo'limi</div></div>
    <div class="card"><div class="l">Bu oy savdo</div><div class="v">${fmt(mS)} $</div><div class="s">to'landi ${fmt(mP)} $</div></div></div>
   <div class="grid3">
    <div class="box"><div class="bt">Bugungi yozuvlar</div>${todayEv.length?todayEv.reverse().map(([c,e])=>`<div class="ci" onclick="goCust('${c.id}')"><div><div class="n">${esc(c.name)}</div><div class="c">${e.t==='sale'?'Savdo':e.t==='pay'?'To\'lov · '+(KINDS[e.kind]||''):e.t==='return'?'Qaytarish':'Boshqa'} · ${esc(e.by)} ${e.at||''}</div></div><div class="b">${e.t==='pay'?'−':''}${fmt(Math.abs(evSum(e)))} $</div></div>`).join(''):'<div class="empty">Bugun hali yozuv yo\'q</div>'}</div>
@@ -332,8 +420,30 @@ function doSearch(){let q=sq.value.trim().toLowerCase();if(q.length<2){sres.inne
   hits.sort((a,b)=>(b.d||'').localeCompare(a.d||''));
   sres.innerHTML=`${cs.length?`<div class="box" style="margin-bottom:12px"><div class="bt">Mijozlar</div>${cs.map(crow).join('')}</div>`:''}<div class="box"><div class="bt">Yozuvlar <span class="hint">${hits.length>300?'300+':hits.length} ta</span></div><div class="prod" style="border:none"><table><tr><th>Sana</th><th>Mijoz</th><th>Yozuv</th><th>Soni</th><th>Narx</th><th>Summa</th></tr>${hits.slice(0,300).map(h=>`<tr class="cl" onclick="goCust('${h.c.id}')"><td>${fd(h.d)}</td><td>${esc(h.c.name)}</td><td>${esc(h.txt)} ${h.l?'<span class="tag">'+esc(h.l)+'</span>':''}${h.nw?' <span class="tag new">yangi</span>':''}</td><td>${h.q!=null?fmt(h.q):''}</td><td>${h.p!=null?fmt(h.p):''}</td><td>${h.s!=null?fmt(h.s):''}</td></tr>`).join('')}</table></div>${hits.length?'':'<div class="empty">Topilmadi</div>'}</div>`}
 
+// ---------- calls & promises report ----------
+function callList(){const out=[];for(const c of CUST){if(c.kind==='sherik')continue;const b=balance(c);if(b<=0.5)continue;const cl=calls(c);const last=cl[cl.length-1];
+  let why='',pri=0;const act=[...cl].reverse().find(x=>x.result==='vada'&&x.pdate&&!x.done);
+  if(act){const ps=promiseStatus(c,act);if(ps.s==='no'){why='va\'da buzildi ('+fd(act.pdate)+')';pri=3}else if(ps.s==='w'&&act.pdate<=TODAY){why='bugun va\'da kuni';pri=2}}
+  if(!why&&last&&last.next&&last.next<=TODAY&&last.result!=='vada'){why=(CALLR[last.result]||'')+' · qayta qo\'ng\'iroq';pri=2}
+  if(!why&&!act){const la=lastDate(c);const ld=last?last.d:'';const quiet=daysAgo(ld>la?ld:la);if(quiet>30){why=last?'oxirgi qo\'ng\'iroq '+daysAgo(last.d)+' kun oldin':'qo\'ng\'iroq qilinmagan'+(la?' · '+daysAgo(la)+' kun jim':'');pri=1}}
+  if(why)out.push({c,b,why,pri})}
+  return out.sort((a,b)=>b.pri-a.pri||b.b-a.b)}
+let RF=null,RT=null;
+function renderCalls(){if(!RF){const d=new Date(TODAY);d.setDate(1);RF=d.toISOString().slice(0,10);RT=TODAY}
+  const all=[];for(const c of CUST)for(const e of calls(c))if(e.d>=RF&&e.d<=RT)all.push({c,e,ps:promiseStatus(c,e)});
+  all.sort((a,b)=>b.e.d.localeCompare(a.e.d));
+  const pr=all.filter(x=>x.ps),ok=pr.filter(x=>x.ps.s==='ok'),no=pr.filter(x=>x.ps.s==='no'),w=pr.filter(x=>x.ps.s==='w');const sum=a=>fmt(a.reduce((t,x)=>t+(x.e.pamt||0),0));
+  const tl=callList();
+  callTab.innerHTML=`<div class="acts nop"><span class="hint">Davr</span><input type="date" id="rf" value="${RF}"><input type="date" id="rt" value="${RT}"><button onclick="callCsv()">Excel</button><button onclick="window.print()">Chop etish / PDF</button></div>
+  <div class="cards"><div class="card"><div class="l">Qo'ng'iroqlar</div><div class="v">${all.length}</div></div><div class="card"><div class="l">Va'da berildi</div><div class="v">${pr.length}</div><div class="s">${sum(pr)} $</div></div><div class="card"><div class="l">To'landi</div><div class="v" style="color:var(--grn)">${ok.length}</div><div class="s">${sum(ok)} $</div></div><div class="card"><div class="l">Buzildi</div><div class="v old">${no.length}</div><div class="s">${sum(no)} $</div></div><div class="card"><div class="l">Kutilmoqda</div><div class="v a">${w.length}</div><div class="s">${sum(w)} $</div></div></div>
+  <div class="cgrid"><div class="box"><div class="bt">Bugun qo'ng'iroq qilish kerak · ${tl.length}</div>${tl.slice(0,40).map(x=>`<div class="ci" onclick="goCust('${x.c.id}')"><div><div class="n">${esc(x.c.name)}</div><div class="c ${x.pri===3?'old':''}">${x.why}</div></div><div class="b">${fmt(x.b)} $</div></div>`).join('')||'<div class="empty">Hammasi joyida</div>'}</div>
+  <div class="box"><div class="bt">Qo'ng'iroqlar · ${fd(RF)} – ${fd(RT)}</div><div class="prod" style="border:none"><table><tr><th>Sana</th><th>Mijoz</th><th>Natija</th><th>Va'da</th><th>Nima dedi</th><th>Kim</th><th>Holat</th></tr>${all.map(x=>`<tr class="cl" onclick="goCust('${x.c.id}')"><td>${fd(x.e.d)}</td><td>${esc(x.c.name)}</td><td>${CALLR[x.e.result]||''}</td><td>${x.e.pdate?fd(x.e.pdate)+(x.e.pamt?' · '+fmt(x.e.pamt)+' $':''):''}</td><td class="hint">${esc(x.e.note||'')}</td><td>${esc(x.e.by||'')}</td><td>${x.ps?`<span class="tag ${x.ps.s==='ok'?'new':x.ps.s==='no'?'void':'flag'}">${x.ps.t}</span>`:''}</td></tr>`).join('')}</table>${all.length?'':'<div class="empty">Bu davrda qo\'ng\'iroq yozilmagan</div>'}</div></div></div>`;
+  rf.onchange=()=>{RF=rf.value;renderCalls()};rt.onchange=()=>{RT=rt.value;renderCalls()}}
+function callCsv(){const out=[['Sana','Mijoz','Natija','Vada sanasi','Vada summasi','Nima dedi','Kim','Holat','Qarz']];for(const c of CUST)for(const e of calls(c))if(e.d>=RF&&e.d<=RT){const ps=promiseStatus(c,e);out.push([e.d,c.name,CALLR[e.result]||'',e.pdate||'',e.pamt||'',e.note||'',e.by||'',ps?ps.t:'',Math.round(balance(c))])}
+  const txt='﻿'+out.map(r=>r.map(x=>`"${String(x??'').replace(/"/g,'""')}"`).join(';')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/csv'}));a.download=`qongiroqlar-${RF}-${RT}.csv`;a.click()}
+
 // ---------- tabs ----------
-function showTab(t){document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.tab===t));homeTab.style.display=t==='home'?'':'none';custTab.style.display=t==='cust'?'':'none';prodTab.style.display=t==='prod'?'':'none';srchTab.style.display=t==='srch'?'':'none';if(t==='prod')renderProd();if(t==='home')renderHome();if(t==='srch')sq.focus()}
+function showTab(t){document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.tab===t));homeTab.style.display=t==='home'?'':'none';custTab.style.display=t==='cust'?'':'none';prodTab.style.display=t==='prod'?'':'none';srchTab.style.display=t==='srch'?'':'none';callTab.style.display=t==='call'?'':'none';if(t==='call')renderCalls();if(t==='prod')renderProd();if(t==='home')renderHome();if(t==='srch')sq.focus()}
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
 renderList();renderHome();
 </script>

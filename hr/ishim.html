@@ -2,7 +2,7 @@
 <html lang="uz">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-f3PDIr9ALUPPH6wUl8DUY4SDcPgdCY+l3SMoSO5oG5M='; style-src 'self' 'sha256-2Vpp2+XAe0g2cNCRVwk5ssjEOVxNem1AwumInVezKeI='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-p+1UAUp7c0XAFdaurO663ZhyKffwuEtHb7nmFk3pDak='; style-src 'self' 'sha256-2Vpp2+XAe0g2cNCRVwk5ssjEOVxNem1AwumInVezKeI='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mening ishim</title>
 <script>window.__mcHash = String(location.hash || '');</script>
@@ -577,11 +577,13 @@
     })();
     var r = await fetch(endpoint(), { method: 'POST', body: body, headers: { 'Content-Type': 'text/plain' }, cache: 'no-store', credentials: 'omit' });
     if (!r.ok) { try { ac && ac.abort(); } catch (e) {} throw new Error('post'); }
-    // Oqim va eski usul (har 1,2 soniyada so'rash) birga ishlaydi: qaysi biri birinchi olsa (ba'zi telefonlarda oqim kechikib keladi)
+    // Javob avval oqimdan kutiladi; 4 soniyada kelmasa (ba'zi telefonlarda oqim kechikadi) har 2,5 soniyada so'raladi.
+    // ntfy.sh bir manzildan ko'p so'rovni 60 soniyaga to'xtatadi (telefon va bot bir Wi-Fi'da bo'lsa, botni ham): so'rovlar kam bo'lsin
     var done = false;
     var poll = (async function () {
+      await wait(4000);
       while (!done && Date.now() < until) {
-        await wait(1200); if (done) return null;
+        if (done) return null;
         var txt = '';
         try {
           var g2 = await fetch(NTFY + '/' + topic + '/json?poll=1&since=' + since, { cache: 'no-store', credentials: 'omit' });
@@ -591,6 +593,7 @@
         if (txt.length > 50000) return null;
         var lines = txt.split('\n');
         for (var k = 0; k < lines.length; k++) { var zs1 = await tryLine(lines[k]); if (zs1) return zs1; }
+        await wait(2500);
       }
       return null;
     })();
@@ -642,7 +645,7 @@
     refreshing = true;
     ss('mc-ref', String(Date.now())); // bot javob bermasa ham har daqiqada qayta so'ramasin
     try {
-      var zs = await fetchLive(null, true);
+      var zs = await fetchX({ t: 'get' }, true); // navbat bilan (ntfy cheklovi)
       if (!zs) return;
       // amaldan keyingi yangilashda: faqat odam hozir nimadir yozayotgan bo'lsa kutiladi
       var a0 = document.activeElement, typing = a0 && /^(INPUT|TEXTAREA)$/.test(a0.tagName) && Date.now() - lastInput < 15000;
@@ -1815,7 +1818,12 @@
 
   // --- rebuild 17: ko'rinish almashtirish (Tizim / Boshqaruv / Xodim) va Tizim holati ---
   // Namuna sahifada (__PROTO) botga so'rov ketmaydi: shu nomdagi namunaviy javob olinadi
-  function fetchX(a) { if (window.__PROTO && typeof window['__PROTO_' + a.t] === 'function') return Promise.resolve(window['__PROTO_' + a.t](a)); return fetchLive(a); }
+  // so'rovlar navbat bilan, bir vaqtda bittadan (ntfy.sh cheklovi)
+  var FQ = Promise.resolve();
+  function fetchX(a, raw) {
+    if (window.__PROTO && typeof window['__PROTO_' + a.t] === 'function') return Promise.resolve(window['__PROTO_' + a.t](a));
+    var p = FQ.then(function () { return fetchLive(a, raw); }); FQ = p.catch(function () {}); return p;
+  }
   function agoTxt(ts, nowS) {
     if (!(ts > 0)) return '—';
     var t = new Date((ts + 5 * 3600) * 1000), n = new Date((nowS + 5 * 3600) * 1000), hm = pad2(t.getUTCHours()) + ':' + pad2(t.getUTCMinutes());

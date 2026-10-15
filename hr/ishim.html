@@ -2,7 +2,7 @@
 <html lang="uz">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-p+1UAUp7c0XAFdaurO663ZhyKffwuEtHb7nmFk3pDak='; style-src 'self' 'sha256-2Vpp2+XAe0g2cNCRVwk5ssjEOVxNem1AwumInVezKeI='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-KyGlQbqP7vU2LXDdBib7Huxg4bN65Fm79BqoN+17FU8='; style-src 'self' 'sha256-2Vpp2+XAe0g2cNCRVwk5ssjEOVxNem1AwumInVezKeI='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mening ishim</title>
 <script>window.__mcHash = String(location.hash || '');</script>
@@ -2319,33 +2319,42 @@
     }
   }
 
-  function noData() { fail(inTg ? "Ma'lumot topilmadi. Botga /start yozib, tugmani qayta bosing." : 'Bu sahifa faqat Mercedes Center botidagi "📊 Mening ishim" tugmasidan ochiladi.'); }
+  function noData() { fail(inTg ? (INIT ? "Ma'lumot topilmadi. Botga /start yozib, tugmani qayta bosing." : "Telegram sahifani to'liq ochmadi. Ilovani yopib, qayta oching.") : 'Bu sahifa faqat Mercedes Center botidagi "📊 Mening ishim" tugmasidan ochiladi.'); }
   var hasData = /[#&][zd]=/.test(window.__mcHash || String(location.hash || ''));
-  var loading = null;
-  if (!hasData && INIT && window.crypto && crypto.subtle) { loading = el('p', 'more', 'Yuklanmoqda…'); loading.id = 'loading'; document.body.insertBefore(loading, document.body.firstChild); }
-  // rebuild 20: oxirgi ma'lumot telefonda saqlanadi (shu Telegram foydalanuvchisi uchun, 24 soat): "Ochish" bosilganda darhol ko'rinadi,
-  // yangisi orqa fonda keladi (sahifa o'zi yangilanadi)
-  var UID = 0; try { UID = Number(tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) || 0; } catch (e) { UID = 0; }
-  function lastGet() { try { var x = JSON.parse(localStorage.getItem('mc-last') || 'null'); return x && x.u === UID && UID && Date.now() - x.t < 86400000 && typeof x.z === 'string' ? x.z : null; } catch (e) { return null; } }
+  // rebuild 21: ekran o'chib yonganda Telegram sahifani o'zi qayta yuklaydi (manzilda ma'lumot yo'q, ba'zan Telegram ma'lumoti ham
+  // kech keladi). Shunda: avval saqlangan oxirgi ma'lumot darhol ko'rsatiladi, Telegram ma'lumoti 2 soniyagacha kutiladi, yangisi orqa fonda.
+  function uidNow() { try { return Number(tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) || 0; } catch (e) { return 0; } }
+  var UID = uidNow();
+  function lastRead() { try { return JSON.parse(localStorage.getItem('mc-last') || 'null'); } catch (e) { return null; } }
+  function lastGet() { var x = lastRead(); return x && typeof x.z === 'string' && Date.now() - x.t < 86400000 && (!UID || x.u === UID) ? x.z : null; }
   function lastSet(zs) { try { if (UID && zs) localStorage.setItem('mc-last', JSON.stringify({ u: UID, t: Date.now(), z: zs })); } catch (e) {} }
-  var cached = loading ? lastGet() : null;
-  if (cached) { loading.remove(); loading = null; }
   var startZ = (window.__mcHash || String(location.hash || '')).match(/[#&]z=([A-Za-z0-9_-]+)/);
   if (startZ) lastSet(startZ[1]);
-  (cached ? decodeZ(cached) : loading ? fetchLive(null, true).then(function (zs) { lastSet(zs); return decodeZ(zs); }) : decode()).then(function (d) {
-    if (loading) loading.remove();
-    if (cached && d && typeof d === 'object') d.at = 1; // saqlangan ma'lumot: yangisi darhol so'raladi
+  async function startup() {
+    if (hasData) return decode();
+    // Telegram ma'lumoti (kim ochgani) ba'zan sahifadan keyin keladi: 2 soniyagacha kutiladi
+    for (var i = 0; i < 20 && !INIT; i++) { await wait(100); try { if (inTg && typeof tg.initData === 'string' && tg.initData) { INIT = tg.initData; UID = uidNow(); } } catch (e) {} }
+    var cached = lastGet();
+    if (cached) {
+      try { var d0 = await decodeZ(cached); if (d0 && typeof d0 === 'object') { d0.at = 1; d0.__cached = 1; return d0; } } catch (e) { /* buzilgan: botdan so'raladi */ }
+    }
+    if (!INIT || !(window.crypto && crypto.subtle)) return null;
+    var ld = el('p', 'more', 'Yuklanmoqda…'); ld.id = 'loading'; document.body.insertBefore(ld, document.body.firstChild);
+    try { var zs = await fetchLive(null, true); lastSet(zs); return decodeZ(zs); }
+    catch (e2) { throw { bot: 1, e: e2 }; }
+    finally { ld.remove(); }
+  }
+  startup().then(function (d) {
     if (!d || typeof d !== 'object' || (d.v !== 1 && d.v !== 2)) return noData();
     try { if (d.v === 2) renderV2(d); else render(d); if (d.v === 2) startAutoRefresh(d); }
     catch (e) {
-      hideAll(); ['p-today', 'p-orders', 'p-staff', 'p-report', 'p-settings', 'p-guide'].forEach(function (k) { $(k).hidden = true; });
+      hideAll(); ['p-today', 'p-orders', 'p-staff', 'p-report', 'p-settings', 'p-guide'].forEach(function (k) { var x = $(k); if (x) x.hidden = true; });
       $('tabs').hidden = true; document.body.classList.remove('has-tabs');
       fail("Ma'lumotni ko'rsatib bo'lmadi. Botga /start yozib, tugmani qayta bosing.");
     }
   }, function (e) {
-    if (loading) loading.remove();
-    if (e && e.upd) fail('Telegram ilovasini yangilang');
-    else if (loading) fail("Bot javob bermadi. Biroz kutib, qayta oching. Bir necha marta takrorlansa, botga /start yozing.");
+    if (e && e.e && e.e.upd) fail('Telegram ilovasini yangilang');
+    else if (e && e.bot) fail("Bot javob bermadi. Biroz kutib, qayta oching. Bir necha marta takrorlansa, botga /start yozing.");
     else noData();
   });
 })();

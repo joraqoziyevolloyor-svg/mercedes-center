@@ -2,7 +2,7 @@
 <html lang="uz">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-KyGlQbqP7vU2LXDdBib7Huxg4bN65Fm79BqoN+17FU8='; style-src 'self' 'sha256-2Vpp2+XAe0g2cNCRVwk5ssjEOVxNem1AwumInVezKeI='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-wdqQiDbxsyukkJiD4DEaknScRDPefiDa/KYpW/aU7mM='; style-src 'self' 'sha256-2Vpp2+XAe0g2cNCRVwk5ssjEOVxNem1AwumInVezKeI='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh https://mc-hr-kopriki.joraqoziyevolloyor.workers.dev; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mening ishim</title>
 <script>window.__mcHash = String(location.hash || '');</script>
@@ -486,6 +486,17 @@
   function nonce() { return b64u(crypto.getRandomValues(new Uint8Array(18))); } // 24 belgi
   // Manzil sahifaga qattiq yozilgan: URL (# qismi) ichidagi topic yoki serverga hech qachon ishonilmaydi (soxta havola amallarni boshqa joyga yubormasin)
   var ENDPOINT = 'https://ntfy.sh/mc-vnoo2calnbwnobjxncz6hd3y';
+  // rebuild 22: Cloudflare ko'prigi - so'rov to'g'ridan-to'g'ri botga, javob shu so'rovga qaytadi (0,3-1 s). Ishlamasa ntfy yo'li (zaxira)
+  var BRIDGE = 'https://mc-hr-kopriki.joraqoziyevolloyor.workers.dev/app';
+  var BR_OK = true; // ko'prik 503/504 bersa yoki ulanmasa 60 soniya ntfy ishlatiladi
+  var BR_DOWN_UNTIL = 0;
+  function bridgeFetch(body, ms) {
+    if (!BRIDGE || Date.now() < BR_DOWN_UNTIL) return Promise.resolve(null);
+    var ac = window.AbortController ? new AbortController() : null, tm = ac && setTimeout(function () { ac.abort(); }, ms || 30000);
+    return fetch(BRIDGE, { method: 'POST', body: body, headers: { 'Content-Type': 'text/plain' }, cache: 'no-store', credentials: 'omit', signal: ac ? ac.signal : undefined })
+      .then(function (r) { clearTimeout(tm); if (r.status === 503 || r.status === 504) { BR_DOWN_UNTIL = Date.now() + 60000; return null; } if (!r.ok) throw new Error('ko\'prik ' + r.status); return r.text(); },
+        function () { clearTimeout(tm); BR_DOWN_UNTIL = Date.now() + 60000; return null; });
+  }
   function endpoint() { return ENDPOINT; }
   function say(box, text, bad) { if (!box) return; box.textContent = text || ''; box.className = 'amsg' + (bad ? ' bad' : ''); }
   // Bitta amalni yuborish. ok() - muvaffaqiyatdan keyingi optimistik o'zgarish.
@@ -498,8 +509,8 @@
     try {
       var body = 'ma1 ' + await encrypt(JSON.stringify({ v: 1, i: INIT, n: nonce(), a: a }));
       if (new TextEncoder().encode(body).length >= 4000) throw new Error('xabar juda uzun, matnni qisqartiring');
-      var r = await fetch(endpoint(V), { method: 'POST', body: body, headers: { 'Content-Type': 'text/plain' }, cache: 'no-store', credentials: 'omit' });
-      if (!r.ok) throw new Error('server javobi ' + r.status);
+      var viaBridge = await bridgeFetch(body, 30000);
+      if (viaBridge === null) { var r = await fetch(endpoint(V), { method: 'POST', body: body, headers: { 'Content-Type': 'text/plain' }, cache: 'no-store', credentials: 'omit' }); if (!r.ok) throw new Error('server javobi ' + r.status); }
     } catch (e) {
       btn.disabled = false;
       say(box, "Yuborib bo'lmadi: " + str(e && e.message ? e.message : e) + ". Qayta urinib ko'ring.", true);
@@ -545,6 +556,14 @@
     if (extra) Object.keys(extra).forEach(function (k) { a[k] = extra[k]; });
     a.k = b64u(pub); a.r = topic; a.s = b64u(salt);
     var body = 'ma1 ' + await encrypt(JSON.stringify({ v: 1, i: INIT, n: nonce(), a: a }));
+    // rebuild 22: avval ko'prik: javob shu so'rovning o'zida keladi
+    var viaBridge = await bridgeFetch(body, 30000);
+    if (viaBridge !== null) {
+      var zb = null;
+      if (viaBridge.indexOf('mr1 ') === 0) { try { zb = await openReply(kp, viaBridge.slice(4), salt); } catch (e) { zb = null; } }
+      if (zb) { seen17(true); return rawOnly ? zb : decodeZ(zb); }
+      throw { timeout: 1 };
+    }
     // rebuild 20: javob kutish uchun avval ntfy oqimi ochiladi (bitta ulanish, javob kelishi bilan darhol), keyin so'rov yuboriladi.
     // Oqim ishlamasa (eski ko'rinish) - avvalgidek har 1,2 soniyada tekshiriladi.
     async function tryLine(line) {

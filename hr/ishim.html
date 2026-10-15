@@ -2,7 +2,7 @@
 <html lang="uz">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-Wge6KqOfMM+znnNtr1FSE1EtE2FnXTN03+qkmlG+SNU='; style-src 'self' 'sha256-2Vpp2+XAe0g2cNCRVwk5ssjEOVxNem1AwumInVezKeI='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-f3PDIr9ALUPPH6wUl8DUY4SDcPgdCY+l3SMoSO5oG5M='; style-src 'self' 'sha256-2Vpp2+XAe0g2cNCRVwk5ssjEOVxNem1AwumInVezKeI='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mening ishim</title>
 <script>window.__mcHash = String(location.hash || '');</script>
@@ -577,21 +577,29 @@
     })();
     var r = await fetch(endpoint(), { method: 'POST', body: body, headers: { 'Content-Type': 'text/plain' }, cache: 'no-store', credentials: 'omit' });
     if (!r.ok) { try { ac && ac.abort(); } catch (e) {} throw new Error('post'); }
-    var zs0 = await stream;
-    if (zs0) return rawOnly ? zs0 : decodeZ(zs0);
-    if (streamOk && Date.now() >= until - 500) throw { timeout: 1 };
-    while (Date.now() < until) {
-      await wait(1200);
-      var txt = '';
-      try {
-        var g2 = await fetch(NTFY + '/' + topic + '/json?poll=1&since=' + since, { cache: 'no-store', credentials: 'omit' });
-        if (!g2.ok) continue;
-        txt = await g2.text();
-      } catch (e) { continue; }
-      if (txt.length > 50000) throw new Error('big');
-      var lines = txt.split('\n');
-      for (var k = 0; k < lines.length; k++) { var zs1 = await tryLine(lines[k]); if (zs1) return rawOnly ? zs1 : decodeZ(zs1); }
-    }
+    // Oqim va eski usul (har 1,2 soniyada so'rash) birga ishlaydi: qaysi biri birinchi olsa (ba'zi telefonlarda oqim kechikib keladi)
+    var done = false;
+    var poll = (async function () {
+      while (!done && Date.now() < until) {
+        await wait(1200); if (done) return null;
+        var txt = '';
+        try {
+          var g2 = await fetch(NTFY + '/' + topic + '/json?poll=1&since=' + since, { cache: 'no-store', credentials: 'omit' });
+          if (!g2.ok) continue;
+          txt = await g2.text();
+        } catch (e) { continue; }
+        if (txt.length > 50000) return null;
+        var lines = txt.split('\n');
+        for (var k = 0; k < lines.length; k++) { var zs1 = await tryLine(lines[k]); if (zs1) return zs1; }
+      }
+      return null;
+    })();
+    var first = await new Promise(function (res) {
+      var left = 2;
+      [stream, poll].forEach(function (p) { p.then(function (z) { if (z && !done) { done = true; res(z); } else if (--left === 0) res(null); }, function () { if (--left === 0) res(null); }); });
+    });
+    done = true; try { ac && ac.abort(); } catch (e) {}
+    if (first) return rawOnly ? first : decodeZ(first);
     throw { timeout: 1 };
   }
 

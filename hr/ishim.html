@@ -2,7 +2,7 @@
 <html lang="uz">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-wdqQiDbxsyukkJiD4DEaknScRDPefiDa/KYpW/aU7mM='; style-src 'self' 'sha256-2Vpp2+XAe0g2cNCRVwk5ssjEOVxNem1AwumInVezKeI='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh https://mc-hr-kopriki.joraqoziyevolloyor.workers.dev; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-jsUhnMs5nMV5q8GYQNC5WlKWcIBNXAnPiarJMK3y1i8='; style-src 'self' 'sha256-A467efwC+NGkeKDdBG8zBaed2gH/bnSiZOrDNZm+gok='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh https://mc-hr-kopriki.joraqoziyevolloyor.workers.dev; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mening ishim</title>
 <script>window.__mcHash = String(location.hash || '');</script>
@@ -138,6 +138,13 @@
   /* rebuild 16: rejalar */
   /* rebuild 17: ko'rinish almashtirish va Tizim */
   .bar{position:relative}
+  /* to'liq ekranda Telegram sarlavhasi yo'q: tepada telefonning soat qismi uchun joy (Telegram beradi) */
+  body.fs-on .bar{padding-top:calc(14px + var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px))}
+  body.fs-on .vmenu{top:calc(52px + var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px))}
+  body.fs-on .sheet{padding-top:calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px))}
+  body.fs-on #mcBar{margin-top:calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px))}
+  body.fs-on .tabs{padding-bottom:calc(env(safe-area-inset-bottom, 0px) + var(--tg-safe-area-inset-bottom, 0px))}
+  body.fs-on.has-tabs main{padding-bottom:calc(86px + env(safe-area-inset-bottom) + var(--tg-safe-area-inset-bottom, 0px))}
   .bar-row button.themebtn+button.themebtn{margin-left:0}
   .vmenu{position:absolute;right:12px;top:52px;z-index:20;background:var(--bg);border:1px solid var(--line-2);border-radius:8px;display:flex;flex-direction:column;min-width:180px;overflow:hidden}
   .vmenu button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 14px;font-size:15px;color:var(--ink);border-top:1px solid var(--line)}
@@ -194,7 +201,7 @@
 </head>
 <body>
 <header class="bar">
-  <div class="bar-row"><h1 id="title">Mening ishim</h1><button type="button" id="viewBtn" class="themebtn" aria-label="Ko'rinishni almashtirish" title="Ko'rinish" hidden></button><button type="button" id="themeBtn" class="themebtn" aria-label="Kun / tun" title="Kun / tun" hidden></button></div>
+  <div class="bar-row"><h1 id="title">Mening ishim</h1><button type="button" id="fsBtn" class="themebtn" aria-label="To'liq ekran" title="To'liq ekran" hidden></button><button type="button" id="viewBtn" class="themebtn" aria-label="Ko'rinishni almashtirish" title="Ko'rinish" hidden></button><button type="button" id="themeBtn" class="themebtn" aria-label="Kun / tun" title="Kun / tun" hidden></button></div>
   <div class="meta" id="sub"></div>
 </header>
 <main>
@@ -270,7 +277,23 @@
   applyTheme(themePref());
   try { if (inTg) tg.onEvent('themeChanged', function () { if (themePref() === 'auto') applyTheme('auto'); }); } catch (e) {}
   // Sarlavhadagi kichik belgi: oy (qoraga o'tish) / quyosh (oqqa o'tish)
+  // rebuild 23: to'liq ekran (Telegram 8.0+). Tanlov telefonda saqlanadi: keyingi safar o'zi shu rejimda ochiladi.
+  // Telegram ruxsat bermasa yoki eski bo'lsa - tugma chiqmaydi, hech narsa buzilmaydi.
+  function fsPref() { try { return localStorage.getItem('mc-fs') === '1'; } catch (e) { return false; } }
+  function fsBtn() {
+    var b = $('fsBtn'); if (!b || !inTg) return;
+    var can = false; try { can = !!(tg.isVersionAtLeast && tg.isVersionAtLeast('8.0') && tg.requestFullscreen); } catch (e) { can = false; }
+    if (!can) return;
+    function paint() { var on = !!tg.isFullscreen; while (b.firstChild) b.removeChild(b.firstChild); b.appendChild(ico(on ? 'shrink' : 'expand', 20)); b.setAttribute('aria-label', on ? "To'liq ekrandan chiqish" : "To'liq ekran"); document.body.classList.toggle('fs-on', on); }
+    b.addEventListener('click', function () {
+      try { if (tg.isFullscreen) { tg.exitFullscreen(); localStorage.setItem('mc-fs', '0'); } else { tg.requestFullscreen(); localStorage.setItem('mc-fs', '1'); } } catch (e) {}
+    });
+    try { tg.onEvent('fullscreenChanged', paint); tg.onEvent('fullscreenFailed', function () { try { localStorage.setItem('mc-fs', '0'); } catch (e) {} paint(); }); } catch (e) {}
+    if (fsPref() && !tg.isFullscreen) { try { tg.requestFullscreen(); } catch (e) {} }
+    paint(); b.hidden = false;
+  }
   function themeBtn() {
+    fsBtn();
     var b = $('themeBtn'); if (!b) return;
     function paint() { var dk = document.documentElement.getAttribute('data-theme') === 'dark'; while (b.firstChild) b.removeChild(b.firstChild); b.appendChild(ico(dk ? 'sun' : 'moon', 20)); b.setAttribute('aria-label', dk ? 'Oq rejim' : 'Qora rejim'); }
     b.addEventListener('click', function () { setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); paint(); });
@@ -1521,6 +1544,8 @@
     sun: ['M12 8a4 4 0 1 1 0 8a4 4 0 0 1 0-8z', 'M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4'],
     moon: ['M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z'],
     grid: ['M4 4h7v7H4z', 'M13 4h7v7h-7z', 'M4 13h7v7H4z', 'M13 13h7v7h-7z'],
+    expand: ['M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'],
+    shrink: ['M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5'],
     pulse: ['M3 12h4l2-6l4 12l2-6h6']
   };
   function ico(name, size) {

@@ -2,7 +2,7 @@
 <html lang="uz">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-denFd0Ko26fhd8YrpWs8labpstVYk2vQk37Q6GFPO6Y='; style-src 'self' 'sha256-2Vpp2+XAe0g2cNCRVwk5ssjEOVxNem1AwumInVezKeI='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-Wge6KqOfMM+znnNtr1FSE1EtE2FnXTN03+qkmlG+SNU='; style-src 'self' 'sha256-2Vpp2+XAe0g2cNCRVwk5ssjEOVxNem1AwumInVezKeI='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mening ishim</title>
 <script>window.__mcHash = String(location.hash || '');</script>
@@ -545,29 +545,52 @@
     if (extra) Object.keys(extra).forEach(function (k) { a[k] = extra[k]; });
     a.k = b64u(pub); a.r = topic; a.s = b64u(salt);
     var body = 'ma1 ' + await encrypt(JSON.stringify({ v: 1, i: INIT, n: nonce(), a: a }));
+    // rebuild 20: javob kutish uchun avval ntfy oqimi ochiladi (bitta ulanish, javob kelishi bilan darhol), keyin so'rov yuboriladi.
+    // Oqim ishlamasa (eski ko'rinish) - avvalgidek har 1,2 soniyada tekshiriladi.
+    async function tryLine(line) {
+      var ev; try { ev = JSON.parse(line); } catch (e) { return null; }
+      if (!ev || ev.event !== 'message' || typeof ev.message !== 'string' || ev.message.indexOf('mr1 ') !== 0) return null;
+      var zs = null; try { zs = await openReply(kp, ev.message.slice(4), salt); } catch (e) { zs = null; }
+      // O'tish davri (rebuild 6): v16 bot sirni bilmaydi va bo'sh tuz bilan shifrlaydi. Shu brauzerda v17 javobi hali
+      // ko'rilmagan bo'lsa bo'sh tuz ham sinab ko'riladi; v17 javobi bir marta ochilgach bo'sh tuz endi qabul qilinmaydi.
+      if (zs) seen17(true);
+      else if (!seen17()) { try { zs = await openReply(kp, ev.message.slice(4), new Uint8Array(0)); } catch (e) { zs = null; } }
+      return zs;
+    }
+    var until = Date.now() + 30000, ac = window.AbortController ? new AbortController() : null, streamOk = false;
+    var stream = (async function () {
+      if (!ac || !window.ReadableStream || !window.TextDecoder) return null;
+      var tmr = setTimeout(function () { try { ac.abort(); } catch (e) {} }, 30000);
+      try {
+        var g = await fetch(NTFY + '/' + topic + '/json?since=' + since, { cache: 'no-store', credentials: 'omit', signal: ac.signal });
+        if (!g.ok || !g.body || !g.body.getReader) return null;
+        streamOk = true;
+        var rd = g.body.getReader(), dec = new TextDecoder(), buf = '', got = 0;
+        for (;;) {
+          var ch = await rd.read(); if (ch.done) break;
+          got += ch.value.length; if (got > 200000) break;
+          buf += dec.decode(ch.value, { stream: true });
+          var i; while ((i = buf.indexOf('\n')) >= 0) { var ln = buf.slice(0, i); buf = buf.slice(i + 1); var zs = await tryLine(ln); if (zs) { try { ac.abort(); } catch (e) {} return zs; } }
+        }
+      } catch (e) { /* uzildi yoki vaqt tugadi */ } finally { clearTimeout(tmr); }
+      return null;
+    })();
     var r = await fetch(endpoint(), { method: 'POST', body: body, headers: { 'Content-Type': 'text/plain' }, cache: 'no-store', credentials: 'omit' });
-    if (!r.ok) throw new Error('post');
-    var until = Date.now() + 30000;
+    if (!r.ok) { try { ac && ac.abort(); } catch (e) {} throw new Error('post'); }
+    var zs0 = await stream;
+    if (zs0) return rawOnly ? zs0 : decodeZ(zs0);
+    if (streamOk && Date.now() >= until - 500) throw { timeout: 1 };
     while (Date.now() < until) {
       await wait(1200);
       var txt = '';
       try {
-        var g = await fetch(NTFY + '/' + topic + '/json?poll=1&since=' + since, { cache: 'no-store', credentials: 'omit' });
-        if (!g.ok) continue;
-        txt = await g.text();
+        var g2 = await fetch(NTFY + '/' + topic + '/json?poll=1&since=' + since, { cache: 'no-store', credentials: 'omit' });
+        if (!g2.ok) continue;
+        txt = await g2.text();
       } catch (e) { continue; }
       if (txt.length > 50000) throw new Error('big');
       var lines = txt.split('\n');
-      for (var i = 0; i < lines.length; i++) {
-        var ev; try { ev = JSON.parse(lines[i]); } catch (e) { continue; }
-        if (!ev || ev.event !== 'message' || typeof ev.message !== 'string' || ev.message.indexOf('mr1 ') !== 0) continue;
-        var zs = null; try { zs = await openReply(kp, ev.message.slice(4), salt); } catch (e) { zs = null; }
-        // O'tish davri (rebuild 6): v16 bot sirni bilmaydi va bo'sh tuz bilan shifrlaydi. Shu brauzerda v17 javobi hali
-        // ko'rilmagan bo'lsa bo'sh tuz ham sinab ko'riladi; v17 javobi bir marta ochilgach bo'sh tuz endi qabul qilinmaydi.
-        if (zs) seen17(true);
-        else if (!seen17()) { try { zs = await openReply(kp, ev.message.slice(4), new Uint8Array(0)); } catch (e) { zs = null; } }
-        if (zs) return rawOnly ? zs : decodeZ(zs);
-      }
+      for (var k = 0; k < lines.length; k++) { var zs1 = await tryLine(lines[k]); if (zs1) return rawOnly ? zs1 : decodeZ(zs1); }
     }
     throw { timeout: 1 };
   }
@@ -1861,11 +1884,10 @@
       var base = kind === 'o' ? 'boss' : 'mine';
       document.body.classList.toggle('v-sys', v === 'sys');
       document.body.classList.toggle('v-mine', v === 'mine' && kind === 'o');
-      if (v === 'sys') { if (!sys) { sys = sysPanel(); main.insertBefore(sys.el, main.firstChild.nextSibling); sys.load(); } if (!titleKeep) titleKeep = $('title').textContent; $('title').textContent = 'Tizim'; }
+      if (v === 'sys') { loadSys(); if (!titleKeep) titleKeep = $('title').textContent; $('title').textContent = 'Tizim'; }
       else if (v === 'mine' && kind === 'o') {
         if (!titleKeep) titleKeep = $('title').textContent; $('title').textContent = 'Mening ishim';
-        if (!mineDone) { mineDone = true; var w = $('p-mine'), ld = el('p', 'empty', 'Yuklanmoqda…'); ld.id = 'mineLoad'; w.insertBefore(ld, w.firstChild);
-          fetchX({ t: 'mget' }).then(function (x) { ld.remove(); if (!x || x.v !== 2 || x.r !== 's') throw new Error('bad'); x.pl = d.pl; x.ot = 0; mineV2(x); }, function () { ld.textContent = "Ma'lumotni olib bo'lmadi. Keyinroq qayta oching."; mineDone = false; }); }
+        loadMine();
       }
       else if (titleKeep) { $('title').textContent = titleKeep; titleKeep = ''; }
       if (v === base && kind === 'o') { var cur = document.querySelector('#tabs button[aria-selected="true"]'); if (cur) cur.click(); }
@@ -1873,6 +1895,14 @@
       var cur2 = V2.filter(function (x) { return x[0] === v; })[0]; b.appendChild(ico(cur2 ? cur2[2] : 'grid', 20)); b.setAttribute('aria-label', "Ko'rinish: " + (cur2 ? cur2[1] : ''));
       window.scrollTo(0, 0);
     }
+    // rebuild 20: Tizim va Xodim ma'lumoti sahifa ochilishi bilan orqa fonda olinadi: almashtirish bir zumda
+    function loadSys() { if (sys || !num(d.tz)) return; sys = sysPanel(); main.insertBefore(sys.el, main.firstChild.nextSibling); sys.load(); }
+    function loadMine() {
+      if (mineDone || kind !== 'o' || !num(d.mw)) return;
+      mineDone = true; var w = $('p-mine'), ld = el('p', 'empty', 'Yuklanmoqda…'); ld.id = 'mineLoad'; w.insertBefore(ld, w.firstChild);
+      fetchX({ t: 'mget' }).then(function (x) { ld.remove(); if (!x || x.v !== 2 || x.r !== 's') throw new Error('bad'); x.pl = d.pl; x.ot = 0; mineV2(x); }, function () { ld.textContent = "Ma'lumotni olib bo'lmadi. Keyinroq qayta oching."; mineDone = false; });
+    }
+    setTimeout(function () { try { loadSys(); loadMine(); } catch (e) {} }, 1200);
     function closeMenu() { if (menu) { menu.remove(); menu = null; } }
     b.addEventListener('click', function (e) {
       e.stopPropagation();
@@ -2277,8 +2307,18 @@
   var hasData = /[#&][zd]=/.test(window.__mcHash || String(location.hash || ''));
   var loading = null;
   if (!hasData && INIT && window.crypto && crypto.subtle) { loading = el('p', 'more', 'Yuklanmoqda…'); loading.id = 'loading'; document.body.insertBefore(loading, document.body.firstChild); }
-  (loading ? fetchLive() : decode()).then(function (d) {
+  // rebuild 20: oxirgi ma'lumot telefonda saqlanadi (shu Telegram foydalanuvchisi uchun, 24 soat): "Ochish" bosilganda darhol ko'rinadi,
+  // yangisi orqa fonda keladi (sahifa o'zi yangilanadi)
+  var UID = 0; try { UID = Number(tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) || 0; } catch (e) { UID = 0; }
+  function lastGet() { try { var x = JSON.parse(localStorage.getItem('mc-last') || 'null'); return x && x.u === UID && UID && Date.now() - x.t < 86400000 && typeof x.z === 'string' ? x.z : null; } catch (e) { return null; } }
+  function lastSet(zs) { try { if (UID && zs) localStorage.setItem('mc-last', JSON.stringify({ u: UID, t: Date.now(), z: zs })); } catch (e) {} }
+  var cached = loading ? lastGet() : null;
+  if (cached) { loading.remove(); loading = null; }
+  var startZ = (window.__mcHash || String(location.hash || '')).match(/[#&]z=([A-Za-z0-9_-]+)/);
+  if (startZ) lastSet(startZ[1]);
+  (cached ? decodeZ(cached) : loading ? fetchLive(null, true).then(function (zs) { lastSet(zs); return decodeZ(zs); }) : decode()).then(function (d) {
     if (loading) loading.remove();
+    if (cached && d && typeof d === 'object') d.at = 1; // saqlangan ma'lumot: yangisi darhol so'raladi
     if (!d || typeof d !== 'object' || (d.v !== 1 && d.v !== 2)) return noData();
     try { if (d.v === 2) renderV2(d); else render(d); if (d.v === 2) startAutoRefresh(d); }
     catch (e) {

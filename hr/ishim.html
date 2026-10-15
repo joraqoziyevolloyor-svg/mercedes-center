@@ -2,7 +2,7 @@
 <html lang="uz">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-jsUhnMs5nMV5q8GYQNC5WlKWcIBNXAnPiarJMK3y1i8='; style-src 'self' 'sha256-A467efwC+NGkeKDdBG8zBaed2gH/bnSiZOrDNZm+gok='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh https://mc-hr-kopriki.joraqoziyevolloyor.workers.dev; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-KBUXlydNnrz9eBgbOFKhSOp/H+EcyXflH+KVn/uIscA='; style-src 'self' 'sha256-A467efwC+NGkeKDdBG8zBaed2gH/bnSiZOrDNZm+gok='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh https://mc-hr-kopriki.joraqoziyevolloyor.workers.dev; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mening ishim</title>
 <script>window.__mcHash = String(location.hash || '');</script>
@@ -279,7 +279,7 @@
   // Sarlavhadagi kichik belgi: oy (qoraga o'tish) / quyosh (oqqa o'tish)
   // rebuild 23: to'liq ekran (Telegram 8.0+). Tanlov telefonda saqlanadi: keyingi safar o'zi shu rejimda ochiladi.
   // Telegram ruxsat bermasa yoki eski bo'lsa - tugma chiqmaydi, hech narsa buzilmaydi.
-  function fsPref() { try { return localStorage.getItem('mc-fs') === '1'; } catch (e) { return false; } }
+  function fsPref() { try { return localStorage.getItem('mc-fs') !== '0'; } catch (e) { return true; } }  // rebuild 24: sukut bo'yicha to'liq ekran; faqat o'chirilgan bo'lsa yo'q
   function fsBtn() {
     var b = $('fsBtn'); if (!b || !inTg) return;
     var can = false; try { can = !!(tg.isVersionAtLeast && tg.isVersionAtLeast('8.0') && tg.requestFullscreen); } catch (e) { can = false; }

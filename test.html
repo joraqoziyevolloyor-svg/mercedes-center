@@ -1700,5 +1700,92 @@ body.m3d-full .m3d .m3d-load{top:45px}
   fetch(M3D_DIR + 'map.json', {cache:'no-cache'}).then(r => r.ok ? r.json() : {}).then(m => { MAP = m || {}; addLink(); }).catch(() => { MAP = {}; });
 })();
 </script>
+<!-- mc-carpick: bosh sahifada mashina brend logosi bilan tanlanadi (logo -> shu brend modellari rasm bilan). Ma'lumot: data/mashinalar.json. Shablonga (internet-dokon/template.html) </body> oldidan shu blokni qo'ying. -->
+<style>
+.carpick.cpl{display:block;overflow:visible}
+.cpl-brands{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.cpl-b{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px 8px;border:1px solid #3d4f60;background:var(--steel-2);color:#fff;border-radius:10px;cursor:pointer;font:inherit}
+.cpl-b .lg{display:flex;align-items:center;justify-content:center;width:64px;height:44px;background:#fff;border-radius:8px;padding:5px;box-sizing:border-box}
+.cpl-b .lg img{max-width:100%;max-height:100%;object-fit:contain}
+.cpl-b .lg.tx{font-weight:700;font-size:24px;color:#1b232b;text-align:center;line-height:1}
+.cpl-b b{font-size:13.5px;font-weight:600;line-height:1.2;text-align:center}
+.cpl-b small{font-size:12px;color:#9fb0c0}
+.cpl-b[aria-expanded=true]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.cpl-b:focus-visible,.cpl-m:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cpl-models{margin-top:12px;padding:12px;border:1px solid #3d4f60;border-radius:10px;background:rgba(255,255,255,.03)}
+.cpl-models h3{margin:0 0 10px;font-size:15px;color:#fff;font-weight:600}
+.cpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.cpl-m{display:flex;flex-direction:column;text-align:left;padding:0;border:1px solid #3d4f60;background:var(--steel-2);color:#fff;border-radius:10px;overflow:hidden;cursor:pointer;font:inherit}
+.cpl-m .ph{display:block;width:100%;aspect-ratio:16/10;background:#e9edf1;overflow:hidden}
+.cpl-m .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.cpl-m .ph.lg{display:flex;align-items:center;justify-content:center;background:#fff}
+.cpl-m .ph.lg img{width:46%;height:60%;object-fit:contain}
+.cpl-m b{display:block;padding:8px 10px 0;font-size:14px;font-weight:600}
+.cpl-m span{display:block;padding:2px 10px 9px;font-size:12px;color:#9fb0c0}
+.cpl-m.on{border-color:var(--accent)}
+.cpl-src{margin-top:10px;font-size:11.5px;color:#8fa0b0}
+.cpl-src summary{cursor:pointer}
+.cpl-src a{color:#b9c7d4}
+.cpl-src li{margin:3px 0}
+@media (max-width:720px){.cpl-brands{grid-template-columns:repeat(3,1fr);gap:6px}.cpl-b{padding:8px 4px 6px}.cpl-b .lg{width:56px;height:38px}.cpl-grid{grid-template-columns:repeat(2,1fr);gap:8px}.cpl-models{padding:10px}}
+</style>
+<script>
+/* Logo bilan mashina tanlash. Bosh sahifadagi ".carpick" ichi almashtiriladi: avval brend logolari, logo bosilganda
+   shu brendning do'konda tovari bor modellari rasm bilan chiqadi; model bosilsa eski tugma qilgan ishni qiladi
+   (data-car, o'sha mashina katalogi). Brendlar, modellar, rasmlar va mualliflar data/mashinalar.json da; u yuklanmasa
+   yoki sayt mashina nomlari o'zgarsa, ro'yxatda yo'q mashinalar "Boshqa" ostiga tushadi, hech biri yo'qolmaydi. */
+(function(){
+  let CFG = null, OPEN = '';
+  const H = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function groups(){
+    const n = Object.fromEntries(CARS), used = new Set(CFG.skip || []), out = [];
+    for (const b of CFG.brands) {
+      const ms = b.models.filter(m => n[m.car]).map(m => (used.add(m.car), Object.assign({n: n[m.car]}, m)));
+      if (ms.length) out.push(Object.assign({}, b, {models: ms, total: ms.reduce((a, m) => a + m.n, 0)}));
+    }
+    const rest = CARS.filter(([c]) => !used.has(c)).map(([c, k]) => ({car: c, n: k}));
+    if (rest.length) out.push({id: 'boshqa', name: 'Boshqa', models: rest, total: rest.reduce((a, m) => a + m.n, 0)});
+    return out;
+  }
+  function brandOf(car){ const g = groups().find(b => b.models.some(m => m.car === car)); return g ? g.id : ''; }
+  function view(){
+    const gs = groups(), open = gs.find(b => b.id === OPEN);
+    const logo = b => b.logo ? `<span class="lg"><img src="${H(b.logo)}" alt=""></span>` : `<span class="lg tx">${H(b.short || b.name)}</span>`;
+    let h = '<div class="cpl-brands" role="group" aria-label="Brend">' + gs.map(b =>
+      `<button type="button" class="cpl-b" data-cplb="${H(b.id)}" aria-expanded="${b.id === OPEN}">${logo(b)}<b>${H(b.name)}</b><small>${b.total} ta tovar</small></button>`).join('') + '</div>';
+    if (open) {
+      const credits = [];
+      h += `<div class="cpl-models"><h3>${H(open.name)}: modelni tanlang</h3><div class="cpl-grid">` + open.models.map(m => {
+        const ph = m.img ? `<span class="ph"><img src="${H(m.img)}" alt="${H(m.label || m.car)}" loading="lazy"></span>`
+          : `<span class="ph lg">${open.logo ? `<img src="${H(open.logo)}" alt="">` : ''}</span>`;
+        if (m.img && m.credit) credits.push(`<li>${H(m.label || m.car)}: <a href="${H(m.credit.url)}" target="_blank" rel="noopener noreferrer">${H(m.credit.author)}</a>, ${H(m.credit.license)}</li>`);
+        return `<button type="button" class="cpl-m${m.car === myCar ? ' on' : ''}" data-car="${H(m.car)}">${ph}<b>${H(m.label || m.car)}</b><span>${m.n} ta tovar</span></button>`;
+      }).join('') + '</div>';
+      if (open.logoCredit) credits.push(`<li>${H(open.name)} logosi: <a href="${H(open.logoCredit.url)}" target="_blank" rel="noopener noreferrer">Wikimedia Commons</a>, ${H(open.logoCredit.license)}</li>`);
+      if (credits.length) h += `<details class="cpl-src"><summary>Rasmlar manbasi (Wikimedia Commons)</summary><ul>${credits.join('')}</ul></details>`;
+      h += '</div>';
+    }
+    return h;
+  }
+  const homeBase = home;
+  home = function(){
+    const out = homeBase.apply(this, arguments);
+    if (!CFG) return out;
+    return out.replace(/<div class="carpick full([^"]*)">[\s\S]*?<\/div>/, '<div class="carpick full cpl">' + view() + '</div>');
+  };
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('[data-cplb]'); if (!b) return;
+    OPEN = OPEN === b.dataset.cplb ? '' : b.dataset.cplb;
+    const y = scrollY; render(); scrollTo(0, y);
+    if (OPEN) { const m = document.querySelector('.cpl-models'); if (m && m.getBoundingClientRect().bottom > innerHeight) m.scrollIntoView({block: 'nearest', behavior: 'smooth'}); }
+  });
+  fetch('data/mashinalar.json', {cache: 'no-cache'}).then(r => r.ok ? r.json() : null).then(c => {
+    if (!c || !Array.isArray(c.brands)) return;
+    CFG = c; OPEN = myCar ? brandOf(myCar) : '';
+    if (state.view === 'home') { const y = scrollY; render(); scrollTo(0, y); }
+  }).catch(() => {});
+})();
+</script>
+<!-- /mc-carpick -->
 </body>
 </html>

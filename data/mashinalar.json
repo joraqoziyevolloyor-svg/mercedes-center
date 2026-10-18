@@ -1,0 +1,473 @@
+{
+    "note":  "Bosh sahifadagi logo bilan mashina tanlash. car = saytdagi mashina nomi (tovarlarning cars maydoni). Ro\u0027yxatda yo\u0027q yangi mashina \u0027Boshqa\u0027 ostida chiqadi. skip: mashina emas (GELEIMA remen ishlab chiqaruvchisi).",
+    "skip":  [
+                 "Geleima"
+             ],
+    "brands":  [
+                   {
+                       "id":  "hyundai",
+                       "name":  "Hyundai",
+                       "logo":  "img/cars/logo-hyundai.svg",
+                       "logoCredit":  {
+                                          "author":  "Hyundai Motor Company",
+                                          "license":  "Public domain",
+                                          "url":  "https://commons.wikimedia.org/wiki/File:Hyundai_Motor_Company_logo.svg"
+                                      },
+                       "models":  [
+                                      {
+                                          "car":  "Porter 2",
+                                          "img":  "img/cars/porter-2.jpg",
+                                          "credit":  {
+                                                         "author":  "Chu",
+                                                         "license":  "CC BY-SA 3.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:20120109_hyundai_porter2_1.jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "Porter 1",
+                                          "img":  "img/cars/porter-1.jpg",
+                                          "credit":  {
+                                                         "author":  "order_242 from Chile",
+                                                         "license":  "CC BY-SA 2.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:Hyundai_H100_Porter_2002_(11181534883).jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "Porter (avlodi yozilmagan)",
+                                          "label":  "Porter (avlodi aniqlanmagan)"
+                                      },
+                                      {
+                                          "car":  "Starex",
+                                          "img":  "img/cars/starex.jpg",
+                                          "credit":  {
+                                                         "author":  "Rutger van der Maar",
+                                                         "license":  "CC BY 2.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:1998_Hyundai_H200_2.4_TD_panel_van_(cropped).jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "Sonata",
+                                          "img":  "img/cars/sonata.jpg",
+                                          "credit":  {
+                                                         "author":  "OSX",
+                                                         "license":  "Public domain",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:2001_Hyundai_Sonata_(EF)_Executive_V6_sedan_(2015-11-11)_01.jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "Sonata (NF dvigatel)",
+                                          "label":  "Sonata NF",
+                                          "img":  "img/cars/sonata-nf.jpg",
+                                          "credit":  {
+                                                         "author":  "IFCAR",
+                                                         "license":  "Public domain",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:06-08_Hyundai_Sonata.jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "Grandeur",
+                                          "img":  "img/cars/grandeur.jpg",
+                                          "credit":  {
+                                                         "author":  "Damian B Oh",
+                                                         "license":  "CC BY-SA 4.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:Hyundai_Grandeur_TG_PE_Slick_Silver_(front).jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "Santa Fe",
+                                          "img":  "img/cars/santa-fe.jpg",
+                                          "credit":  {
+                                                         "author":  "Vauxford",
+                                                         "license":  "CC BY-SA 4.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:2001_Hyundai_Santa_Fe_TD_2.0_Front.jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "Avante",
+                                          "img":  "img/cars/avante.jpg",
+                                          "credit":  {
+                                                         "author":  "Cutlass",
+                                                         "license":  "CC0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:2003_Hyundai_Elantra_GLS_in_Pewter%2C_front_right%2C_11-05-2023.jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "Getz",
+                                          "img":  "img/cars/getz.jpg",
+                                          "credit":  {
+                                                         "author":  "Mick from Northamptonshire, England",
+                                                         "license":  "CC BY 2.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:Hyundai_Getz_-_Flickr_-_mick_-_Lumix.jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "Genesis",
+                                          "img":  "img/cars/genesis.jpg",
+                                          "credit":  {
+                                                         "author":  "Mr.choppers",
+                                                         "license":  "CC BY-SA 3.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:2013_Hyundai_Genesis_3.8_sedan_front_left.jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "Tucson",
+                                          "img":  "img/cars/tucson.jpg",
+                                          "credit":  {
+                                                         "author":  "OSX",
+                                                         "license":  "Public domain",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:2008-2010_Hyundai_Tucson_City_SX_wagon_01.jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "Grace",
+                                          "img":  "img/cars/grace.jpg",
+                                          "credit":  {
+                                                         "author":  "Benespit",
+                                                         "license":  "CC BY-SA 4.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:00_grace_1.jpg"
+                                                     }
+                                      }
+                                  ]
+                   },
+                   {
+                       "id":  "kia",
+                       "name":  "Kia",
+                       "logo":  "img/cars/logo-kia.svg",
+                       "logoCredit":  {
+                                          "author":  "Kia Corporation",
+                                          "license":  "Public domain",
+                                          "url":  "https://commons.wikimedia.org/wiki/File:KIA_logo3.svg"
+                                      },
+                       "models":  [
+                                      {
+                                          "car":  "Bongo 3",
+                                          "img":  "img/cars/bongo-3.jpg",
+                                          "credit":  {
+                                                         "author":  "Benespit",
+                                                         "license":  "CC BY-SA 4.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:00_kia_bongo3_truck_1.jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "Bongo (avlodi yozilmagan)",
+                                          "label":  "Bongo (avlodi aniqlanmagan)"
+                                      },
+                                      {
+                                          "car":  "Carnival",
+                                          "img":  "img/cars/carnival.jpg",
+                                          "credit":  {
+                                                         "author":  "MercurySable99",
+                                                         "license":  "CC BY-SA 4.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:2004_Kia_Sedona_EX%2C_front_left%2C_11-19-2022.jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "Kia K2700",
+                                          "label":  "K2700",
+                                          "img":  "img/cars/kia-k2700.jpg",
+                                          "credit":  {
+                                                         "author":  "Benespit",
+                                                         "license":  "CC BY-SA 4.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:00_kia_bongo_frontier_1.jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "Sorento",
+                                          "img":  "img/cars/sorento.jpg",
+                                          "credit":  {
+                                                         "author":  "Vauxford",
+                                                         "license":  "CC BY-SA 4.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:2005_Kia_Sorento_CRDi_XS_Automatic_2.5_Front.jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "Kia K5 / Optima",
+                                          "label":  "K5 / Optima",
+                                          "img":  "img/cars/kia-k5-optima.jpg",
+                                          "credit":  {
+                                                         "author":  "Damian B Oh",
+                                                         "license":  "CC BY-SA 4.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:Kia_K5_2.0_T-GDi_TF_Snow_White_Pearl_(3)_(cropped).jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "Sportage",
+                                          "img":  "img/cars/sportage.jpg",
+                                          "credit":  {
+                                                         "author":  "Vauxford",
+                                                         "license":  "CC BY-SA 4.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:2008_Kia_Sportage_XE_CRDi_2WD_Automatic_2.0_Front.jpg"
+                                                     }
+                                      }
+                                  ]
+                   },
+                   {
+                       "id":  "mercedes",
+                       "name":  "Mercedes-Benz",
+                       "logo":  "img/cars/logo-mercedes.svg",
+                       "logoCredit":  {
+                                          "author":  "Mercedes-Benz Group",
+                                          "license":  "Public domain",
+                                          "url":  "https://commons.wikimedia.org/wiki/File:Mercedes-Benz_Star_2022.svg"
+                                      },
+                       "models":  [
+                                      {
+                                          "car":  "Sprinter",
+                                          "img":  "img/cars/sprinter.jpg",
+                                          "credit":  {
+                                                         "author":  "EurovisionNim",
+                                                         "license":  "CC BY-SA 4.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:2012_Mercedes-Benz_Sprinter_(W_906_MY12)_313_CDI_van_(2018-11-22)_01.jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "Vito",
+                                          "img":  "img/cars/vito.jpg",
+                                          "credit":  {
+                                                         "author":  "Vauxford",
+                                                         "license":  "CC BY-SA 4.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:2006_Mercedes-Benz_Vito_111_CDi_Compact_2.1_Front.jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "207 avtobus (T1)",
+                                          "img":  "img/cars/207-avtobus-t1.jpg",
+                                          "credit":  {
+                                                         "author":  "Rudolf Stricker",
+                                                         "license":  "CC BY-SA 3.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:Mercedes_T1_front_20080214.jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "Mercedes (boshqa)",
+                                          "label":  "Boshqa Mercedes"
+                                      }
+                                  ]
+                   },
+                   {
+                       "id":  "ssangyong",
+                       "name":  "SsangYong",
+                       "logo":  "img/cars/logo-ssangyong.svg",
+                       "logoCredit":  {
+                                          "author":  "SsangYong",
+                                          "license":  "Public domain",
+                                          "url":  "https://commons.wikimedia.org/wiki/File:Ssangyong_company_logo.svg"
+                                      },
+                       "models":  [
+                                      {
+                                          "car":  "Musso",
+                                          "img":  "img/cars/musso.jpg",
+                                          "credit":  {
+                                                         "author":  "order_242 from Chile",
+                                                         "license":  "CC BY-SA 2.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:Ssangyong_Musso_602EL_2.9d_1997_(15510387599).jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "SsangYong Istana",
+                                          "label":  "Istana",
+                                          "img":  "img/cars/istana.jpg",
+                                          "credit":  {
+                                                         "author":  "Benespit",
+                                                         "license":  "CC BY-SA 4.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:00_SsangYong_istana_1.jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "SsangYong",
+                                          "label":  "Boshqa SsangYong"
+                                      }
+                                  ]
+                   },
+                   {
+                       "id":  "ford",
+                       "name":  "Ford",
+                       "logo":  "img/cars/logo-ford.svg",
+                       "logoCredit":  {
+                                          "author":  "Ford Motor Company",
+                                          "license":  "Public domain",
+                                          "url":  "https://commons.wikimedia.org/wiki/File:Ford_logo_flat.svg"
+                                      },
+                       "models":  [
+                                      {
+                                          "car":  "Ford Transit",
+                                          "label":  "Transit",
+                                          "img":  "img/cars/ford-transit.jpg",
+                                          "credit":  {
+                                                         "author":  "Rudolf Stricker",
+                                                         "license":  "CC BY-SA 3.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:Ford_Transit_front_20071231.jpg"
+                                                     }
+                                      }
+                                  ]
+                   },
+                   {
+                       "id":  "chevrolet",
+                       "name":  "Chevrolet",
+                       "logo":  "img/cars/logo-chevrolet.svg",
+                       "logoCredit":  {
+                                          "author":  "General Motors",
+                                          "license":  "Public domain",
+                                          "url":  "https://commons.wikimedia.org/wiki/File:Chevrolet-logo.svg"
+                                      },
+                       "models":  [
+                                      {
+                                          "car":  "Cobalt",
+                                          "img":  "img/cars/cobalt.jpg",
+                                          "credit":  {
+                                                         "author":  "Milhouse35",
+                                                         "license":  "CC BY-SA 3.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:Chevrolet_Cobalt_2013_in_Russia.JPG"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "Gentra",
+                                          "img":  "img/cars/gentra.jpg",
+                                          "credit":  {
+                                                         "author":  "Milhouse35",
+                                                         "license":  "CC BY-SA 4.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:Ravon_Gentra_(cropped).jpg"
+                                                     }
+                                      }
+                                  ]
+                   },
+                   {
+                       "id":  "toyota",
+                       "name":  "Toyota",
+                       "logo":  "img/cars/logo-toyota.svg",
+                       "logoCredit":  {
+                                          "author":  "Toyota Motor Corporation",
+                                          "license":  "Public domain",
+                                          "url":  "https://commons.wikimedia.org/wiki/File:Toyota_carlogo.svg"
+                                      },
+                       "models":  [
+                                      {
+                                          "car":  "Toyota",
+                                          "label":  "Toyota"
+                                      }
+                                  ]
+                   },
+                   {
+                       "id":  "nissan",
+                       "name":  "Nissan",
+                       "logo":  "img/cars/logo-nissan.svg",
+                       "logoCredit":  {
+                                          "author":  "Nissan Motor Corporation",
+                                          "license":  "Public domain",
+                                          "url":  "https://commons.wikimedia.org/wiki/File:Nissan_2020_logo.svg"
+                                      },
+                       "models":  [
+                                      {
+                                          "car":  "Nissan",
+                                          "label":  "Nissan"
+                                      }
+                                  ]
+                   },
+                   {
+                       "id":  "mazda",
+                       "name":  "Mazda",
+                       "logo":  "img/cars/logo-mazda.svg",
+                       "logoCredit":  {
+                                          "author":  "Wikimedia Commons",
+                                          "license":  "CC0",
+                                          "url":  "https://commons.wikimedia.org/wiki/File:Mazda_logo_with_emblem%2C_new.svg"
+                                      },
+                       "models":  [
+                                      {
+                                          "car":  "Mazda Bongo",
+                                          "label":  "Bongo (Mazda)",
+                                          "img":  "img/cars/mazda-bongo.jpg",
+                                          "credit":  {
+                                                         "author":  "Ypy31",
+                                                         "license":  "CC0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:Mazda_Bongo_Van_DX_SLP2V.jpg"
+                                                     }
+                                      },
+                                      {
+                                          "car":  "Mazda",
+                                          "label":  "Boshqa Mazda"
+                                      }
+                                  ]
+                   },
+                   {
+                       "id":  "jac",
+                       "name":  "JAC",
+                       "logo":  "img/cars/logo-jac.png",
+                       "logoCredit":  {
+                                          "author":  "JAC Motors",
+                                          "license":  "Public domain",
+                                          "url":  "https://commons.wikimedia.org/wiki/File:New_Jac_motors_logo.png"
+                                      },
+                       "models":  [
+                                      {
+                                          "car":  "JAC",
+                                          "label":  "JAC"
+                                      }
+                                  ]
+                   },
+                   {
+                       "id":  "renault",
+                       "name":  "Renault",
+                       "logo":  "img/cars/logo-renault.svg",
+                       "logoCredit":  {
+                                          "author":  "Renault",
+                                          "license":  "Public domain",
+                                          "url":  "https://commons.wikimedia.org/wiki/File:Renault_2021_Text.svg"
+                                      },
+                       "models":  [
+                                      {
+                                          "car":  "Renault Espace",
+                                          "label":  "Espace",
+                                          "img":  "img/cars/renault-espace.jpg",
+                                          "credit":  {
+                                                         "author":  "Rudolf Stricker",
+                                                         "license":  "CC BY-SA 3.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:Renault_Espace_front_20080108.jpg"
+                                                     }
+                                      }
+                                  ]
+                   },
+                   {
+                       "id":  "volkswagen",
+                       "name":  "Volkswagen",
+                       "short":  "VW",
+                       "logo":  "img/cars/logo-volkswagen.svg",
+                       "logoCredit":  {
+                                          "author":  "Volkswagen",
+                                          "license":  "Public domain",
+                                          "url":  "https://commons.wikimedia.org/wiki/File:Volkswagen_logo_2019.svg"
+                                      },
+                       "models":  [
+                                      {
+                                          "car":  "VW Crafter",
+                                          "label":  "Crafter",
+                                          "img":  "img/cars/vw-crafter.jpg",
+                                          "credit":  {
+                                                         "author":  "Rudolf Stricker",
+                                                         "license":  "CC BY-SA 3.0",
+                                                         "url":  "https://commons.wikimedia.org/wiki/File:VW_Crafter_front_20071215.jpg"
+                                                     }
+                                      }
+                                  ]
+                   },
+                   {
+                       "id":  "dvigatel",
+                       "name":  "Dvigatel bo\u0027yicha",
+                       "short":  "⚙",
+                       "models":  [
+                                      {
+                                          "car":  "V6 dvigatel (6G72)",
+                                          "label":  "V6 (6G72)"
+                                      },
+                                      {
+                                          "car":  "D4CB dvigatel",
+                                          "label":  "D4CB"
+                                      },
+                                      {
+                                          "car":  "J3 dvigatel",
+                                          "label":  "J3"
+                                      }
+                                  ]
+                   }
+               ]
+}

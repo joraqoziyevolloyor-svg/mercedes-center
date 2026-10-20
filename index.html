@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="uz">
-<head><script>/* mc-https: mercedescenter.uz faqat https orqali (buyurtma shifrlash crypto.subtle xavfsiz sahifa talab qiladi) */if(location.protocol==="http:"&&/(^|\.)mercedescenter\.uz$/.test(location.hostname))location.replace("https://"+location.host+location.pathname+location.search+location.hash)</script>
+<head><script>/* mc-tgcatch: Telegram javobi (#tgAuthResult=..., ?tgAuthResult=... yoki ?id=..&hash=..) sayt manzilni o'zgartirishidan oldin ushlanadi */try{var L=location,m=/[#&?]tgAuthResult=([^&#]+)/.exec(L.hash+"&"+L.search),q=new URLSearchParams(L.search),v=null;if(m)v=m[1];else if(q.get("hash")&&q.get("id")&&q.get("auth_date")){var o={};q.forEach(function(x,k){o[k]=x});v=btoa(unescape(encodeURIComponent(JSON.stringify(o))))}if(v){sessionStorage.setItem("mc-tgauth",v);history.replaceState(null,"",L.pathname)}}catch(e){}</script><script>/* mc-https: mercedescenter.uz faqat https orqali (buyurtma shifrlash crypto.subtle xavfsiz sahifa talab qiladi) */if(location.protocol==="http:"&&/(^|\.)mercedescenter\.uz$/.test(location.hostname))location.replace("https://"+location.host+location.pathname+location.search+location.hash)</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Mercedes Center: Porter, Bongo, Starex va Mercedes uchun avtozapchastlar.">
@@ -1522,10 +1522,14 @@ updCount(); render();
 #m3dHost{position:absolute;z-index:5;margin:0;top:0;left:0;width:0;height:0}
 #m3dHost iframe{display:block;width:100%;height:100%!important;min-height:0!important;box-sizing:border-box}
 #m3dHost.off{visibility:hidden;pointer-events:none;left:-300vw!important}
-body.m3d-full #m3dHost{top:0!important;left:0!important;width:auto!important;height:auto!important}
+/* full screen: fixed to the screen and above the sticky header (z 20) and the bottom menu (z 30); the id rule above
+   would otherwise keep it absolute at z 5, scrolling with the page under both */
+body.m3d-full #m3dHost{position:fixed!important;z-index:2147483000!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:auto!important;height:auto!important}
 /* phones: the 3D fills exactly the space between the sticky header and the bottom menu (place() sets the height),
    so neither its top row nor its bottom row ends up hidden; the breadcrumb is one short line and the footer is hidden */
-@media (max-width:720px){body.v-m3d footer{display:none}.m3dcr{flex-wrap:nowrap;font-size:0;padding-block:8px 6px}.m3dcr>.back{font-size:14px}.m3dcr>button[data-go],.m3dcr>span{display:none}}
+body.v-m3d footer{display:none}
+@media (max-height:600px){body.v-m3d .proto{display:none}.m3dcr{padding-block:6px 4px}}
+@media (max-width:720px){.m3dcr{flex-wrap:nowrap;font-size:0;padding-block:8px 6px}.m3dcr>.back{font-size:14px}.m3dcr>button[data-go],.m3dcr>span{display:none}}
 .m3d .m3d-load{position:absolute;inset:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:#0f1418;color:#e8ecef;font-size:15px;text-align:center;padding:20px;pointer-events:none}
 .m3d.ready .m3d-load{display:none}
 .m3d-load i{width:42px;height:42px;border:3px solid #2a333b;border-top-color:#f5b53a;border-radius:50%;animation:m3dspin .9s linear infinite}
@@ -1549,7 +1553,9 @@ body.m3d-full .m3d .m3d-load{top:45px}
    Tovar sahifasida 3d/map.json bo'yicha "3D'da alohida ko'rish" havolasi chiqadi. */
 (function(){
   /* M3D_V changes with every 3D release, so browsers never pair the new shop page with a cached old 3d/ page */
-  const M3D_V = '20261010b';
+  const M3D_V = '20261010d';
+  /* folder of the 3D page: '3d/' on the live page; stage.ps1 writes test.html with '3d-test/' (the version under test) */
+  const M3D_DIR = '3d/';
   let PART = '', MAP = null, loadT = 0, job = 0, host = null, base = '', baseLite = false, navN = 0;
   const frame = () => host && host.querySelector('iframe');
   /* One 3D frame for the whole visit. It used to be rebuilt on every return to the 3D page, which reloaded the model
@@ -1569,11 +1575,11 @@ body.m3d-full .m3d .m3d-load{top:45px}
     if (!host) return;
     const s = state.view === 'model3d' && document.querySelector('.m3d-slot');
     if (!s) { host.classList.add('off'); return; }
-    if (innerWidth <= 720) {
-      const hd = document.querySelector('header'), nv = document.querySelector('nav.tabs'), cr = s.previousElementSibling;
-      const h = innerHeight - (hd ? hd.offsetHeight : 0) - (nv && nv.offsetHeight ? nv.offsetHeight : 0) - (cr ? cr.offsetHeight : 0) - 6;
-      s.style.height = Math.max(300, Math.round(h)) + 'px'; s.style.minHeight = '0';
-    } else { s.style.height = ''; s.style.minHeight = ''; }
+    /* every screen: the 3D ends where the visible page ends (above the bottom menu on phones), measured from the top
+       of the page, so with the page at the top nothing of it is hidden and there is nothing below it to scroll to */
+    const nv = document.querySelector('nav.tabs'), above = s.getBoundingClientRect().top + scrollY;
+    const h = innerHeight - above - (nv && nv.offsetHeight ? nv.offsetHeight : 0) - 6;
+    s.style.height = Math.max(200, Math.round(h)) + 'px'; s.style.minHeight = '0';
     const r = s.getBoundingClientRect();
     host.style.top = (r.top + scrollY) + 'px'; host.style.left = (r.left + scrollX) + 'px';
     host.style.width = r.width + 'px'; host.style.height = r.height + 'px';
@@ -1640,7 +1646,7 @@ body.m3d-full .m3d .m3d-load{top:45px}
     if (f.dataset.busy) return;
     f.dataset.busy = '1';
     const my = ++job, wrap = f.parentNode, small = wrap.querySelector('.m3d-load small'), btn = wrap.querySelector('.m3d-load button');
-    const page = `3d/?v=${M3D_V}`, hash = PART ? `#${PART}` : '';
+    const page = `${M3D_DIR}?v=${M3D_V}`, hash = PART ? `#${PART}` : '';
     const size = {page: 1830000}, got = {page: 0};
     const show = () => { if (small) small.textContent = Math.min(99, Math.round(got.page / size.page * 100)) + '%'; };
     const fetchRetry = (name, url, n) => get(url, (b, done) => { got[name] = done ? size[name] : Math.min(b, size[name]); show(); })
@@ -1688,11 +1694,287 @@ body.m3d-full .m3d .m3d-load{top:45px}
     document.body.classList.toggle('v-m3d', state.view === 'model3d');
     if (state.view === 'model3d') { startM3D(); place(); if (base) post({a:'cart', cart: cartNow()}); toTop(); }
     else { place(); document.body.classList.remove('m3d-full'); } };
-  /* phones: scroll the notice line away so the header sits on top and the whole 3D is in view */
-  function toTop(){ if (innerWidth > 720) return; const p = document.querySelector('.proto'); requestAnimationFrame(() => { scrollTo(0, p ? p.offsetHeight : 0); place(); }); }
+  /* the 3D is sized for the page at the top: go there when the 3D page opens */
+  function toTop(){ requestAnimationFrame(() => { scrollTo(0, 0); place(); }); }
   if (state.view === 'model3d') { document.body.classList.add('v-m3d'); startM3D(); place(); toTop(); }
-  fetch('3d/map.json', {cache:'no-cache'}).then(r => r.ok ? r.json() : {}).then(m => { MAP = m || {}; addLink(); }).catch(() => { MAP = {}; });
+  fetch(M3D_DIR + 'map.json', {cache:'no-cache'}).then(r => r.ok ? r.json() : {}).then(m => { MAP = m || {}; addLink(); }).catch(() => { MAP = {}; });
 })();
 </script>
+<!-- mc-carpick: bosh sahifada mashina brend logosi bilan tanlanadi (logo -> shu brend modellari rasm bilan). Ma'lumot: data/mashinalar.json. Shablonga (internet-dokon/template.html) </body> oldidan shu blokni qo'ying. -->
+<style>
+.carpick.cpl{display:block;overflow:visible}
+.cpl-brands{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.cpl-b{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px 8px;border:1px solid #3d4f60;background:var(--steel-2);color:#fff;border-radius:10px;cursor:pointer;font:inherit}
+.cpl-b .lg{display:flex;align-items:center;justify-content:center;width:64px;height:44px;background:#fff;border-radius:8px;padding:5px;box-sizing:border-box}
+.cpl-b .lg img{max-width:100%;max-height:100%;object-fit:contain}
+.cpl-b .lg.tx{font-weight:700;font-size:24px;color:#1b232b;text-align:center;line-height:1}
+.cpl-b b{font-size:13.5px;font-weight:600;line-height:1.2;text-align:center}
+.cpl-b small{font-size:12px;color:#9fb0c0}
+.cpl-b[aria-expanded=true]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.cpl-b:focus-visible,.cpl-m:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cpl-models{margin-top:12px;padding:12px;border:1px solid #3d4f60;border-radius:10px;background:rgba(255,255,255,.03)}
+.cpl-models h3{margin:0 0 10px;font-size:15px;color:#fff;font-weight:600}
+.cpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.cpl-m{display:flex;flex-direction:column;text-align:left;padding:0;border:1px solid #3d4f60;background:var(--steel-2);color:#fff;border-radius:10px;overflow:hidden;cursor:pointer;font:inherit}
+.cpl-m .ph{display:block;width:100%;aspect-ratio:16/10;background:#e9edf1;overflow:hidden}
+.cpl-m .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.cpl-m .ph.lg{display:flex;align-items:center;justify-content:center;background:#fff}
+.cpl-m .ph.lg img{width:46%;height:60%;object-fit:contain}
+.cpl-m b{display:block;padding:8px 10px 0;font-size:14px;font-weight:600}
+.cpl-m span{display:block;padding:2px 10px 9px;font-size:12px;color:#9fb0c0}
+.cpl-m.on{border-color:var(--accent)}
+.cpl-src{margin-top:10px;font-size:11.5px;color:#8fa0b0}
+.cpl-src summary{cursor:pointer}
+.cpl-src a{color:#b9c7d4}
+.cpl-src li{margin:3px 0}
+@media (max-width:720px){.cpl-brands{grid-template-columns:repeat(3,1fr);gap:6px}.cpl-b{padding:8px 4px 6px}.cpl-b .lg{width:56px;height:38px}.cpl-grid{grid-template-columns:repeat(2,1fr);gap:8px}.cpl-models{padding:10px}}
+</style>
+<script>
+/* Logo bilan mashina tanlash. Bosh sahifadagi ".carpick" ichi almashtiriladi: avval brend logolari, logo bosilganda
+   shu brendning do'konda tovari bor modellari rasm bilan chiqadi; model bosilsa eski tugma qilgan ishni qiladi
+   (data-car, o'sha mashina katalogi). Brendlar, modellar, rasmlar va mualliflar data/mashinalar.json da; u yuklanmasa
+   yoki sayt mashina nomlari o'zgarsa, ro'yxatda yo'q mashinalar "Boshqa" ostiga tushadi, hech biri yo'qolmaydi. */
+(function(){
+  let CFG = null, OPEN = '';
+  const H = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function groups(){
+    const n = Object.fromEntries(CARS), used = new Set(CFG.skip || []), out = [];
+    for (const b of CFG.brands) {
+      const ms = b.models.filter(m => n[m.car]).map(m => (used.add(m.car), Object.assign({n: n[m.car]}, m)));
+      if (ms.length) out.push(Object.assign({}, b, {models: ms, total: ms.reduce((a, m) => a + m.n, 0)}));
+    }
+    const rest = CARS.filter(([c]) => !used.has(c)).map(([c, k]) => ({car: c, n: k}));
+    if (rest.length) out.push({id: 'boshqa', name: 'Boshqa', models: rest, total: rest.reduce((a, m) => a + m.n, 0)});
+    return out;
+  }
+  function brandOf(car){ const g = groups().find(b => b.models.some(m => m.car === car)); return g ? g.id : ''; }
+  function view(){
+    const gs = groups(), open = gs.find(b => b.id === OPEN);
+    const logo = b => b.logo ? `<span class="lg"><img src="${H(b.logo)}" alt=""></span>` : `<span class="lg tx">${H(b.short || b.name)}</span>`;
+    let h = '<div class="cpl-brands" role="group" aria-label="Brend">' + gs.map(b =>
+      `<button type="button" class="cpl-b" data-cplb="${H(b.id)}" aria-expanded="${b.id === OPEN}">${logo(b)}<b>${H(b.name)}</b><small>${b.total} ta tovar</small></button>`).join('') + '</div>';
+    if (open) {
+      const credits = [];
+      h += `<div class="cpl-models"><h3>${H(open.name)}: modelni tanlang</h3><div class="cpl-grid">` + open.models.map(m => {
+        const ph = m.img ? `<span class="ph"><img src="${H(m.img)}" alt="${H(m.label || m.car)}" loading="lazy"></span>`
+          : `<span class="ph lg">${open.logo ? `<img src="${H(open.logo)}" alt="">` : ''}</span>`;
+        if (m.img && m.credit) credits.push(`<li>${H(m.label || m.car)}: <a href="${H(m.credit.url)}" target="_blank" rel="noopener noreferrer">${H(m.credit.author)}</a>, ${H(m.credit.license)}</li>`);
+        return `<button type="button" class="cpl-m${m.car === myCar ? ' on' : ''}" data-car="${H(m.car)}">${ph}<b>${H(m.label || m.car)}</b><span>${m.n} ta tovar</span></button>`;
+      }).join('') + '</div>';
+      if (open.logoCredit) credits.push(`<li>${H(open.name)} logosi: <a href="${H(open.logoCredit.url)}" target="_blank" rel="noopener noreferrer">Wikimedia Commons</a>, ${H(open.logoCredit.license)}</li>`);
+      if (credits.length) h += `<details class="cpl-src"><summary>Rasmlar manbasi (Wikimedia Commons)</summary><ul>${credits.join('')}</ul></details>`;
+      h += '</div>';
+    }
+    return h;
+  }
+  const homeBase = home;
+  home = function(){
+    const out = homeBase.apply(this, arguments);
+    if (!CFG) return out;
+    return out.replace(/<div class="carpick full([^"]*)">[\s\S]*?<\/div>/, '<div class="carpick full cpl">' + view() + '</div>');
+  };
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('[data-cplb]'); if (!b) return;
+    OPEN = OPEN === b.dataset.cplb ? '' : b.dataset.cplb;
+    const y = scrollY; render(); scrollTo(0, y);
+    if (OPEN) { const m = document.querySelector('.cpl-models'); if (m && m.getBoundingClientRect().bottom > innerHeight) m.scrollIntoView({block: 'nearest', behavior: 'smooth'}); }
+  });
+  fetch('data/mashinalar.json', {cache: 'no-cache'}).then(r => r.ok ? r.json() : null).then(c => {
+    if (!c || !Array.isArray(c.brands)) return;
+    CFG = c; OPEN = myCar ? brandOf(myCar) : '';
+    if (state.view === 'home') { const y = scrollY; render(); scrollTo(0, y); }
+  }).catch(() => {});
+})();
+</script>
+<!-- /mc-carpick -->
+<!-- mc-account: mijoz kabineti (Telegram orqali kirish), narx ustamasi (umumiy va har mijozga alohida), buyurtmalar tarixi, admin uchun mijozlar ro'yxati. Server: Cloudflare Worker "mc-api". Shablonga (internet-dokon/template.html) </body> oldidan shu blokni qo'ying. -->
+<style>
+.acct-btn{flex-shrink:0;border:1px solid #3d4f60;background:transparent;color:#fff;border-radius:8px;padding:8px 12px;font:600 14px var(--f-body);cursor:pointer;white-space:nowrap}
+.acct-btn:hover{border-color:var(--accent)}
+.acct-ov{position:fixed;inset:0;z-index:2147482000;background:rgba(8,12,16,.6);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 12px}
+.acct-box{background:var(--bg,#fff);color:var(--ink,#16191c);width:min(720px,100%);border-radius:12px;padding:18px 18px 22px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.acct-box h2{margin:0 0 4px;font:600 20px var(--f-display,inherit)}
+.acct-box h3{margin:18px 0 8px;font:600 16px var(--f-display,inherit)}
+.acct-box p.mut{margin:0 0 10px;color:var(--muted);font-size:13.5px}
+.acct-box label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+.acct-box input,.acct-box textarea{width:100%;box-sizing:border-box;border:1px solid var(--line,#ccd);border-radius:8px;padding:9px 10px;font:15px var(--f-body,inherit);background:var(--surface,#fff);color:inherit}
+.acct-box textarea{min-height:76px;resize:vertical}
+.acct-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.acct-row button{border:0;border-radius:8px;padding:10px 14px;font:600 14px var(--f-body,inherit);cursor:pointer}
+.acct-row .pri{background:var(--accent,#f5b53a);color:var(--accent-ink,#1b1300)}
+.acct-row .sec{background:transparent;border:1px solid var(--line,#ccd);color:inherit}
+.acct-x{float:right;background:none;border:0;font-size:26px;line-height:1;cursor:pointer;color:inherit}
+.acct-ord{border:1px solid var(--line,#ccd);border-radius:8px;padding:8px 10px;margin:6px 0;font-size:13.5px}
+.acct-ord b{font-weight:600}
+.acct-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.acct-tbl td,.acct-tbl th{border-bottom:1px solid var(--line,#ccd);padding:6px 4px;text-align:left;vertical-align:top}
+.acct-tbl input{width:70px;padding:5px 6px;font-size:13px}
+.acct-tbl input.nt{width:140px}
+.acct-ok{color:#1b7f3b;font-size:13px}
+.acct-hint{display:block;margin-top:6px;font-size:12.5px;color:var(--muted)}
+@media (max-width:720px){.acct-btn{padding:7px 9px;font-size:13px}.acct-tbl .hide-s{display:none}}
+</style>
+<script>
+/* Mijoz kabineti va narx ustamasi.
+   - Narxlar: Bito narxi (p._b) * (1 + foiz/100). Kirmaganlar uchun umumiy foiz (admin belgilaydi, standart 20%),
+     kirgan mijozga admin qo'ygan shaxsiy foiz. Hisob render() dan oldin qilinadi, shuning uchun savat, buyurtma va
+     3D ichidagi narxlar ham bir xil bo'ladi.
+   - Kirish: Telegram (oauth.telegram.org), server imzoni bot tokeni bilan tekshiradi; sessiya localStorage'da.
+   - Botga buyurtma avvalgidek katalog narxida boradi (bot shu narx bilan tekshiradi); izohga saytdagi ustamali jami yoziladi.
+   Server: https://mc-api.joraqoziyevolloyor.workers.dev (Cloudflare Worker, D1). Server ishlamasa sayt 20% bilan ishlayveradi. */
+(function(){
+  const API = 'https://mc-api.joraqoziyevolloyor.workers.dev', TK = 'mc-token', MKK = 'mc-mk';
+  const LS = k => { try { return localStorage.getItem(k); } catch(e) { return null; } };
+  const LSset = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch(e) {} };
+  let TOKEN = LS(TK), ME = null, BOTID = null, ADMIN = null;
+  let MK = (() => { const v = Number(LS(MKK)); return LS(MKK) != null && isFinite(v) ? v : 20; })();
+  const H = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const r2 = x => Math.round(x * 100) / 100;
+
+  /* p._b = Bito narxi, p._s = oxirgi ko'rsatilgan narx. Narxlar fayli yangilansa (p.price !== p._s), yangi Bito narxi olinadi. */
+  function applyMarkup(){
+    const f = 1 + MK / 100;
+    P.forEach(p => {
+      if (p.price == null) { p._b = null; p._s = null; return; }
+      if (p._s == null || p.price !== p._s) p._b = p.price;
+      const v = r2(p._b * f); p.price = v; p._s = v;
+    });
+  }
+  function setMarkup(m){ const v = Number(m); if (!isFinite(v)) return; const ch = v !== MK; MK = v; LSset(MKK, String(v)); if (ch) { const y = scrollY; render(); scrollTo(0, y); } }
+
+  async function api(path, opt = {}){
+    const h = {'Content-Type': 'application/json'}; if (TOKEN) h.Authorization = 'Bearer ' + TOKEN;
+    const r = await fetch(API + path, {method: opt.method || 'GET', headers: h, body: opt.body ? JSON.stringify(opt.body) : undefined});
+    const d = await r.json().catch(() => ({}));
+    if (r.status === 401 && TOKEN) { TOKEN = null; ME = null; LSset(TK, null); paintBtn(); }
+    if (!r.ok) throw Object.assign(new Error(d.error || ('HTTP ' + r.status)), {status: r.status});
+    return d;
+  }
+
+  /* ---- header button ---- */
+  let btn = null;
+  function paintBtn(){
+    if (!btn) { const cart = document.getElementById('cartTop'); if (!cart) return;
+      btn = document.createElement('button'); btn.type = 'button'; btn.className = 'acct-btn'; btn.id = 'acctBtn';
+      btn.onclick = () => ME ? openCabinet() : login(); cart.parentNode.insertBefore(btn, cart); }
+    btn.textContent = ME ? (ME.user.fullName || ME.user.name || 'Kabinet').split(' ')[0] : 'Kirish';
+    btn.title = ME ? 'Mening kabinetim' : "Telegram orqali kirish: ro'yxatdan o'tgan mijozlar uchun narxlar";
+  }
+  function login(){
+    if (!BOTID) { toast("Kirish hozircha sozlanmoqda. Birozdan keyin urinib ko'ring."); return; }
+    const back = location.origin + location.pathname;
+    location.href = 'https://oauth.telegram.org/auth?bot_id=' + encodeURIComponent(BOTID) + '&origin=' + encodeURIComponent(location.origin)
+      + '&request_access=write&return_to=' + encodeURIComponent(back);
+  }
+  /* Telegram returns to the page with #tgAuthResult=<base64 JSON> */
+  const diag = (step, info) => { try { fetch(API + '/api/diag', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({step, info: String(info || '').slice(0, 120)}), keepalive: true}); } catch(e) {} };
+  async function finishLogin(){
+    /* the <head> catcher (mc-tgcatch) keeps it in sessionStorage; the address hash is a fallback */
+    let raw0 = null; try { raw0 = sessionStorage.getItem('mc-tgauth'); sessionStorage.removeItem('mc-tgauth'); } catch(e) {}
+    const mh = /[#&]tgAuthResult=([^&]+)/.exec(location.hash);
+    const m = raw0 ? [null, raw0] : mh;
+    if (!m) { if (/tgAuth|auth_date|[?&]hash=/.test(location.href) || document.referrer.indexOf('oauth.telegram.org') >= 0) diag('no-data', 'ref=' + document.referrer.slice(0, 40) + ' url=' + location.pathname + (location.search ? '?..' : '') + (location.hash ? '#' + location.hash.slice(1, 20) : '')); return false; }
+    diag('got', 'len=' + m[1].length);
+    if (mh) history.replaceState(null, '', location.pathname + location.search);
+    try {
+      const raw = decodeURIComponent(m[1]).replace(/-/g, '+').replace(/_/g, '/');
+      const data = JSON.parse(decodeURIComponent(escape(atob(raw + '==='.slice((raw.length + 3) % 4)))));
+      if (!data || data === false || !data.id) throw new Error('bekor qilindi');
+      const d = await api('/api/login', {method: 'POST', body: data});
+      TOKEN = d.token; LSset(TK, TOKEN); ME = d; setMarkup(d.markup); paintBtn();
+      toast("Xush kelibsiz! Kabinetingizda telefon va manzilingizni yozib qo'ying.");
+      openCabinet();
+    } catch(e) { diag('fail', (e && e.status ? 'http ' + e.status + ' ' : '') + (e && e.message || e)); toast('Kirish amalga oshmadi. Qayta urinib ko\'ring.'); }
+    return true;
+  }
+
+  /* ---- cabinet ---- */
+  let ov = null;
+  function close(){ if (ov) { ov.remove(); ov = null; } }
+  async function openCabinet(){
+    close(); if (!ME) return;
+    ov = document.createElement('div'); ov.className = 'acct-ov'; ov.onclick = e => { if (e.target === ov) close(); };
+    const u = ME.user;
+    ov.innerHTML = `<div class="acct-box" role="dialog" aria-label="Mening kabinetim"><button class="acct-x" aria-label="Yopish">×</button>
+      <h2>Mening kabinetim</h2><p class="mut">Telegram: ${H(u.name)}${u.username ? ' (@' + H(u.username) + ')' : ''}</p>
+      <label>Ism va familiya</label><input id="acFn" maxlength="100" value="${H(u.fullName || u.name)}">
+      <label>Telefon</label><input id="acPh" maxlength="30" inputmode="tel" value="${H(u.phone || '+998 ')}">
+      <label>Yetkazib berish manzillari (har biri alohida qatorda)</label><textarea id="acAd" maxlength="1500">${H((u.addresses || []).join('\n'))}</textarea>
+      <div class="acct-row"><button class="pri" id="acSave">Saqlash</button><button class="sec" id="acOut">Chiqish</button><span id="acMsg" class="acct-ok" hidden>Saqlandi</span></div>
+      <h3>Buyurtmalarim</h3><div id="acOrd"><p class="mut">Yuklanmoqda…</p></div>
+      ${ME.admin ? '<h3>Admin: narx va mijozlar</h3><div id="acAdm"><p class="mut">Yuklanmoqda…</p></div>' : ''}</div>`;
+    document.body.appendChild(ov);
+    ov.querySelector('.acct-x').onclick = close;
+    ov.querySelector('#acOut').onclick = () => { TOKEN = null; ME = null; LSset(TK, null); close(); paintBtn(); api('/api/config').then(c => setMarkup(c.markup)).catch(() => setMarkup(20)); };
+    ov.querySelector('#acSave').onclick = async () => {
+      const body = {fullName: ov.querySelector('#acFn').value, phone: ov.querySelector('#acPh').value.trim() === '+998' ? '' : ov.querySelector('#acPh').value,
+        addresses: ov.querySelector('#acAd').value.split('\n').map(s => s.trim()).filter(Boolean)};
+      try { ME = await api('/api/me', {method: 'PUT', body}); paintBtn(); const m = ov.querySelector('#acMsg'); m.hidden = false; setTimeout(() => { if (m) m.hidden = true; }, 2500); }
+      catch(e) { toast('Saqlanmadi. Internetni tekshirib, qayta urinib ko\'ring.'); }
+    };
+    api('/api/orders').then(d => { const el = ov && ov.querySelector('#acOrd'); if (!el) return;
+      el.innerHTML = d.orders.length ? d.orders.map(o => `<div class="acct-ord"><b>${H(o.ref || ('#' + o.id))}</b> · ${H(new Date(o.created_at).toLocaleString('uz-UZ'))} · jami <b>$${Number(o.total).toFixed(2)}</b>
+        <br>${o.items.map(i => H(i.title || i.id) + ' × ' + i.q).join(', ')}${o.address ? '<br>Manzil: ' + H(o.address) : ''}</div>`).join('') : '<p class="mut">Hozircha buyurtma yo\'q.</p>';
+    }).catch(() => {});
+    if (ME.admin) loadAdmin();
+  }
+  async function loadAdmin(){
+    const el = ov && ov.querySelector('#acAdm'); if (!el) return;
+    try { ADMIN = await api('/api/admin/users'); } catch(e) { el.innerHTML = '<p class="mut">Yuklanmadi.</p>'; return; }
+    el.innerHTML = `<label>Umumiy ustama, foiz (kirmaganlar va shaxsiy foizi yo'q mijozlar uchun)</label>
+      <div class="acct-row" style="margin-top:0"><input id="acGm" type="number" min="0" max="300" step="0.5" value="${H(ADMIN.markup)}" style="width:110px"><button class="pri" id="acGs">Saqlash</button></div>
+      <h3>Mijozlar (${ADMIN.users.length})</h3><span class="acct-hint">"Foiz" bo'sh bo'lsa umumiy foiz ishlaydi. 0 yozilsa, mijoz Bito'dagi asl narxni ko'radi.</span>
+      <table class="acct-tbl"><thead><tr><th>Mijoz</th><th class="hide-s">Telefon</th><th class="hide-s">Buyurtma</th><th>Foiz</th><th class="hide-s">Izoh</th><th></th></tr></thead><tbody>
+      ${ADMIN.users.map(u => `<tr data-u="${u.tg_id}"><td>${H(u.full_name || u.name)}${u.username ? '<br><small>@' + H(u.username) + '</small>' : ''}</td>
+        <td class="hide-s">${H(u.phone || '')}</td><td class="hide-s">${u.orders} ta · $${Number(u.spent).toFixed(2)}</td>
+        <td><input type="number" min="-50" max="300" step="0.5" value="${u.markup == null ? '' : H(u.markup)}" placeholder="${H(ADMIN.markup)}"></td>
+        <td class="hide-s"><input class="nt" maxlength="300" value="${H(u.note || '')}"></td><td><button class="sec" style="padding:5px 9px;border:1px solid var(--line);border-radius:6px;background:none;cursor:pointer">Saqlash</button></td></tr>`).join('')}
+      </tbody></table>`;
+    el.querySelector('#acGs').onclick = async () => { try { ADMIN = await api('/api/admin/settings', {method: 'PUT', body: {markup: Number(el.querySelector('#acGm').value)}}); toast('Umumiy foiz saqlandi: ' + ADMIN.markup + '%'); loadAdmin(); refreshMe(); } catch(e) { toast('Saqlanmadi: ' + e.message); } };
+    el.querySelectorAll('tr[data-u]').forEach(tr => { tr.querySelector('button').onclick = async () => {
+      const [mk, nt] = tr.querySelectorAll('input');
+      try { ADMIN = await api('/api/admin/users/' + tr.dataset.u, {method: 'PUT', body: {markup: mk.value === '' ? null : Number(mk.value), note: nt ? nt.value : ''}}); toast('Saqlandi'); refreshMe(); }
+      catch(e) { toast('Saqlanmadi: ' + e.message); } }; });
+  }
+  async function refreshMe(){ if (!TOKEN) return; try { ME = await api('/api/me'); setMarkup(ME.markup); paintBtn(); } catch(e) {} }
+
+  /* ---- prices before every render, labels and checkout prefill after ---- */
+  const renderBase = render;
+  render = function(){
+    applyMarkup();
+    if (ME && typeof form === 'object' && form) {
+      if (!form.name) form.name = ME.user.fullName || ME.user.name || '';
+      if ((!form.phone || form.phone === '+998 ') && ME.user.phone) form.phone = ME.user.phone;
+      if (!form.addr && ME.user.addresses && ME.user.addresses[0]) form.addr = ME.user.addresses[0];
+    }
+    const out = renderBase.apply(this, arguments);
+    const lbl = MK > 0 ? 'Narx' : 'Optom narxi';
+    document.querySelectorAll('.ptag').forEach(t => { if (t.textContent !== lbl) t.textContent = lbl; });
+    return out;
+  };
+
+  /* ---- orders: the bot gets catalogue prices (its check), the note says what the customer saw; history saved ---- */
+  const botSendBase = botSend;
+  botSend = function(kind, data){
+    if (kind !== 'order' || !data || !Array.isArray(data.items)) return botSendBase.apply(this, arguments);
+    const shown = data.items.map(([id, q, c]) => [id, q, c]);
+    data.items = data.items.map(([id, q, c]) => { const p = byId[id]; return [id, q, p && p._b != null ? Math.round(p._b * 100) : c]; });
+    const tot = shown.reduce((s, [, q, c]) => s + q * c, 0) / 100;
+    if (MK) data.note = cpCut((data.note ? data.note + ' · ' : '') + `Saytdagi narx +${MK}% bilan: jami $${tot.toFixed(2)}`, 300);
+    return botSendBase.apply(this, arguments).then(r => {
+      if (r && r.ok && TOKEN) api('/api/orders', {method: 'POST', body: {ref: r.ref || '', address: data.address || '',
+        items: shown.map(([id, q, c]) => ({id, q, price: c / 100, title: byId[id] ? byId[id].title : ''}))}}).catch(() => {});
+      return r;
+    });
+  };
+
+  /* ---- start ---- */
+  paintBtn();
+  { const y = scrollY; render(); scrollTo(0, y); }
+  api('/api/config').then(c => { BOTID = c.botId; if (!TOKEN) setMarkup(c.markup); }).catch(() => {});
+  finishLogin().then(done => { if (!done && TOKEN) refreshMe(); });
+})();
+</script>
+<!-- /mc-account -->
 </body>
 </html>

@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="uz">
-<head><meta name="robots" content="noindex,nofollow"><script>/* mc-https: mercedescenter.uz faqat https orqali (buyurtma shifrlash crypto.subtle xavfsiz sahifa talab qiladi) */if(location.protocol==="http:"&&/(^|\.)mercedescenter\.uz$/.test(location.hostname))location.replace("https://"+location.host+location.pathname+location.search+location.hash)</script>
+<head><meta name="robots" content="noindex,nofollow"><script>/* mc-tgcatch */try{var m=/[#&]tgAuthResult=([^&]+)/.exec(location.hash);if(m){sessionStorage.setItem("mc-tgauth",m[1]);history.replaceState(null,"",location.pathname+location.search)}}catch(e){}</script><script>/* mc-https: mercedescenter.uz faqat https orqali (buyurtma shifrlash crypto.subtle xavfsiz sahifa talab qiladi) */if(location.protocol==="http:"&&/(^|\.)mercedescenter\.uz$/.test(location.hostname))location.replace("https://"+location.host+location.pathname+location.search+location.hash)</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Mercedes Center: Porter, Bongo, Starex va Mercedes uchun avtozapchastlar.">
@@ -1868,8 +1868,11 @@ body.m3d-full .m3d .m3d-load{top:45px}
   }
   /* Telegram returns to the page with #tgAuthResult=<base64 JSON> */
   async function finishLogin(){
-    const m = /[#&]tgAuthResult=([^&]+)/.exec(location.hash); if (!m) return false;
-    history.replaceState(null, '', location.pathname + location.search);
+    /* the <head> catcher (mc-tgcatch) keeps it in sessionStorage; the address hash is a fallback */
+    let raw0 = null; try { raw0 = sessionStorage.getItem('mc-tgauth'); sessionStorage.removeItem('mc-tgauth'); } catch(e) {}
+    const mh = /[#&]tgAuthResult=([^&]+)/.exec(location.hash);
+    const m = raw0 ? [null, raw0] : mh; if (!m) return false;
+    if (mh) history.replaceState(null, '', location.pathname + location.search);
     try {
       const raw = decodeURIComponent(m[1]).replace(/-/g, '+').replace(/_/g, '/');
       const data = JSON.parse(decodeURIComponent(escape(atob(raw + '==='.slice((raw.length + 3) % 4)))));

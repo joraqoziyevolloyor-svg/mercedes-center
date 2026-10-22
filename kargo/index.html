@@ -178,17 +178,24 @@ details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
     </section>
 
     <section class="panel">
-      <h2>Har bir yuk qaysi furada</h2>
+      <h2>Qaysi furaga qaysi yuk tushdi</h2>
       <div class="toolbar" style="margin:0 0 10px">
-        <button id="copyRes">Jadvalni nusxalash (Excelga qo'yish uchun)</button>
-        <button id="dlRes">Excel yuklab olish</button>
+        <button class="primary" id="dlRes" style="width:auto">Excel yuklab olish</button>
+        <button id="copyRes">Nusxalash (Excelga qo'yish uchun)</button>
       </div>
-      <div class="tscroll" style="max-height:420px;overflow-y:auto">
+      <div id="byTruck"></div>
+    </section>
+
+    <section class="panel">
+      <details id="detailDet">
+      <summary style="font-family:var(--display);font-size:18px;font-weight:700;color:var(--fg)">Har bir dona qayerda turibdi (batafsil)</summary>
+      <div class="tscroll" style="max-height:420px;overflow-y:auto;margin-top:10px">
       <table id="result">
         <thead><tr><th>Fura</th><th>Yuk</th><th class="num">U×E×B</th><th class="num">kg</th><th class="num">Old tomondan, m</th><th class="num">Chapdan, m</th><th class="num">Qavat</th></tr></thead>
         <tbody></tbody>
       </table>
       </div>
+      </details>
     </section>
   </div>
 </div>
@@ -607,7 +614,32 @@ function showTruck() {
   for (const [ci, n] of top) lg.append(el("span", { style: "--c:" + cargo[ci].color }, `${cargo[ci].name} × ${n}`));
   if (seen.size > top.length) lg.append(el("span", { style: "--c:transparent" }, `… yana ${seen.size - top.length} xil`));
 }
+// Har fura uchun yuk turlari bo'yicha jamlanma: [{ci, name, qty, vol, kg}]
+function groupItems(list) {
+  const m = new Map();
+  for (const p of list) { const g = m.get(p.ci) || { ci: p.ci, name: p.name, color: p.color, dims: `${p.L}×${p.W}×${p.H}`, qty: 0, vol: 0, kg: 0 }; g.qty++; g.vol += p.L * p.W * p.H / 1e6; g.kg += p.kg; m.set(p.ci, g); }
+  return [...m.values()].sort((a, b) => a.ci - b.ci);
+}
+function groupTable(groups) {
+  const tot = groups.reduce((a, g) => ({ qty: a.qty + g.qty, vol: a.vol + g.vol, kg: a.kg + g.kg }), { qty: 0, vol: 0, kg: 0 });
+  return el("div", { class: "tscroll" }, el("table", {},
+    el("thead", {}, el("tr", {}, el("th", {}, "Yuk"), el("th", { class: "num" }, "O'lcham sm"), el("th", { class: "num" }, "Dona"), el("th", { class: "num" }, "m³"), el("th", { class: "num" }, "kg"))),
+    el("tbody", {}, ...groups.map(g => el("tr", {}, el("td", {}, el("span", { class: "legend", style: "--c:" + g.color }, el("span", {}, g.name))), el("td", { class: "num" }, g.dims), el("td", { class: "num" }, g.qty), el("td", { class: "num" }, fmt(g.vol, 2)), el("td", { class: "num" }, fmt(g.kg, 0)))),
+      el("tr", { style: "font-weight:600" }, el("td", {}, "Jami"), el("td", {}), el("td", { class: "num" }, tot.qty), el("td", { class: "num" }, fmt(tot.vol, 1)), el("td", { class: "num" }, fmt(tot.kg, 0))))));
+}
+function renderByTruck() {
+  const box = $("#byTruck"); box.innerHTML = "";
+  if (!plan) return;
+  plan.trucks.forEach((tr, i) => {
+    const T = tr.truck;
+    box.append(el("div", { style: "margin-bottom:16px" },
+      el("h2", { style: "font-size:18px;margin-bottom:6px" }, `${i + 1}. ${tr.label}`, el("span", { class: "hint", style: "font-family:var(--mono);font-weight:400;text-transform:none;letter-spacing:0" }, `${tr.placed.length} dona · ${fmt(tr.vol / 1e6, 1)} m³ (${Math.round(tr.vol / (T.L * T.W * T.H) * 100)}%) · ${fmt(tr.kg / 1000, 2)} t (${Math.round(tr.kg / T.kg * 100)}%)`)),
+      groupTable(groupItems(tr.placed))));
+  });
+  if (plan.left.length) box.append(el("div", {}, el("h2", { style: "font-size:18px;margin-bottom:6px;color:var(--bad)" }, "Sig'madi"), groupTable(groupItems(plan.left))));
+}
 function renderResult() {
+  renderByTruck();
   const tb = $("#result tbody"); tb.innerHTML = "";
   if (!plan) return;
   const frag = document.createDocumentFragment();
@@ -632,19 +664,38 @@ function resultRows() {
   plan.left.forEach(p => rows.push(["SIG'MADI", p.name, p.L, p.W, p.H, +p.kg.toFixed(1), "", "", "", ""]));
   return rows;
 }
+// Fura bo'yicha jamlanma qatorlari (Excel va nusxalash uchun)
+function summaryRows() {
+  const rows = [["Fura", "Yuk", "O'lcham sm", "Dona", "m³", "kg"]];
+  const add = (label, list) => { const gs = groupItems(list); gs.forEach(g => rows.push([label, g.name, g.dims, g.qty, +g.vol.toFixed(3), +g.kg.toFixed(1)])); rows.push([label, "JAMI", "", gs.reduce((a, g) => a + g.qty, 0), +gs.reduce((a, g) => a + g.vol, 0).toFixed(2), +gs.reduce((a, g) => a + g.kg, 0).toFixed(0)]); rows.push([]); };
+  plan.trucks.forEach((tr, i) => add(`${i + 1}. ${tr.label}`, tr.placed));
+  if (plan.left.length) add("SIG'MADI", plan.left);
+  return rows;
+}
 $("#copyRes").onclick = async () => {
   if (!plan) return toast("Avval hisoblang");
-  const txt = resultRows().map(r => r.join("\t")).join("\n");
+  const txt = summaryRows().map(r => r.join("\t")).join("\n");
   try { await navigator.clipboard.writeText(txt); toast("Nusxalandi — Excelda Ctrl+V qiling"); }
   catch { const ta = el("textarea", {}, txt); document.body.append(ta); ta.select(); document.execCommand("copy"); ta.remove(); toast("Nusxalandi"); }
 };
 $("#dlRes").onclick = () => {
   if (!plan) return toast("Avval hisoblang");
   const wb = XLSX.utils.book_new();
-  const sum = [["Fura", "Yuk soni", "Hajm %", "Og'irlik %", "Pol %", "kg", "m³"]];
-  plan.trucks.forEach(tr => { const T = tr.truck; sum.push([tr.label, tr.placed.length, Math.round(tr.vol / (T.L * T.W * T.H) * 100), Math.round(tr.kg / T.kg * 100), Math.round(tr.floor / (T.L * T.W) * 100), Math.round(tr.kg), +(tr.vol / 1e6).toFixed(2)]); });
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sum), "Xulosa");
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resultRows()), "Joylashuv");
+  // 1-varaq: furalar xulosasi
+  const sum = [["Fura", "Ichki o'lcham m", "Sig'im m³", "Ko'taradi t", "Yuk soni", "Yuk m³", "Hajm %", "Yuk t", "Og'irlik %", "Pol %"]];
+  plan.trucks.forEach((tr, i) => { const T = tr.truck; sum.push([`${i + 1}. ${tr.label}`, `${T.L / 100}×${T.W / 100}×${T.H / 100}`, +truckVol(T).toFixed(1), T.kg / 1000, tr.placed.length, +(tr.vol / 1e6).toFixed(2), Math.round(tr.vol / (T.L * T.W * T.H) * 100), +(tr.kg / 1000).toFixed(2), Math.round(tr.kg / T.kg * 100), Math.round(tr.floor / (T.L * T.W) * 100)]); });
+  if (plan.left.length) sum.push(["SIG'MADI", "", "", "", plan.left.length, +(plan.left.reduce((s, p) => s + p.L * p.W * p.H, 0) / 1e6).toFixed(2), "", +(plan.left.reduce((s, p) => s + p.kg, 0) / 1000).toFixed(2), "", ""]);
+  const ws1 = XLSX.utils.aoa_to_sheet(sum); ws1["!cols"] = [{ wch: 28 }, { wch: 16 }, { wch: 10 }, { wch: 11 }, { wch: 9 }, { wch: 9 }, { wch: 8 }, { wch: 8 }, { wch: 11 }, { wch: 7 }];
+  XLSX.utils.book_append_sheet(wb, ws1, "Xulosa");
+  // 2-varaq: qaysi furaga qaysi yuk
+  const ws2 = XLSX.utils.aoa_to_sheet(summaryRows()); ws2["!cols"] = [{ wch: 26 }, { wch: 34 }, { wch: 14 }, { wch: 7 }, { wch: 9 }, { wch: 9 }];
+  XLSX.utils.book_append_sheet(wb, ws2, "Fura bo'yicha yuklar");
+  // har fura alohida varaq
+  plan.trucks.forEach((tr, i) => { const rows = [["Yuk", "O'lcham sm", "Dona", "m³", "kg"]]; const gs = groupItems(tr.placed); gs.forEach(g => rows.push([g.name, g.dims, g.qty, +g.vol.toFixed(3), +g.kg.toFixed(1)])); rows.push(["JAMI", "", gs.reduce((a, g) => a + g.qty, 0), +gs.reduce((a, g) => a + g.vol, 0).toFixed(2), +gs.reduce((a, g) => a + g.kg, 0).toFixed(0)]);
+    const ws = XLSX.utils.aoa_to_sheet(rows); ws["!cols"] = [{ wch: 34 }, { wch: 14 }, { wch: 7 }, { wch: 9 }, { wch: 9 }]; XLSX.utils.book_append_sheet(wb, ws, `${i + 1}-fura`.slice(0, 31)); });
+  // oxirgi varaq: har bir dona qayerda
+  const ws3 = XLSX.utils.aoa_to_sheet(resultRows()); ws3["!cols"] = [{ wch: 26 }, { wch: 34 }];
+  XLSX.utils.book_append_sheet(wb, ws3, "Har bir dona (joyi)");
   XLSX.writeFile(wb, "fura-rejasi.xlsx");
   toast("Agar fayl tushmasa, 'Nusxalash' tugmasini ishlating");
 };

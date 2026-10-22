@@ -126,6 +126,11 @@ details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
         <input type="file" id="file" accept=".xlsx,.xls,.csv">
       </label>
       <div class="sum" id="cargoSum"></div>
+      <label class="drop" id="dropPlan" style="margin-top:10px;padding:10px">
+        <b style="font-size:13px">Kargo rejasini tekshirish</b>
+        "FURA 1", "FURA 2", "QOLADIGAN YUK" fayllarini birga tashlang — har fayl o'z furasiga biriktiriladi, 3D sig'ish-sig'masligini ko'rsatadi.
+        <input type="file" id="filePlan" accept=".xlsx,.xls" multiple>
+      </label>
       <div class="toolbar">
         <button id="sampleCargo">Namuna</button>
         <button id="clearCargo">Tozalash</button>
@@ -570,6 +575,56 @@ function readSheet(file) {
   };
   r.readAsArrayBuffer(file);
 }
+// Kargo rejasi: bir nechta fayl — nomidan qaysi furaga tegishli ekanini aniqlaymiz
+function planFileKind(name) {
+  const n = name.toLowerCase();
+  if (/qolad|остат|qoladigan/.test(n)) return "skip";
+  const m = n.match(/fura\s*0*(\d)/) || n.match(/(\d)\1{3,}/) || n.match(/\b(\d)\b/);
+  return m ? +m[1] - 1 : null;
+}
+function readBuf(file) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = e => res(e.target.result); r.onerror = rej; r.readAsArrayBuffer(file); }); }
+async function readPlanFiles(files) {
+  toast("Kargo rejasi o'qilmoqda…");
+  const list = [...files].map(f => ({ f, kind: planFileKind(f.name) }));
+  let next = 0; for (const e of list) if (e.kind == null) { while (list.some(x => x.kind === next)) next++; e.kind = next++; }
+  const nTrucks = Math.max(1, ...list.filter(e => e.kind !== "skip").map(e => e.kind + 1));
+  const keepExtra = [];
+  const groups = []; // [{kind, items}]
+  for (const e of list.sort((a, b) => (a.kind === "skip") - (b.kind === "skip") || (a.kind > b.kind ? 1 : -1))) {
+    try {
+      const buf = await readBuf(e.f);
+      const wb = XLSX.read(new Uint8Array(buf), { type: "array", cellStyles: false });
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: "" });
+      const items = parseKargo(rows);
+      // РЕССОР paletlari (o'lchamsiz qatorlar) va sarlavhadagi "Рессор / Радиатор kg m³" yozuvlari
+      for (const r of rows) {
+        const c = r.map(x => String(x).trim());
+        if (/^рессор/i.test(c[0]) && num(c[7])) { const s = Math.round(Math.cbrt(num(c[7])) * 100); items.push({ name: "Ressor (chegara) " + (c[10] || ""), L: s, W: s, H: s, kg: num(c[9]) || num(c[8]), qty: 1, stack: true, pri: 1, extra: true }); continue; }
+        for (let j = 0; j < c.length - 2; j++) {
+          if (/^(рессор|ressor)$/i.test(c[j]) && num(c[j + 1]) && num(c[j + 2])) { const vol = num(c[j + 2]), kg = num(c[j + 1]), q = Math.max(1, Math.round(vol / 0.95)); const s = Math.round(Math.cbrt(vol / q) * 100); items.push({ name: "Ressor (chegara)", L: s, W: s, H: s, kg: kg / q, qty: q, stack: true, pri: 1, extra: true }); }
+          if (/^(радиатор|radiator)$/i.test(c[j]) && num(c[j + 1]) && num(c[j + 2])) { const vol = num(c[j + 2]), kg = num(c[j + 1]), q = 40; const s = Math.round(Math.cbrt(vol / q) * 100); items.push({ name: "Radiator (chegara)", L: s, W: s, H: s, kg: kg / q, qty: q, stack: true, pri: 1, extra: true }); }
+        }
+      }
+      groups.push({ kind: e.kind, name: e.f.name, items });
+    } catch (err) { toast("Xato (" + e.f.name + "): " + err.message); return; }
+  }
+  cargo = []; pins = {};
+  for (const g of groups) for (const it of g.items) {
+    const ci = cargo.length;
+    addCargo({ ...it, name: it.name + (g.kind === "skip" ? "" : ""), pri: g.kind === "skip" ? 3 : (it.pri || 2) });
+    if (g.kind !== "skip") pins[ci] = { [g.kind]: it.qty };
+  }
+  // furalar: kerakli sonda 80 m³ / 28.5 t bo'lmasa — shunday qilamiz
+  const have = fleet.reduce((s, t) => s + t.count, 0);
+  if (have < nTrucks) { fleet = [{ ...PRESETS[1], count: nTrucks }]; renderFleet(); }
+  renderCargo(); run();
+  toast(`Kargo rejasi: ${groups.map(g => (g.kind === "skip" ? "qoladigan" : (g.kind + 1) + "-fura") + " " + g.items.reduce((s, c) => s + c.qty, 0) + " dona").join(", ")}`);
+}
+const dropPlan = $("#dropPlan");
+$("#filePlan").onchange = e => e.target.files.length && readPlanFiles(e.target.files);
+dropPlan.ondragover = e => { e.preventDefault(); dropPlan.classList.add("over"); };
+dropPlan.ondragleave = () => dropPlan.classList.remove("over");
+dropPlan.ondrop = e => { e.preventDefault(); dropPlan.classList.remove("over"); e.dataTransfer.files.length && readPlanFiles(e.dataTransfer.files); };
 const drop = $("#drop");
 $("#file").onchange = e => e.target.files[0] && readSheet(e.target.files[0]);
 drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };

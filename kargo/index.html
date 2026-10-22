@@ -427,7 +427,7 @@ function addByVolume(name, vol, kg, qty, extra = {}) {
 $("#addBorder").onclick = () => {
   if (cargo.some(c => /^Radiator/.test(c.name))) return toast("Chegaradagi yuk allaqachon qo'shilgan");
   addByVolume("Radiator (chegara)", 28.21, 1712, 40, { color: "#1fa6a6", extra: true, pri: 1 });
-  addByVolume("Ressor (chegara)", 14.5, 27492, 20, { color: "#555b66", stack: false, extra: true, pri: 1 });
+  addByVolume("Ressor (chegara)", 14.5, 27492, 20, { color: "#555b66", stack: true, extra: true, pri: 1 }); // ressor bog'lami ustiga yuk qo'ysa bo'ladi
   renderCargo(); run();
   toast("Radiator 28,21 m³ va ressor 14,5 m³ qo'shildi (Shart) — dona sonini jadvalda to'g'rilang");
 };

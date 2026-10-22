@@ -430,10 +430,15 @@ function addByVolume(name, vol, kg, qty, extra = {}) {
   const s = Math.round(Math.cbrt(vol / qty) * 100); // har bo'lak kub shaklida
   addCargo({ name, L: s, W: s, H: s, kg: kg / qty, qty, ...extra });
 }
+// Chegaradagi yuk (radiator, ressor) — ro'yxatda bo'lmasa qo'shadi; true qaytarsa qo'shilgan
+function ensureBorderCargo() {
+  let added = false;
+  if (!cargo.some(c => /^Radiator \(chegara\)/.test(c.name))) { addByVolume("Radiator (chegara)", 28.21, 1712, 40, { color: "#1fa6a6", extra: true, pri: 1 }); added = true; }
+  if (!cargo.some(c => /^Ressor \(chegara\)/.test(c.name))) { addByVolume("Ressor (chegara)", 14.5, 27492, 20, { color: "#555b66", stack: true, extra: true, pri: 1 }); added = true; } // ressor bog'lami ustiga yuk qo'ysa bo'ladi
+  return added;
+}
 $("#addBorder").onclick = () => {
-  if (cargo.some(c => /^Radiator \(chegara\)/.test(c.name))) { $("#extraList").scrollIntoView({ behavior: "smooth", block: "center" }); return toast("Radiator va ressor allaqachon ro'yxatda (pastda) — qayta qo'shilmadi"); }
-  addByVolume("Radiator (chegara)", 28.21, 1712, 40, { color: "#1fa6a6", extra: true, pri: 1 });
-  addByVolume("Ressor (chegara)", 14.5, 27492, 20, { color: "#555b66", stack: true, extra: true, pri: 1 }); // ressor bog'lami ustiga yuk qo'ysa bo'ladi
+  if (!ensureBorderCargo()) { $("#extraList").scrollIntoView({ behavior: "smooth", block: "center" }); return toast("Radiator va ressor allaqachon ro'yxatda (pastda)"); }
   renderCargo(); run();
   toast("Radiator 28,21 m³ va ressor 14,5 m³ qo'shildi (Shart) — dona sonini jadvalda to'g'rilang");
 };
@@ -549,7 +554,7 @@ function readSheet(file) {
       if (!items.length) items = parseGeneric(rows);
       if (!items.length) throw new Error("Yuk qatorlari topilmadi");
       const keep = cargo.filter(c => c.extra); // qo'shimcha yuklar saqlanib qoladi
-      cargo = []; pins = {}; items.forEach(it => addCargo(it)); keep.forEach(c => cargo.push(c)); renderCargo();
+      cargo = []; pins = {}; items.forEach(it => addCargo(it)); keep.forEach(c => cargo.push(c)); ensureBorderCargo(); renderCargo();
       toast(`${cargo.length} xil, ${fmt(cargoQty(), 0)} dona yuk o'qildi`); run();
       // rasmlarni alohida, sekinroq yuklaymiz
       if (/\.xlsx$/i.test(file.name)) {
@@ -986,11 +991,11 @@ $("#dlRes").onclick = () => {
 // ---------- Boshlang'ich holat ----------
 init3D();
 if (loadState()) {
-  renderFleet(); renderCargo(); run();
+  ensureBorderCargo(); renderFleet(); renderCargo(); run();
   if (cargo.some(c => c.row != null)) toast("Oxirgi holat tiklandi. Rasmlar uchun Excelni qayta yuklang.");
 } else {
   fleet.push({ ...PRESETS[1], count: 2 }); renderFleet();   // kargo aytgan: 2 ta 80 m³ / 28.5 t
-  SAMPLE.forEach(s => addCargo({ ...s })); renderCargo();
+  SAMPLE.forEach(s => addCargo({ ...s })); ensureBorderCargo(); renderCargo();
   run();
 }
 </script>

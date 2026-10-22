@@ -264,7 +264,7 @@ body.pen .penbar .tools{display:flex}
     </div>
   </header>
   <main id="sheet" style="position:relative">
-    <section id="v-bosh"></section><section id="v-daftar" hidden></section><section id="v-qongiroq" hidden></section><section id="v-dhisobot" hidden></section><section id="v-yana" hidden></section><section id="v-mahsulot" hidden></section><section id="v-qidiruv" hidden></section><section id="v-xodim" hidden></section>
+    <section id="v-bosh"></section><section id="v-daftar" hidden></section><section id="v-qongiroq" hidden></section><section id="v-dhisobot" hidden></section><section id="v-yana" hidden></section><section id="v-mahsulot" hidden></section><section id="v-qidiruv" hidden></section><section id="v-xodim" hidden></section><section id="v-amallar" hidden></section>
     <section id="v-kassa" hidden></section><section id="v-kunlar" hidden></section><section id="v-hisobot" hidden></section>
     <div class="foot">Mercedes Center · daftar va kassa</div>
   </main>
@@ -368,11 +368,11 @@ body.pen .penbar .tools{display:flex}
 /* ================= state & ledger core ================= */
 const D=window.LEDGER_DATA; const TODAY=(()=>{const t=new Date();return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0")})();
 const KEY='ledger_proto_v2';
-let S={};try{S=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){S={}}
+let S={};
 S.ev=S.ev||{}; S.cust=S.cust||[]; S.seq=S.seq||1; S.meta=S.meta||{}; S.rate=S.rate||12450; S.kas=S.kas||{days:{},who:[]}; S.kas.days=S.kas.days||{}; S.kas.who=S.kas.who||[];
 if(window.LOGIN_USER)S.user=window.LOGIN_USER; S.user=S.user||'Olloyor';
 const $=id=>document.getElementById(id);
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Saqlanmadi: brauzer xotirasi')}updBk()};
+const save=()=>{if(typeof saveCache==='function')saveCache();else updBk()};
 const CUST=[...D.customers,...S.cust];
 const CID=new Map(CUST.map(c=>[c.id,c]));
 const fmt=n=>(Math.round((+n||0)*10)/10).toLocaleString('ru-RU',{maximumFractionDigits:1});
@@ -428,10 +428,10 @@ function promiseStatus(c,call,tl){if(call.result!=='vada'||!call.pdate)return nu
 function calls(c){return newEvents(c).filter(e=>e.t==='call'&&!e.void)}
 function activePromise(c){const cl=calls(c);const act=[...cl].reverse().find(x=>x.result==='vada'&&x.pdate&&!x.done);if(!act)return null;const ps=promiseStatus(c,act);return ps&&ps.s!=='ok'?{call:act,ps}:null}
 function evSum(e){return e.t==='sale'?e.lines.reduce((a,l)=>a+l.s,0):e.t==='return'?-e.lines.reduce((a,l)=>a+l.s,0):e.t==='other'?e.amt:-e.amt}
-function pushEv(c,e){e.id='e'+(S.seq++);e.by=S.user;e.at=stamp();(S.ev[c.id]=S.ev[c.id]||[]).push(e);save();return e}
-function voidEv(cid,id){const c=CID.get(cid);const e=newEvents(c).find(x=>x.id===id);if(!e)return;if(!confirm("Bekor qilinsinmi? Yozuv o'chmaydi, chizilgan holda qoladi."))return;e.void=1;e.voidBy=S.user;
-  if(e.kasId){const k=findKas(e.kasId);if(k&&!k.day.closed){k.e.void=1;k.e.voidBy=S.user}}save();render()}
-function doneCall(cid,id){const c=CID.get(cid);const e=newEvents(c).find(x=>x.id===id);if(!e)return;e.done=1;e.doneAt=TODAY;e.doneBy=S.user;save();render()}
+function pushEv(c,e){e.id=newId('e');e.by=S.user;e.at=stamp();emit('ev',c.id,e);return e}
+function voidEv(cid,id){const c=CID.get(cid);const e=newEvents(c).find(x=>x.id===id);if(!e)return;if(!confirm("Bekor qilinsinmi? Yozuv o'chmaydi, chizilgan holda qoladi."))return;emit('evset',c.id+':'+id,{void:1,voidBy:S.user});
+  if(e.kasId){const k=findKas(e.kasId);if(k&&!k.day.closed)emit('kasset',k.day.d+':'+k.e.id,{void:1,voidBy:S.user})}render()}
+function doneCall(cid,id){const c=CID.get(cid);const e=newEvents(c).find(x=>x.id===id);if(!e)return;emit('evset',c.id+':'+id,{done:1,doneAt:TODAY,doneBy:S.user});render()}
 /* products */
 const PROD=D.products; const PK=new Map(PROD.map(p=>[p.k,p]));
 function lastPriceFor(c,k){let best=null;for(const e of newEvents(c))if(e.t==='sale'&&!e.void)for(const l of e.lines)if(l.k===k)best=l.p;if(best!=null)return best;for(let i=c.rows.length-1;i>=0;i--){const r=c.rows[i];if(r.r==='i'&&r.k===k)return r.p}return null}
@@ -455,6 +455,66 @@ function callList(){const out=[];for(const c of CUST){if(c.kind==='sherik')conti
   if(!why&&!act){const la=lastDate(c);const ld=last?last.d:'';const quiet=daysAgo(ld>la?ld:la);if(quiet>30){why=last?"oxirgi qo'ng'iroq "+daysAgo(last.d)+' kun oldin':"qo'ng'iroq qilinmagan"+(la?' · '+daysAgo(la)+' kun jim':'');pri=1}}
   if(why)out.push({c,b,why,pri})}
   return out.sort((a,b)=>b.pri-a.pri||b.b-a.b)}
+/* ================= server sync: one shared ledger =================
+   Hamma yozuv serverdagi amallar jurnalida (daftar_ops). Brauzer jurnalni o'qib S ni quradi,
+   har o'zgarish = bitta amal: avval mahalliy qo'llanadi, keyin serverga yuboriladi. */
+const SYNC={seq:0,pending:[],ops:[],busy:false,last:0};
+const CACHE='ledger_sync_v1';
+const newId=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function applyOp(o){const d=o.data||{};switch(o.kind){
+  case 'cust':{if(!d.id||CID.has(d.id))break;const c={...d,rows:d.rows||[]};S.cust.push(c);CUST.push(c);CID.set(c.id,c);break}
+  case 'ev':{if(!CID.has(o.key))break;const arr=S.ev[o.key]=S.ev[o.key]||[];if(!arr.find(e=>e.id===d.id)){arr.push({...d,by:d.by||o.by,at:d.at||o.at})}break}
+  case 'evset':{const i=o.key.lastIndexOf(':');const e=(S.ev[o.key.slice(0,i)]||[]).find(x=>x.id===o.key.slice(i+1));if(e)Object.assign(e,d);break}
+  case 'meta':S.meta[o.key]=d;break;
+  case 'set':if(o.key==='rate'&&d.v>0)S.rate=d.v;break;
+  case 'kasday':{if(!S.kas.days[o.key])S.kas.days[o.key]={d:o.key,open:d.open||{usd:0,uzs:0},by:d.by||o.by,at:d.at||'',ent:[],closed:null,log:[]};break}
+  case 'kas':{const day=S.kas.days[o.key];if(!day||day.ent.find(x=>x.id===d.id))break;day.ent.unshift({...d,by:d.by||o.by});if(d.who&&!S.kas.who.includes(d.who)){S.kas.who.unshift(d.who);S.kas.who=S.kas.who.slice(0,40)}break}
+  case 'kasset':{const i=o.key.indexOf(':');const day=S.kas.days[o.key.slice(0,i)];const e=day&&day.ent.find(x=>x.id===o.key.slice(i+1));if(e)Object.assign(e,d);break}
+  case 'kasclose':{const day=S.kas.days[o.key];if(day)day.closed=d;break}
+  case 'kasreopen':{const day=S.kas.days[o.key];if(day){(day.log=day.log||[]).push(d);day.closed=null}break}
+}}
+function saveCache(){try{localStorage.setItem(CACHE,JSON.stringify({seq:SYNC.seq,pending:SYNC.pending,S:{ev:S.ev,cust:S.cust,meta:S.meta,rate:S.rate,kas:S.kas,bkAt:S.bkAt,bkN:S.bkN}}))}catch(e){}updBk()}
+/* bitta amal: mahalliy qo'llash + serverga yuborish */
+/* amallar serverga navbat bilan, yozilgan tartibda yuboriladi (bog'liq yozuvlar tartibi buzilmasin) */
+SYNC.chain=Promise.resolve();
+function emit(kind,key,data){const o={kind,key,data,by:S.user,at:stamp()};applyOp(o);saveCache();
+  if(!window.DAFTAR_API){toast('Mahalliy rejim: server yo’q');return o}
+  SYNC.chain=SYNC.chain.then(()=>sendOp(o)).catch(()=>{});return o}
+async function sendOp(o){if(SYNC.pending.length){SYNC.pending.push(o);saveCache();return}
+  try{const j=await api('/api/daftar/op',{kind:o.kind,key:o.key,data:o.data,at:o.at});const r=j.ops[0];o.seq=r.seq;SYNC.seq=Math.max(SYNC.seq,r.seq);SYNC.ops.push({...r});saveCache();setSyncSt('')}
+  catch(e){if(/yopilgan|rahbar|notogri|katta/.test(e.message)){toast(e.message);await fullResync();render()}
+    else if(/kirish/.test(e.message)){toast('Kirish muddati tugadi, qayta kiring');setTimeout(logout,1800)}
+    else{SYNC.pending.push(o);saveCache();setSyncSt('Server bilan aloqa yo’q · '+SYNC.pending.length+' yozuv navbatda')}}}
+function setSyncSt(t){const el=$('mSaved');if(el&&t)el.innerHTML='<span class="c-warn">'+t+'</span>';else updBk()}
+async function flushPending(){if(!SYNC.pending.length)return;const ops=SYNC.pending.map(o=>({kind:o.kind,key:o.key,data:o.data,at:o.at}));
+  try{const j=await api('/api/daftar/op',{ops});SYNC.pending=[];for(const r of j.ops){SYNC.seq=Math.max(SYNC.seq,r.seq);SYNC.ops.push(r)}saveCache();setSyncSt('');toast('Navbatdagi yozuvlar yuborildi')}catch(e){if(/yopilgan|rahbar|notogri/.test(e.message)){SYNC.pending=[];toast('Navbatdagi yozuv rad etildi: '+e.message);await fullResync();render()}}}
+async function pull(){if(!window.DAFTAR_API||SYNC.busy)return 0;SYNC.busy=true;let n=0;
+  try{let more=true;while(more){const j=await api('/api/daftar/ops?since='+SYNC.seq);for(const o of j.ops){if(o.seq<=SYNC.seq)continue;
+      const mine=SYNC.ops.find(x=>x.seq===o.seq);if(!mine)applyOp(o);SYNC.ops.push(o);SYNC.seq=o.seq;n++}more=j.more}
+    if(n)saveCache();SYNC.last=Date.now();await flushPending()}
+  catch(e){if(/kirish/.test(e.message)){toast('Kirish muddati tugadi, qayta kiring');setTimeout(logout,1800)}}
+  SYNC.busy=false;return n}
+function resetState(){S.ev={};S.cust.length=0;S.meta={};S.kas={days:{},who:[]};CUST.length=D.customers.length;CID.clear();for(const c of CUST)CID.set(c.id,c);SYNC.seq=0;SYNC.ops=[]}
+async function fullResync(){resetState();await pull()}
+/* eski brauzer yozuvlarini (server bo'lmagan davr) bir marta serverga ko'chirish */
+function legacyOps(){let L=null;try{L=JSON.parse(localStorage.getItem('ledger_proto_v2')||'null')}catch(e){}if(!L||typeof L!=='object')return[];const ops=[];
+  for(const c of L.cust||[])ops.push({kind:'cust',key:c.id,data:c});
+  for(const cid in L.ev||{})for(const e of L.ev[cid])ops.push({kind:'ev',key:cid,data:e});
+  for(const cid in L.meta||{})ops.push({kind:'meta',key:cid,data:L.meta[cid]});
+  const days=(L.kas&&L.kas.days)||{};for(const dt of Object.keys(days).sort()){const d=days[dt];ops.push({kind:'kasday',key:dt,data:{open:d.open,by:d.by,at:d.at}});for(const e of [...(d.ent||[])].reverse())ops.push({kind:'kas',key:dt,data:e});
+    for(const l of d.log||[])ops.push({kind:'kasreopen',key:dt,data:l});if(d.closed)ops.push({kind:'kasclose',key:dt,data:d.closed})}
+  if(L.rate)ops.push({kind:'set',key:'rate',data:{v:L.rate}});return ops}
+async function boot(){let c=null;try{c=JSON.parse(localStorage.getItem(CACHE)||'null')}catch(e){}
+  if(c&&c.S){Object.assign(S,{ev:c.S.ev||{},cust:c.S.cust||[],meta:c.S.meta||{},rate:c.S.rate||S.rate,kas:c.S.kas||{days:{},who:[]},bkAt:c.S.bkAt,bkN:c.S.bkN});S.kas.days=S.kas.days||{};S.kas.who=S.kas.who||[];
+    for(const x of S.cust){if(!CID.has(x.id)){CUST.push(x);CID.set(x.id,x)}}SYNC.seq=c.seq||0;SYNC.pending=c.pending||[]}
+  render();
+  if(!window.DAFTAR_API)return;
+  const n=await pull();
+  if(SYNC.seq===0&&!SYNC.ops.length){const L=legacyOps();if(L.length&&confirm('Serverda hali yozuv yo’q. Shu brauzerdagi '+L.length+' ta eski yozuv serverga ko’chirilsinmi?')){try{const j=await api('/api/daftar/op',{ops:L});for(const r of j.ops){applyOp(r);SYNC.ops.push(r);SYNC.seq=r.seq}saveCache();toast(L.length+' ta yozuv serverga ko’chirildi')}catch(e){toast('Ko’chirilmadi: '+e.message)}}}
+  render();
+  setInterval(async()=>{if($('modal').innerHTML||document.hidden)return;const k=await pull();if(k&&!(view==='kassa'&&kform&&$('kA')&&$('kA').value))render()},15000);
+  document.addEventListener('visibilitychange',async()=>{if(!document.hidden){const k=await pull();if(k&&!$('modal').innerHTML)render()}});
+}
 /* ================= ledger views ================= */
 const att=(bar,t1,t2,am,click,extra)=>`<button class="att ${bar.startsWith('on ')?'sel':''}${extra?' '+extra:''}"${click?` onclick="${click}"`:''}><span class="b4 ${bar.replace('on ','')}"></span><span class="gr"><div class="t1">${t1}</div>${t2?`<div class="t2">${t2}</div>`:''}</span>${am!=null?`<span class="am">${am}</span>`:''}<span class="ch">›</span></button>`;
 let cur=null, LF={q:'',city:'',st:'',sort:'bal'}, mFilter='all', tq='', openIds=new Set(), shown=40;
@@ -592,12 +652,13 @@ function vYana(){const n=newCount();const stale=n&&(!S.bkAt||S.bkN!==n);
   ${att('b-acc','Qidiruv','hamma daftarlardan: tovar, izoh, summa',null,"go('qidiruv')")}
   ${att(stale?'b-warn':'b-ok','Zaxira nusxa',stale?`${n} ta yangi yozuv faylga saqlanmagan`:(S.bkAt?'oxirgi zaxira '+S.bkAt:'yangi yozuv yo’q'),null,'backupMenu()')}
   ${ROLE==='admin'&&window.DAFTAR_API?att('b-acc','Xodimlar va kirish','kim kira oladi, ro’llar, kodni tiklash',null,"go('xodim')"):''}
+  ${isBoss()&&window.DAFTAR_API?att('b-acc','Amallar jurnali','kim, qachon, nima qildi \u2014 odam bo’yicha',null,"go('amallar')"):''}
   ${window.DAFTAR_API?att('b-none','Shaxsiy kodni o’zgartirish','kirishda teriladigan kod',null,'mPinChange()'):''}
   </div><div class="pR"><div class="lbl2">Sozlamalar</div>
   <div class="form" style="background:var(--bg)"><div class="ln2 f0"><span>Kirgan</span><span class="r" style="font-family:inherit">${esc(S.user)} · ${ROLEN[ROLE]||ROLE}</span></div><label class="fld"><span class="l">Dollar kursi (so'mdagi to'lov uchun)</span><input id="sRate" inputmode="numeric" value="${S.rate}"></label>
-  <button class="btn" onclick="S.rate=+$('sRate').value||S.rate;save();render();toast('Saqlandi')">Saqlash</button>
+  <button class="btn" onclick="emit('set','rate',{v:+$('sRate').value||S.rate});render();toast('Saqlandi')">Saqlash</button>
   <button class="btn ghost" onclick="logout()">Chiqish</button></div>
-  <div class="lbl2">Eslatma</div><div class="pad small">Yangi yozuvlar hozircha shu brauzerda saqlanadi. Kun oxirida «Zaxira nusxa» orqali faylga yuklab qo'ying, boshqa kompyuterga ham shu fayl bilan o'tkaziladi.</div></div></div>`}
+  <div class="lbl2">Eslatma</div><div class="pad small">Yozuvlar serverda saqlanadi — telefon va kompyuterda bitta daftar. «Zaxira nusxa» qo'shimcha fayl nusxasi uchun.</div></div></div>`}
 let PQ={q:'',car:''},pdet=null;
 function vMahsulot(){const cars=[...new Set(PROD.map(p=>p.car).filter(Boolean))].sort();const m=PQ.q?matcher(PQ.q):null;
   const rows=PROD.filter(p=>(!PQ.car||p.car===PQ.car)&&(!m||m(p.name))).slice(0,200);
@@ -627,8 +688,8 @@ function wireQidiruv(){const s=$('sq');if(!s)return;s.oninput=()=>{SQ=s.value;cl
 function modal(h){$('modal').innerHTML=`<div class="ov" onclick="if(event.target===this)closeM()"><div class="md">${h}</div></div>`}
 function closeM(){$('modal').innerHTML=''}
 function mNewCust(){modal(`<h3>Yangi mijoz</h3><div class="row"><div><label>Ism</label><input id="m_name"></div><div><label>Shahar</label><input id="m_city" list="cl"><datalist id="cl">${cities().map(c=>`<option>${esc(c)}</option>`).join('')}</datalist></div><div><label>Telefon</label><input id="m_tel" inputmode="tel"></div><div><label>Boshlang'ich qarz $</label><input id="m_bal" type="number" value="0"></div></div><div class="ft"><span></span><span><button onclick="closeM()">Bekor</button> <button class="pri" onclick="addCust()">Saqlash</button></span></div>`);$('m_name').focus()}
-function addCust(){const n=$('m_name').value.trim();if(!n){$('m_name').focus();return}const c={id:'n'+Date.now(),name:n,city:$('m_city').value.trim(),tel:$('m_tel').value,rows:[],excel_balance:+$('m_bal').value||0,kind:'mijoz',last:TODAY,flags:0,isnew:1};S.cust.push(c);CUST.push(c);CID.set(c.id,c);save();closeM();openCust(c.id)}
-function mEditCust(){const m=S.meta[cur.id]||{};modal(`<h3>Mijoz ma'lumoti · ${esc(cur.name)}</h3><div class="row"><div><label>Shahar</label><input id="e_city" value="${esc(m.city||cur.city||'')}"></div><div><label>Telefon</label><input id="e_tel" inputmode="tel" value="${esc(m.tel||cur.tel||'')}"></div></div><div class="row"><div><label>Izoh (qanday to'laydi, qachon keladi)</label><input id="e_note" value="${esc(m.note||'')}"></div></div><div class="ft"><span></span><span><button onclick="closeM()">Bekor</button> <button class="pri" onclick="S.meta[cur.id]={city:$('e_city').value.trim(),tel:$('e_tel').value.trim(),note:$('e_note').value.trim()};save();closeM();render()">Saqlash</button></span></div>`)}
+function addCust(){const n=$('m_name').value.trim();if(!n){$('m_name').focus();return}const c={id:'n'+Date.now(),name:n,city:$('m_city').value.trim(),tel:$('m_tel').value,rows:[],excel_balance:+$('m_bal').value||0,kind:'mijoz',last:TODAY,flags:0,isnew:1};emit('cust',c.id,c);closeM();openCust(c.id)}
+function mEditCust(){const m=S.meta[cur.id]||{};modal(`<h3>Mijoz ma'lumoti · ${esc(cur.name)}</h3><div class="row"><div><label>Shahar</label><input id="e_city" value="${esc(m.city||cur.city||'')}"></div><div><label>Telefon</label><input id="e_tel" inputmode="tel" value="${esc(m.tel||cur.tel||'')}"></div></div><div class="row"><div><label>Izoh (qanday to'laydi, qachon keladi)</label><input id="e_note" value="${esc(m.note||'')}"></div></div><div class="ft"><span></span><span><button onclick="closeM()">Bekor</button> <button class="pri" onclick="emit('meta',cur.id,{city:$('e_city').value.trim(),tel:$('e_tel').value.trim(),note:$('e_note').value.trim()});closeM();render()">Saqlash</button></span></div>`)}
 function mCall(id){const e=id?newEvents(cur).find(x=>x.id===id):null;const r0=e?e.result:'vada';
   modal(`<h3>☎ ${esc(cur.name)} <span class="hint" style="font-weight:400">· qarz ${fmt(balance(cur))} $</span></h3>
   <div class="opts" id="c_r">${Object.entries(CALLR).map(([k,v])=>`<button type="button" data-k="${k}" class="${r0===k?'on':''}">${v}</button>`).join('')}</div>
@@ -639,7 +700,7 @@ function mCall(id){const e=id?newEvents(cur).find(x=>x.id===id):null;const r0=e?
   cr.onclick=ev=>{const b=ev.target.closest('button');if(!b)return;cr.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));sync();(b.dataset.k==='vada'?$('c_pd'):$('c_n')).focus()};sync();(r0==='vada'&&!e?$('c_pd'):$('c_n')).focus()}
 function saveCall(id){const k=$('c_r').querySelector('.on').dataset.k;if(k==='vada'&&!$('c_pd').value){$('c_pd').focus();return}
   const e={t:'call',d:TODAY,result:k,note:$('c_n').value.trim(),pdate:k==='vada'?$('c_pd').value:'',pamt:k==='vada'?(+$('c_pa').value||0):0,next:k==='vada'?$('c_pd').value:k==='javob'?addDays(TODAY,2):''};
-  if(id){const o=newEvents(cur).find(x=>x.id===id);Object.assign(o,e,{d:o.d});save();closeM();render();return}
+  if(id){emit('evset',cur.id+':'+id,{result:e.result,note:e.note,pdate:e.pdate,pamt:e.pamt,next:e.next});closeM();render();return}
   pushEv(cur,e);closeM();render()}
 function moreMenu(){modal(`<h3>${esc(cur.name)}</h3><div class="menu2"><button onclick="closeM();mSale('return')">Qaytarish</button><button onclick="closeM();mOther()">Boshqa yozuv (skidka, yulkira…)</button><button onclick="closeM();mAkt()">Akt sverka · PDF</button><button onclick="closeM();csv()">Excel yuklash</button><button onclick="closeM();mRemind()">Eslatma matni (Telegram / SMS)</button><button onclick="closeM();mEditCust()">Mijoz ma'lumoti</button><button onclick="closeM()">Yopish</button></div>`)}
 function mRemind(){const m=S.meta[cur.id]||{};const tel=m.tel||cur.tel||'';const b=balance(cur);
@@ -690,7 +751,7 @@ function setAmt(v){$('m_cur').value='usd';$('m_amt').value=v;payCalc()}
 function payCalc(){const A=$('m_amt');if(+A.value>=50000&&$('m_cur').value==='usd'&&document.activeElement===A)$('m_cur').value='uzs';const a=+A.value||0;const u=$('m_cur').value==='uzs'?a/(+$('m_rate').value||1):a;$('m_usd').textContent=fmt(u);$('m_after').textContent=fmt(balance(cur)-u)}
 function savePay(){const a=+$('m_amt').value;if(!a){$('m_amt').focus();return}const isUzs=$('m_cur').value==='uzs';const rate=+$('m_rate').value||S.rate;const u=isUzs?Math.round(a/rate*100)/100:a;const note=(isUzs?`${a.toLocaleString('ru-RU')} so'm, kurs ${rate}`:'')+($('m_note').value?' · '+$('m_note').value:'');
   const e=pushEv(cur,{t:'pay',d:$('m_d').value,kind:$('m_k').value,amt:u,note});
-  const ck=$('m_kas');if(ck&&ck.checked&&!ck.disabled&&e.d===TODAY){const k=kasAdd({dir:'in',cat:"Qarz to'lovi",who:cur.name,why:note||KINDS[e.kind]||'',a:isUzs?a:u,cur:isUzs?"so'm":'$',cid:cur.id,evId:e.id});e.kasId=k.id;save()}
+  const ck=$('m_kas');if(ck&&ck.checked&&!ck.disabled&&e.d===TODAY){const k=kasAdd({dir:'in',cat:"Qarz to'lovi",who:cur.name,why:note||KINDS[e.kind]||'',a:isUzs?a:u,cur:isUzs?"so'm":'$',cid:cur.id,evId:e.id});emit('evset',cur.id+':'+e.id,{kasId:k.id})}
   closeM();render();toast("To'lov yozildi")}
 function mOther(){modal(`<h3>Boshqa yozuv · ${esc(cur.name)}</h3><p class="hint" style="margin:0 0 10px">Yulkira, avans, skidka, naqd pul ustaga va h.k. Tovar ro'yxatiga tushmaydi, faqat qoldiqni o'zgartiradi.</p><div class="row"><div><label>Sana</label><input id="m_d" type="date" value="${TODAY}"></div><div><label>Yo'nalishi</label><select id="m_dir"><option value="-1">Qarz kamayadi (skidka, mijoz to'ladi)</option><option value="1">Qarz oshadi (yulkira, pul berildi)</option></select></div><div><label>Summa $</label><input id="m_amt" type="number" step="any" inputmode="decimal"></div></div><div class="row"><div><label>Izoh (majburiy)</label><input id="m_note"></div></div><div class="ft"><span></span><span><button onclick="closeM()">Bekor</button> <button class="pri" onclick="saveOther()">Saqlash</button></span></div>`);$('m_amt').focus()}
 function saveOther(){const a=+$('m_amt').value,n=$('m_note').value.trim();if(!a||!n){(!a?$('m_amt'):$('m_note')).focus();return}pushEv(cur,{t:'other',d:$('m_d').value,amt:a*+$('m_dir').value,note:n});closeM();render()}
@@ -704,11 +765,11 @@ function csv(){const out=[['Sana','Tur','Nom','Soni','Narx','Summa','Izoh','Manb
   for(const e of newEvents(cur)){if(e.t==='call'){out.push([e.d,"qo'ng'iroq: "+(CALLR[e.result]||''),'','','',e.pamt||'',(e.pdate?"va'da "+e.pdate+' · ':'')+(e.note||''),e.by]);continue}if(e.t==='sale'||e.t==='return')e.lines.forEach(l=>out.push([e.d,e.t==='sale'?'tovar':'qaytarish',l.n,l.q,l.p,l.s,e.void?'BEKOR':'',e.by]));else out.push([e.d,e.t==='pay'?"to'lov "+e.kind:e.t,'','','',e.amt,(e.note||'')+(e.void?' BEKOR':''),e.by])}
   dlCsv(out,`${cur.name}.csv`)}
 /* backup */
-function newCount(){return Object.values(S.ev).reduce((a,x)=>a+x.length,0)+(S.cust||[]).length+Object.values(S.kas.days).reduce((a,d)=>a+(d.ent||[]).length+(d.closed?1:0),0)}
+function newCount(){return window.DAFTAR_API?0:Object.values(S.ev).reduce((a,x)=>a+x.length,0)+(S.cust||[]).length+Object.values(S.kas.days).reduce((a,d)=>a+(d.ent||[]).length+(d.closed?1:0),0)}
 function updBk(){const n=newCount();const el=$('mSaved');if(!el)return;const stale=n&&(!S.bkAt||S.bkN!==n);el.innerHTML=stale?`<button onclick="backupMenu()" class="c-warn">zaxira: ${n} yangi</button>`:(S.bkAt?`zaxira ${S.bkAt.slice(0,5)}`:'')}
-function backupMenu(){const n=newCount();modal(`<h3>Zaxira nusxa</h3><p class="hint" style="margin:0 0 10px">Yangi yozuvlar (daftar va kassa) hozircha shu brauzerda saqlanadi. Yo'qolmasligi uchun kun oxirida faylga yuklab qo'ying. Boshqa kompyuterga o'tkazish ham shu fayl bilan.</p>
+function backupMenu(){const n=newCount();modal(`<h3>Zaxira nusxa</h3><p class="hint" style="margin:0 0 10px">Yozuvlar serverda saqlanadi. Bu fayl — qo'shimcha nusxa (Excel/arxiv uchun).</p>
   <p>Yangi yozuvlar: <b>${n}</b> ta${S.bkAt?` · oxirgi zaxira ${S.bkAt}`:' · hali zaxira olinmagan'}</p>
-  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="pri" onclick="doBackup()">Faylga yuklab olish</button><button onclick="$('rs_f').click()">Fayldan tiklash</button><input type="file" id="rs_f" accept=".json" style="display:none" onchange="doRestore(this)"></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="pri" onclick="doBackup()">Faylga yuklab olish</button></div>
   <div class="ft"><span></span><button onclick="closeM()">Yopish</button></div>`)}
 function doBackup(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));a.download=`daftar-zaxira-${TODAY}.json`;a.click();S.bkAt=new Date().toLocaleString('ru-RU').slice(0,16);S.bkN=newCount();save();closeM();render()}
 function doRestore(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!j||!j.ev)throw 0;if(!confirm('Hozirgi yangi yozuvlar fayldagisi bilan almashtiriladi. Davom etilsinmi?'))return;localStorage.setItem(KEY,JSON.stringify(j));location.reload()}catch(e){toast("Fayl noto'g'ri")}};r.readAsText(f)}
@@ -720,7 +781,7 @@ function dayOf(d){return DAYS()[d]||null}
 function openDay(){const d=dayOf(TODAY);return d&&!d.closed?d:null}
 function lastClosed(){const ks=Object.keys(DAYS()).filter(k=>DAYS()[k].closed).sort();return ks.length?DAYS()[ks[ks.length-1]]:null}
 function findKas(id){for(const d of Object.values(DAYS())){const e=(d.ent||[]).find(x=>x.id===id);if(e)return{day:d,e}}return null}
-function kasAdd(o){const d=openDay();if(!d)return null;const e={id:'k'+(S.seq++),tm:nowHM(),by:S.user,...o};d.ent.unshift(e);if(o.who&&!S.kas.who.includes(o.who))S.kas.who.unshift(o.who);S.kas.who=S.kas.who.slice(0,40);save();return e}
+function kasAdd(o){const d=openDay();if(!d)return null;const e={id:newId('k'),tm:nowHM(),by:S.user,...o};emit('kas',TODAY,e);return e}
 function dsum(d,dir,cur,cat){return (d.ent||[]).filter(k=>!k.void&&k.dir===dir&&(cur?k.cur===cur:true)&&(cat?k.cat===cat:true)).reduce((a,k)=>a+k.a,0)}
 function dayCalc(d){const inU=dsum(d,'in','$'),outU=dsum(d,'out','$'),inS=dsum(d,'in',"so'm"),outS=dsum(d,'out',"so'm");
   const debtU=dsum(d,'in','$',"Qarz to'lovi"),saleU=dsum(d,'in','$','Savdo'),otherU=dsum(d,'in','$','Boshqa kirim');
@@ -729,15 +790,15 @@ const money=(u,s)=>`${fmt(u)} $${s?' · '+fmt0(s)+" so'm":''}`;
 function kasRow(k,locked){return att(k.void?'b-none':k.dir==='in'?'b-ok':'b-no',`${esc(k.cat)} · ${esc(k.who)}`,`${k.tm}${k.why?' · “'+esc(k.why)+'”':''}${k.by&&k.by!==S.user?' · '+esc(k.by):''}`,`<span class="${k.dir==='in'?'c-ok':'c-no'}">${k.dir==='in'?'+':'−'}${k.cur==='$'?fmt(k.a)+' $':fmt0(k.a)+" so'm"}</span>`,locked?null:`kasMenu('${k.id}')`,k.void?'void':'')}
 function kasMenu(id){const r=findKas(id);if(!r||r.day.closed)return;const k=r.e;modal(`<h3>${esc(k.cat)} · ${esc(k.who)}</h3><p>${k.dir==='in'?'+':'−'}${k.cur==='$'?fmt(k.a)+' $':fmt0(k.a)+" so'm"} · ${k.tm} · ${esc(k.by||'')}${k.why?'<br>“'+esc(k.why)+'”':''}${k.cid?'<br><span class="hint">daftardagi mijoz to’loviga bog’langan</span>':''}</p>
   <div class="menu2">${k.void?'<span class="hint">Bekor qilingan</span>':`<button onclick="kasVoid('${k.id}')">Bekor qilish (chizilgan holda qoladi)</button>`}${k.cid?`<button onclick="closeM();openCust('${k.cid}')">Mijoz daftarini ochish</button>`:''}<button onclick="closeM()">Yopish</button></div>`)}
-function kasVoid(id){const r=findKas(id);if(!r||r.day.closed)return;if(!confirm('Bekor qilinsinmi?'))return;r.e.void=1;r.e.voidBy=S.user;
-  if(r.e.cid&&r.e.evId){const c=CID.get(r.e.cid);const ev=c&&newEvents(c).find(x=>x.id===r.e.evId);if(ev){ev.void=1;ev.voidBy=S.user}}save();closeM();render()}
+function kasVoid(id){const r=findKas(id);if(!r||r.day.closed)return;if(!confirm('Bekor qilinsinmi?'))return;emit('kasset',r.day.d+':'+r.e.id,{void:1,voidBy:S.user});
+  if(r.e.cid&&r.e.evId)emit('evset',r.e.cid+':'+r.e.evId,{void:1,voidBy:S.user});closeM();render()}
 function vOpenDay(){const lc=lastClosed();const pu=lc?lc.closed.cntU:0,ps=lc?lc.closed.cntS:0;
   return `<div class="closewrap"><div class="status"><span class="dot" style="background:var(--warn-bar)"></span><div><b>Bugun kun ochilmagan · ${fd(TODAY)}</b><small>${lc?'oxirgi yopilgan kun '+fd(lc.d)+' · qoldiq '+money(pu,ps):'Birinchi kun. Kassadagi hozirgi pulni yozing, shundan hisob boshlanadi.'}</small></div></div>
   <div class="form"><div class="row2"><label class="fld"><span class="l">Kassada hozir, dollar</span><input id="oU" inputmode="decimal" value="${pu||''}" placeholder="0"></label><label class="fld"><span class="l">Kassada hozir, so'm</span><input id="oS" inputmode="numeric" value="${ps||''}" placeholder="0"></label></div>
   <label class="fld"><span class="l">Kassir</span><input id="oW" value="${esc(S.user)}"></label>
   <button class="btn wide" onclick="openToday()">Kunni ochish</button></div>
   <div class="lbl2">Qoida</div><div class="pad small">Kun ochilgach har kirim-chiqim shu yerga yoziladi: kimdan/kimga, nima uchun, summa. Kun oxirida pul sanaladi, Bito'dagi savdo bilan solishtiriladi va kun yopiladi — yopilgan kunni o'zgartirib bo'lmaydi.</div></div>`}
-function openToday(){const d={d:TODAY,open:{usd:+String($('oU').value).replace(/\s/g,'').replace(',','.')||0,uzs:+String($('oS').value).replace(/\s/g,'')||0},by:$('oW').value.trim()||S.user,at:nowHM(),ent:[],closed:null};DAYS()[TODAY]=d;save();kform=true;render();toast('Kun ochildi')}
+function openToday(){const d={d:TODAY,open:{usd:+String($('oU').value).replace(/\s/g,'').replace(',','.')||0,uzs:+String($('oS').value).replace(/\s/g,'')||0},by:$('oW').value.trim()||S.user,at:nowHM(),ent:[],closed:null};emit('kasday',TODAY,{open:d.open,by:d.by,at:d.at});kform=true;render();toast('Kun ochildi')}
 function vKassa(){const d=openDay();const tdy=dayOf(TODAY);
   if(!d){if(tdy&&tdy.closed){kday=TODAY;return vDay(TODAY,true)}return vOpenDay()}
   const c=dayCalc(d);const dsk=isDesk();if(dsk)kform=true;
@@ -781,7 +842,7 @@ function wireKassa(){const d=openDay();if(!d)return;wireResize();
     if(!a){$('kErr').textContent='Summani kiriting';$('kA').focus();return}if(!who){$('kErr').textContent=(kdir==='in'?'Kimdan':'Kimga')+' ekanini yozing';$('kW').focus();return}if(!why&&kcat!=='Savdo'&&kcat!=="Qarz to'lovi"){$('kErr').textContent='Nima uchun ekanini yozing';$('kY').focus();return}
     if(kcat==="Qarz to'lovi"&&!kCid){$('kErr').textContent='Mijozni daftardan tanlang (yoki «Boshqa kirim» deb yozing)';$('kCq').focus();return}
     const o={dir:kdir,cat:kcat,who,why,a,cur:curr};
-    if(kCid){const c=CID.get(kCid);const u=curr==="so'm"?Math.round(a/S.rate*100)/100:a;const ev=pushEv(c,{t:'pay',d:TODAY,kind:'naqd',amt:u,note:(curr==="so'm"?`${a.toLocaleString('ru-RU')} so'm, kurs ${S.rate}`:'')+(why?' · '+why:'')+' · kassadan'});o.cid=c.id;o.evId=ev.id;const k=kasAdd(o);ev.kasId=k.id;save()}else kasAdd(o);
+    if(kCid){const c=CID.get(kCid);const u=curr==="so'm"?Math.round(a/S.rate*100)/100:a;const ev=pushEv(c,{t:'pay',d:TODAY,kind:'naqd',amt:u,note:(curr==="so'm"?`${a.toLocaleString('ru-RU')} so'm, kurs ${S.rate}`:'')+(why?' · '+why:'')+' · kassadan'});o.cid=c.id;o.evId=ev.id;const k=kasAdd(o);emit('evset',c.id+':'+ev.id,{kasId:k.id})}else kasAdd(o);
     kform=!isDesk()?false:true;render();toast('Kassaga yozildi');if(isDesk()){const A=$('kA');if(A)A.focus()}}}
 /* ---- day close ---- */
 function vClose(){const d=openDay();if(!d){kclose=0;return vKassa()}const c=dayCalc(d);
@@ -832,10 +893,10 @@ function closeNext(n){const num=v=>+String(v).replace(/\s/g,'').replace(',','.')
   if(n===3&&KC.cB===''){toast("Bito'dagi savdoni yozing (0 bo'lsa 0)");$('cB').focus();return}
   kstep=n;render();window.scrollTo(0,0)}
 function closeDay(){const num=v=>+String(v).replace(/\s/g,'').replace(',','.')||0;const d=openDay();if(!d)return;const c=dayCalc(d);
-  d.closed={at:stamp(),by:$('cBy').value.trim()||S.user,cntU:num(KC.cU),cntS:num(KC.cS),bito:num(KC.cB),why:KC.why.trim(),dU:Math.round((num(KC.cU)-c.needU)*100)/100,dS:Math.round(num(KC.cS)-c.needS),dB:Math.round((c.saleU-num(KC.cB))*100)/100,...c};
-  KC={cU:'',cS:'',cB:'',why:''};kclose=0;kstep=1;save();toast('Kun yopildi va qulflandi');kday=TODAY;go('kunlar')}
+  emit('kasclose',TODAY,{at:stamp(),by:$('cBy').value.trim()||S.user,cntU:num(KC.cU),cntS:num(KC.cS),bito:num(KC.cB),why:KC.why.trim(),dU:Math.round((num(KC.cU)-c.needU)*100)/100,dS:Math.round(num(KC.cS)-c.needS),dB:Math.round((c.saleU-num(KC.cB))*100)/100,...c});
+  KC={cU:'',cS:'',cB:'',why:''};kclose=0;kstep=1;toast('Kun yopildi va qulflandi');kday=TODAY;go('kunlar')}
 function reopenDay(dt){const d=dayOf(dt);if(!d||!d.closed)return;if(!isBoss()){toast('Yopilgan kunni faqat rahbar ochadi');return}modal(`<h3>Kunni ochish · ${fd(dt)}</h3><p class="hint" style="margin:0 0 10px">Faqat xato topilganda. Sabab jurnalda qoladi, kun qayta yopiladi.</p><div class="row"><div><label>Sabab (majburiy)</label><input id="roWhy"></div><div><label>Kim</label><input id="roBy" value="${esc(S.user)}"></div></div><div class="ft"><span></span><span><button onclick="closeM()">Bekor</button> <button class="pri" onclick="doReopen('${dt}')">Ochish</button></span></div>`);$('roWhy').focus()}
-function doReopen(dt){const d=dayOf(dt);const why=$('roWhy').value.trim();if(!why){$('roWhy').focus();return}(d.log=d.log||[]).push({at:stamp(),by:$('roBy').value.trim()||S.user,why,was:d.closed});d.closed=null;save();closeM();
+function doReopen(dt){const d=dayOf(dt);const why=$('roWhy').value.trim();if(!why){$('roWhy').focus();return}emit('kasreopen',dt,{at:stamp(),by:$('roBy').value.trim()||S.user,why});closeM();
   if(dt===TODAY)go('kassa');else{toast('Kun ochildi — faqat bugungi kun yozuv oladi; eski kunni to’g’rilash uchun rahbar bilan');render()}}
 /* ---- days list & day view ---- */
 let KM='';
@@ -929,6 +990,38 @@ async function pinChange(){const o=$('pc_old').value,a=$('pc_new').value,b=$('pc
   let dev='';try{dev=localStorage.getItem('ddev')||''}catch(e){}const tg=window.Telegram&&window.Telegram.WebApp;
   try{await api('/api/daftar/pin',{name:S.user,dev,init:tg&&tg.initData||'',pin:a,old:o});closeM();toast('Kod o’zgartirildi')}catch(e){toast(e.message)}}
 async function staffInvite(id){try{await api('/api/daftar/staff/invite',{id});toast('Tugma yuborildi')}catch(e){toast(e.message)}}
+/* ================= amallar jurnali (rahbar/admin): kim, qachon, nima qildi ================= */
+let AF={who:'',days:7};
+function opText(o){const d=o.data||{};const cn=id=>{const c=CID.get(id);return c?c.name:id};const am=v=>fmt(Math.abs(v||0))+' $';
+  switch(o.kind){
+    case 'cust':return ['Yangi mijoz',d.name||''];
+    case 'ev':{const c=cn(o.key);if(d.t==='sale')return ['Savdo · '+c,(d.lines||[]).length+' nom · '+am(evSum(d))];if(d.t==='return')return ['Qaytarish · '+c,am(evSum(d))];
+      if(d.t==='pay')return ["To'lov · "+c,(KINDS[d.kind]||'')+' · '+am(d.amt)+(d.note?' · '+d.note:'')];if(d.t==='other')return ['Boshqa · '+c,(d.amt>0?'+':'−')+am(d.amt)+' · '+(d.note||'')];
+      if(d.t==='call')return ["Qo'ng'iroq · "+c,(CALLR[d.result]||'')+(d.pdate?' · '+fds(d.pdate)+(d.pamt?' · '+am(d.pamt):''):'')+(d.note?' · “'+d.note+'”':'')];return ['Yozuv · '+c,d.t||'']}
+    case 'evset':{const c=cn(o.key.split(':')[0]);if(d.void)return ['Bekor qildi · '+c,'daftar yozuvi'];if(d.done)return ["Va'da to'landi · "+c,''];if(d.kasId)return null;return ["Qo'ng'iroq o'zgartirildi · "+c,CALLR[d.result]||'']}
+    case 'meta':return ["Mijoz ma'lumoti · "+cn(o.key),[d.city,d.tel,d.note].filter(Boolean).join(' · ')];
+    case 'set':return ['Kurs',fmt0(d.v)];
+    case 'kasday':return ['Kassa kuni ochildi · '+fds(o.key),'ochilishda '+money((d.open||{}).usd,(d.open||{}).uzs)];
+    case 'kas':return ['Kassa '+(d.dir==='in'?'kirim':'chiqim')+' · '+(d.cat||''),(d.who||'')+' · '+(d.cur==='$'?fmt(d.a)+' $':fmt0(d.a)+" so'm")+(d.why?' · '+d.why:'')];
+    case 'kasset':return ['Kassa yozuvi bekor · '+fds(o.key.split(':')[0]),''];
+    case 'kasclose':return ['Kun yopildi · '+fds(o.key),'sanaldi '+money(d.cntU,d.cntS)+(d.dU?' · farq '+fmt(d.dU):'')+(d.dB?" · Bito'ga kiritilmagan "+fmt(d.dB)+' $':'')];
+    case 'kasreopen':return ['Kun qayta ochildi · '+fds(o.key),d.why||''];
+  }return [o.kind,'']}
+function opDate(o){const m=/^(\d{2})\.(\d{2})\.(\d{4})/.exec(o.at||'');return m?m[3]+'-'+m[2]+'-'+m[1]:(o.at||'').slice(0,10)}
+function vAmallar(){if(!isBoss())return '<div class="empty">Faqat rahbar va admin</div>';
+  const people=[...new Set(SYNC.ops.map(o=>o.by))].sort();const from=AF.days?addDays(TODAY,-AF.days+1):'0000';
+  const rows=SYNC.ops.filter(o=>(!AF.who||o.by===AF.who)&&opDate(o)>=from).map(o=>({o,t:opText(o)})).filter(x=>x.t).reverse();
+  const per={};for(const x of rows){const p=per[x.o.by]=per[x.o.by]||{n:0,inU:0,outU:0,sale:0,pay:0};p.n++;const d=x.o.data||{};if(x.o.kind==='kas'&&d.cur==='$'){if(d.dir==='in')p.inU+=d.a;else p.outU+=d.a}if(x.o.kind==='ev'&&d.t==='sale')p.sale+=evSum(d);if(x.o.kind==='ev'&&d.t==='pay')p.pay+=d.amt}
+  return `<div class="two wide"><div class="pL"><div class="seg" id="afdays">${[[1,'Bugun'],[7,'7 kun'],[30,'30 kun'],[0,'Hammasi']].map(x=>`<button class="${AF.days===x[0]?'on':''}" data-d="${x[0]}">${x[1]}</button>`).join('')}</div>
+  <div class="chips pad" id="afwho"><button class="${!AF.who?'on':''}" data-w="">Hamma</button>${people.map(p=>`<button class="${AF.who===p?'on':''}" data-w="${esc(p)}">${esc(p)}</button>`).join('')}</div>
+  <div class="lbl2"><span class="grow">Odamlar bo'yicha</span><span class="mono">${rows.length} amal</span></div>
+  <div class="trow h"><span>Kim</span><span class="r">Amal</span><span class="r">Kassa +/− $</span></div>
+  ${Object.entries(per).sort((a,b)=>b[1].n-a[1].n).map(([p,v])=>`<div class="trow" style="cursor:pointer" onclick="AF.who='${esc(p)}';render()"><span class="n">${esc(p)}<br><small class="c-mut">savdo ${fmt0(v.sale)} · to'lov ${fmt0(v.pay)} $</small></span><span class="r">${v.n}</span><span class="r"><span class="c-ok">+${fmt0(v.inU)}</span> <span class="c-no">−${fmt0(v.outU)}</span></span></div>`).join('')||'<div class="empty">Bu davrda amal yo’q</div>'}
+  <div class="wrapbtn"><button class="btn ghost wide" onclick="amalCsv()">Excel'ga olish</button></div>
+  </div><div class="pR"><div class="lbl2"><span class="grow">Amallar${AF.who?' · '+esc(AF.who):''}</span><span class="mono">${Math.min(rows.length,300)}</span></div>
+  ${rows.slice(0,300).map(x=>`<div class="ent"><span class="d">${(x.o.at||'').slice(0,5)}<br><small style="color:var(--muted)">${(x.o.at||'').slice(11,16)}</small></span><span style="min-width:0"><div class="t1">${esc(x.t[0])}</div><div class="t2">${esc(x.t[1])}${AF.who?'':' · <b>'+esc(x.o.by)+'</b>'}</div></span><span class="am c-mut" style="font-size:12px">#${x.o.seq||''}</span></div>`).join('')||'<div class="empty">Yozuv yo’q</div>'}</div></div>`}
+function wireAmallar(){const s=$('afdays');if(s)s.querySelectorAll('button').forEach(b=>b.onclick=()=>{AF.days=+b.dataset.d;render()});const w=$('afwho');if(w)w.querySelectorAll('button').forEach(b=>b.onclick=()=>{AF.who=b.dataset.w;render()})}
+function amalCsv(){const from=AF.days?addDays(TODAY,-AF.days+1):'0000';const out=[['Vaqt','Kim','Amal','Tafsilot','Nº']];for(const o of SYNC.ops){if((AF.who&&o.by!==AF.who)||opDate(o)<from)continue;const t=opText(o);if(t)out.push([o.at,o.by,t[0],t[1],o.seq])}dlCsv(out,`amallar-${TODAY}.csv`)}
 /* ================= shell: views, nav, theme ================= */
 const I={home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg>',
  users:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 20a6 6 0 0 0-2.5-5"/></svg>',
@@ -938,9 +1031,9 @@ const I={home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
  cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="1.5"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>',
  more:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>'};
 const VIEWS={bosh:{ws:'d',t:'Bosh sahifa',ic:'home',tab:'Bosh'},daftar:{ws:'d',t:'Mijozlar',ic:'users',tab:'Mijozlar'},qongiroq:{ws:'d',t:"Qo'ng'iroqlar",ic:'phone',tab:"Qo'ng'iroq"},dhisobot:{ws:'d',t:'Qarz hisoboti',ic:'chart',tab:'Hisobot'},yana:{ws:'d',t:'Yana',ic:'more',tab:'Yana'},
- mahsulot:{ws:'d',t:'Mahsulotlar',hide:1,under:'yana'},qidiruv:{ws:'d',t:'Qidiruv',hide:1,under:'yana'},xodim:{ws:'d',t:'Xodimlar',hide:1,under:'yana'},
+ mahsulot:{ws:'d',t:'Mahsulotlar',hide:1,under:'yana'},qidiruv:{ws:'d',t:'Qidiruv',hide:1,under:'yana'},xodim:{ws:'d',t:'Xodimlar',hide:1,under:'yana'},amallar:{ws:'d',t:'Amallar jurnali',hide:1,under:'yana'},
  kassa:{ws:'k',t:'Bugun',ic:'cash',tab:'Bugun'},kunlar:{ws:'k',t:'Kassa kunlari',ic:'cal',tab:'Kunlar'},hisobot:{ws:'k',t:'Kassa hisoboti',ic:'chart',tab:'Hisobot'}};
-const R={bosh:vBosh,daftar:vDaftar,qongiroq:vQong,dhisobot:vDHis,yana:vYana,mahsulot:vMahsulot,qidiruv:vQidiruv,xodim:vXodim,kassa:()=>kclose?vClose():vKassa(),kunlar:vKunlar,hisobot:vHisobot};
+const R={bosh:vBosh,daftar:vDaftar,qongiroq:vQong,dhisobot:vDHis,yana:vYana,mahsulot:vMahsulot,qidiruv:vQidiruv,xodim:vXodim,amallar:vAmallar,kassa:()=>kclose?vClose():vKassa(),kunlar:vKunlar,hisobot:vHisobot};
 const isDesk=()=>window.matchMedia('(min-width:960px)').matches;
 let view='bosh',lastIn={d:'bosh',k:'kassa'};
 function render(){for(const v in R){const el=$('v-'+v);el.hidden=v!==view;if(v===view)el.innerHTML=R[v]()}
@@ -951,7 +1044,7 @@ function render(){for(const v in R){const el=$('v-'+v);el.hidden=v!==view;if(v==
  const tabOn=VIEWS[view].under||view;const cl=ws==='d'?callList().length:0;
  $('tabs').innerHTML=Object.entries(VIEWS).filter(([k,v])=>v.ws===ws&&!v.hide).map(([k,v])=>`<button class="${k===tabOn?'on':''}" onclick="go('${k}')">${I[v.ic]}${v.tab}${k==='qongiroq'&&cl?`<span class="bdg">${cl}</span>`:''}</button>`).join('');
  wire()}
-function wire(){if(view==='daftar')wireDaftar();else if(view==='qongiroq')wireQong();else if(view==='dhisobot')wireDHis();else if(view==='mahsulot')wireMahsulot();else if(view==='qidiruv')wireQidiruv();else if(view==='kassa'){kclose?wireClose():wireKassa()}else if(view==='kunlar')wireKunlar();else if(view==='hisobot')wireHisobot()}
+function wire(){if(view==='daftar')wireDaftar();else if(view==='qongiroq')wireQong();else if(view==='dhisobot')wireDHis();else if(view==='mahsulot')wireMahsulot();else if(view==='qidiruv')wireQidiruv();else if(view==='kassa'){kclose?wireClose():wireKassa()}else if(view==='kunlar')wireKunlar();else if(view==='hisobot')wireHisobot();else if(view==='amallar')wireAmallar()}
 function go(v){if(!VIEWS[v])v='bosh';if(v!=='daftar')cur=null;if(v!=='mahsulot')pdet=null;if(v!=='kassa'){kclose=0;kstep=1}if(v!=='kunlar')kday=null;view=v;try{history.replaceState(null,'','#'+v)}catch(e){}render();window.scrollTo(0,0)}
 function toast(m){$('toastBox').innerHTML=`<div class="toast">${m}</div>`;clearTimeout(toast.t);toast.t=setTimeout(()=>$('toastBox').innerHTML='',2600)}
 function logout(){window.LOGIN_TOKEN='';location.reload()}
@@ -967,7 +1060,7 @@ try{const t=localStorage.getItem('dk-theme');if(t)document.documentElement.setAt
 paintTheme();
 let wasDesk=isDesk();window.addEventListener('resize',()=>{const d=isDesk();if(d!==wasDesk){wasDesk=d;render()}});
 {const h=(location.hash||'').slice(1);view=VIEWS[h]?h:'bosh'}
-render();
+boot();
 </script>
 </body>
 </html>

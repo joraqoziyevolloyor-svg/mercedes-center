@@ -135,15 +135,16 @@ details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
 
     <section class="panel">
       <h2><span class="n">+</span> Qo'shimcha yuk qo'shish</h2>
-      <p class="hint" style="margin:0 0 10px">Excelda yo'q yuklar uchun (chegaradagi, boshqa ombordagi). Kargo aytgan kub va kg ni yozing — aniq o'lcham bo'lsa, "aniq o'lcham" ni oching.</p>
+      <button class="primary" id="addBorder" style="font-size:16px;margin-bottom:6px" title="Radiator 28.21 m³ / 1712 kg (40 joy) va ressor 14.5 m³ / 27492 kg (20 joy), ikkalasi Shart">+ Chegaradagi yuk: radiator va ressor (tayyor)</button>
+      <p class="hint" style="margin:0 0 10px">Yoki boshqa yukni qo'lda kiriting: kargo aytgan jami kub va kg ni yozing (kulrang raqamlar — faqat namuna). Aniq o'lcham bo'lsa, "aniq o'lcham" ni oching.</p>
       <div class="truck" style="margin:0">
         <div class="fields" style="grid-template-columns:2fr 1fr">
-          <label class="f">Nomi<input type="text" id="mName" placeholder="Radiator"></label>
+          <label class="f">Nomi<input type="text" id="mName" placeholder="masalan: Shina"></label>
           <label class="f">Dona (joy)<input type="number" id="mQty" value="1" min="1"></label>
         </div>
         <div class="fields" style="margin-top:8px">
-          <label class="f">Jami m³<input type="number" id="mVol" step="0.1" placeholder="28"></label>
-          <label class="f">Jami kg<input type="number" id="mKg" placeholder="1712"></label>
+          <label class="f">Jami m³<input type="number" id="mVol" step="0.1" placeholder="yozing"></label>
+          <label class="f">Jami kg<input type="number" id="mKg" placeholder="yozing"></label>
           <label class="f">Muhimlik<select id="mPri"><option value="1">Shart</option><option value="2" selected>Oddiy</option><option value="3">Qolsin</option></select></label>
         </div>
         <div class="dims"><span></span><button class="link" id="mAdvBtn">aniq o'lcham kiritish</button></div>
@@ -156,9 +157,6 @@ details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
           <label class="row" style="gap:6px;font-size:13px"><input type="checkbox" id="mStack" checked> ustiga yuk qo'ysa bo'ladi</label>
           <button class="primary" id="addByVol" style="width:auto;font-size:16px;padding:6px 16px">+ Qo'shish</button>
         </div>
-      </div>
-      <div class="toolbar">
-        <button id="addBorder" title="Radiator 28.21 m³ / 1712 kg va ressor 14.5 m³ / 27492 kg">Chegaradagi yukni tayyor qo'shish (radiator, ressor)</button>
       </div>
       <div id="extraList" style="margin-top:10px"></div>
     </section>
@@ -433,7 +431,7 @@ function addByVolume(name, vol, kg, qty, extra = {}) {
   addCargo({ name, L: s, W: s, H: s, kg: kg / qty, qty, ...extra });
 }
 $("#addBorder").onclick = () => {
-  if (cargo.some(c => /^Radiator/.test(c.name))) return toast("Chegaradagi yuk allaqachon qo'shilgan");
+  if (cargo.some(c => /^Radiator \(chegara\)/.test(c.name))) { $("#extraList").scrollIntoView({ behavior: "smooth", block: "center" }); return toast("Radiator va ressor allaqachon ro'yxatda (pastda) — qayta qo'shilmadi"); }
   addByVolume("Radiator (chegara)", 28.21, 1712, 40, { color: "#1fa6a6", extra: true, pri: 1 });
   addByVolume("Ressor (chegara)", 14.5, 27492, 20, { color: "#555b66", stack: true, extra: true, pri: 1 }); // ressor bog'lami ustiga yuk qo'ysa bo'ladi
   renderCargo(); run();
@@ -443,7 +441,7 @@ $("#addBorder").onclick = () => {
 function renderExtra() {
   const box = $("#extraList"); box.innerHTML = "";
   const ex = cargo.map((c, i) => [c, i]).filter(([c]) => c.extra);
-  if (!ex.length) return;
+  if (!ex.length) { box.append(el("p", { class: "hint" }, "Hali qo'shimcha yuk yo'q.")); return; }
   box.append(el("table", {}, el("thead", {}, el("tr", {}, el("th", {}, "Qo'shilgan yuk"), el("th", { class: "num" }, "Dona"), el("th", { class: "num" }, "m³"), el("th", { class: "num" }, "kg"), el("th", {}, "Muhimlik"), el("th", {}))),
     el("tbody", {}, ...ex.map(([c, i]) => el("tr", {}, el("td", {}, el("span", { class: "legend", style: "--c:" + c.color }, el("span", {}, c.name))), el("td", { class: "num" }, c.qty), el("td", { class: "num" }, fmt(c.L * c.W * c.H * c.qty / 1e6, 1)), el("td", { class: "num" }, fmt(c.kg * c.qty, 0)), el("td", {}, priSelect(c)),
       el("td", {}, el("button", { class: "icon", title: "O'chirish", onclick: () => { cargo.splice(i, 1); pins = {}; renderCargo(); run(); } }, "×")))))));
@@ -457,7 +455,7 @@ $("#addByVol").onclick = () => {
   const L = +$("#mL").value, W = +$("#mW").value, H = +$("#mH").value;
   if (!$("#mAdv").hidden && L && W && H) addCargo({ name, L, W, H, kg: kg / qty, qty, pri, stack, extra: true });
   else if (vol) addByVolume(name, vol, kg, qty, { pri, stack, extra: true });
-  else return toast("Jami m³ ni yozing (yoki aniq o'lcham kiriting)");
+  else { $("#mVol").focus(); return toast("Jami m³ maydonini to'ldiring (kulrang raqam — namuna, qiymat emas)"); }
   renderCargo(); run(); toast(name + " qo'shildi");
   ["mName", "mVol", "mKg", "mL", "mW", "mH"].forEach(id => $("#" + id).value = ""); $("#mQty").value = 1;
 };

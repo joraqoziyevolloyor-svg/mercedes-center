@@ -120,27 +120,49 @@ details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
       </label>
       <div class="sum" id="cargoSum"></div>
       <details style="margin-top:10px" id="cargoDet">
-        <summary>Ro'yxatni ko'rish / qo'lda qo'shish</summary>
-        <div class="row" style="margin:10px 0 6px;align-items:flex-end">
-          <label class="f">Nomi<input type="text" id="mName" placeholder="Radiator" style="width:110px"></label>
-          <label class="f">Dona<input type="number" id="mQty" value="1" min="1"></label>
-          <label class="f">Jami m³<input type="number" id="mVol" step="0.1" placeholder="28"></label>
-          <label class="f">Jami kg<input type="number" id="mKg" placeholder="1712"></label>
-          <button id="addByVol">+ Qo'shish</button>
-        </div>
-        <p class="hint" style="margin:0 0 8px">O'lchami noma'lum yuk uchun: jami kub va kg ni yozing, dastur uni teng bo'laklarga bo'lib hisoblaydi. Aniq o'lchamni jadvalda tahrirlasa bo'ladi.</p>
-        <div class="tscroll" style="max-height:360px;overflow-y:auto">
+        <summary>To'liq ro'yxatni ko'rish / tahrirlash</summary>
+        <div class="tscroll" style="max-height:360px;overflow-y:auto;margin-top:8px">
         <table id="cargo">
-          <thead><tr><th>Nomi</th><th class="num">U sm</th><th class="num">E sm</th><th class="num">B sm</th><th class="num">kg/dona</th><th class="num">Dona</th><th title="Ustiga boshqa yuk qo'yish mumkin">Ust</th><th></th></tr></thead>
+          <thead><tr><th>Nomi</th><th class="num">U sm</th><th class="num">E sm</th><th class="num">B sm</th><th class="num">kg/dona</th><th class="num">Dona</th><th title="Ustiga boshqa yuk qo'yish mumkin">Ust</th><th>Muhimlik</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
         </div>
         <div class="toolbar">
-          <button id="addCargo">+ O'lcham bilan qator</button>
           <button id="sampleCargo">Namuna</button>
           <button id="clearCargo">Tozalash</button>
         </div>
       </details>
+      <p class="hint" style="margin:8px 0 0">Muhimlik: <b>Shart</b> — birinchi joylanadi, <b>Oddiy</b> — joy qolsa, <b>Qolsin</b> — bu reysda yuklanmaydi.</p>
+    </section>
+
+    <section class="panel">
+      <h2><span class="n">+</span> Qo'shimcha yuk qo'shish</h2>
+      <p class="hint" style="margin:0 0 10px">Excelda yo'q yuklar uchun (chegaradagi, boshqa ombordagi). Kargo aytgan kub va kg ni yozing — aniq o'lcham bo'lsa, "aniq o'lcham" ni oching.</p>
+      <div class="truck" style="margin:0">
+        <div class="fields" style="grid-template-columns:2fr 1fr">
+          <label class="f">Nomi<input type="text" id="mName" placeholder="Radiator"></label>
+          <label class="f">Dona (joy)<input type="number" id="mQty" value="1" min="1"></label>
+        </div>
+        <div class="fields" style="margin-top:8px">
+          <label class="f">Jami m³<input type="number" id="mVol" step="0.1" placeholder="28"></label>
+          <label class="f">Jami kg<input type="number" id="mKg" placeholder="1712"></label>
+          <label class="f">Muhimlik<select id="mPri"><option value="1">Shart</option><option value="2" selected>Oddiy</option><option value="3">Qolsin</option></select></label>
+        </div>
+        <div class="dims"><span></span><button class="link" id="mAdvBtn">aniq o'lcham kiritish</button></div>
+        <div class="adv" id="mAdv" hidden>
+          <label class="f">Uzunlik sm<input type="number" id="mL"></label>
+          <label class="f">Eni sm<input type="number" id="mW"></label>
+          <label class="f">Balandlik sm<input type="number" id="mH"></label>
+        </div>
+        <div class="row" style="margin-top:10px;justify-content:space-between">
+          <label class="row" style="gap:6px;font-size:13px"><input type="checkbox" id="mStack" checked> ustiga yuk qo'ysa bo'ladi</label>
+          <button class="primary" id="addByVol" style="width:auto;font-size:16px;padding:6px 16px">+ Qo'shish</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <button id="addBorder" title="Radiator 28 m³ / 1712 kg va ressor 20 m³ / 27500 kg">Chegaradagi yukni tayyor qo'shish (radiator, ressor)</button>
+      </div>
+      <div id="extraList" style="margin-top:10px"></div>
     </section>
 
     <section class="panel">
@@ -253,32 +275,72 @@ function renderCargo() {
       el("td", { class: "num" }, num("L")), el("td", { class: "num" }, num("W")), el("td", { class: "num" }, num("H")),
       el("td", { class: "num" }, num("kg", 0.1, 68)), el("td", { class: "num" }, num("qty", 1, 56)),
       el("td", {}, (() => { const cb = el("input", { type: "checkbox" }); cb.checked = c.stack; return bind("stack", cb); })()),
+      el("td", {}, priSelect(c)),
       el("td", {}, el("button", { class: "icon", title: "O'chirish", onclick: () => { cargo.splice(i, 1); renderCargo(); renderSums(); scheduleRun(); } }, "×")),
     ));
   });
-  renderSums();
+  renderSums(); renderExtra();
+}
+const PRI = { 1: "Shart", 2: "Oddiy", 3: "Qolsin" };
+function priSelect(c) {
+  const s = el("select", { style: "padding:3px 4px" }, ...Object.entries(PRI).map(([v, t]) => el("option", { value: v }, t)));
+  s.value = c.pri || 2; s.onchange = () => { c.pri = +s.value; pins = {}; renderCargo(); scheduleRun(); }; return s;
+}
+// Yuk turini ikkiga bo'lib, qty donasini boshqa muhimlikka o'tkazamiz
+function splitCargo(ci, qty, pri) {
+  const c = cargo[ci];
+  if (qty >= c.qty) { c.pri = pri; }
+  else { c.qty -= qty; cargo.splice(ci + 1, 0, { ...c, qty, pri }); }
+  pins = {}; renderCargo(); run();
 }
 function renderSums() {
   const s = $("#cargoSum"); s.innerHTML = "";
   if (!cargo.length) { s.append(el("span", {}, "Hali yuk yo'q")); }
-  else { s.append(el("div", {}, el("b", {}, fmt(cargoQty(), 0)), el("span", {}, "dona")), el("div", {}, el("b", {}, fmt(cargoVol(), 1)), el("span", {}, "m³")), el("div", {}, el("b", {}, fmt(cargoKg() / 1000, 2)), el("span", {}, "tonna")), el("div", {}, el("b", {}, cargo.length), el("span", {}, "xil"))); }
+  else {
+    s.append(el("div", {}, el("b", {}, fmt(cargoQty(), 0)), el("span", {}, "dona")), el("div", {}, el("b", {}, fmt(cargoVol(), 1)), el("span", {}, "m³")), el("div", {}, el("b", {}, fmt(cargoKg() / 1000, 2)), el("span", {}, "tonna")), el("div", {}, el("b", {}, cargo.length), el("span", {}, "xil")));
+    const left = cargo.filter(c => c.pri === 3);
+    if (left.length) s.append(el("div", { style: "color:var(--warn)" }, el("b", {}, fmt(left.reduce((a, c) => a + c.qty, 0), 0)), el("span", {}, "dona qolsin (" + fmt(left.reduce((a, c) => a + c.L * c.W * c.H * c.qty, 0) / 1e6, 1) + " m³)")));
+  }
   const f = $("#fleetSum"); f.innerHTML = "";
   const n = fleet.reduce((a, t) => a + t.count, 0);
   if (n) { const v = fleet.reduce((a, t) => a + truckVol(t) * t.count, 0), kg = fleet.reduce((a, t) => a + t.kg * t.count, 0);
     f.append(el("div", {}, el("b", {}, n), el("span", {}, "fura")), el("div", {}, el("b", {}, fmt(v, 0)), el("span", {}, "m³ sig'im")), el("div", {}, el("b", {}, fmt(kg / 1000, 1)), el("span", {}, "t sig'im"))); }
 }
 function addCargo(c = {}) {
-  cargo.push({ name: c.name || "Yuk " + (cargo.length + 1), L: c.L || 120, W: c.W || 80, H: c.H || 150, kg: c.kg || 0, qty: c.qty || 1, stack: c.stack !== false, color: c.color || PALETTE[cargo.length % PALETTE.length] });
+  cargo.push({ name: c.name || "Yuk " + (cargo.length + 1), L: c.L || 120, W: c.W || 80, H: c.H || 150, kg: c.kg || 0, qty: c.qty || 1, stack: c.stack !== false, pri: c.pri || 2, extra: !!c.extra, color: c.color || PALETTE[cargo.length % PALETTE.length] });
 }
-$("#addCargo").onclick = () => { addCargo(); renderCargo(); $("#cargoDet").open = true; };
+function addByVolume(name, vol, kg, qty, extra = {}) {
+  const s = Math.round(Math.cbrt(vol / qty) * 100); // har bo'lak kub shaklida
+  addCargo({ name, L: s, W: s, H: s, kg: kg / qty, qty, ...extra });
+}
+$("#addBorder").onclick = () => {
+  if (cargo.some(c => /^Radiator/.test(c.name))) return toast("Chegaradagi yuk allaqachon qo'shilgan");
+  addByVolume("Radiator (chegara)", 28, 1712, 40, { color: "#1fa6a6", extra: true });
+  addByVolume("Ressor (chegara)", 20, 27500, 20, { color: "#555b66", stack: false, extra: true });
+  renderCargo(); run();
+  toast("Radiator 28 m³ va ressor 20 m³ qo'shildi — dona sonini jadvalda to'g'rilang");
+};
+// Qo'shimcha (Excelda yo'q) yuklar ro'yxati
+function renderExtra() {
+  const box = $("#extraList"); box.innerHTML = "";
+  const ex = cargo.map((c, i) => [c, i]).filter(([c]) => c.extra);
+  if (!ex.length) return;
+  box.append(el("table", {}, el("thead", {}, el("tr", {}, el("th", {}, "Qo'shilgan yuk"), el("th", { class: "num" }, "Dona"), el("th", { class: "num" }, "m³"), el("th", { class: "num" }, "kg"), el("th", {}, "Muhimlik"), el("th", {}))),
+    el("tbody", {}, ...ex.map(([c, i]) => el("tr", {}, el("td", {}, el("span", { class: "legend", style: "--c:" + c.color }, el("span", {}, c.name))), el("td", { class: "num" }, c.qty), el("td", { class: "num" }, fmt(c.L * c.W * c.H * c.qty / 1e6, 1)), el("td", { class: "num" }, fmt(c.kg * c.qty, 0)), el("td", {}, priSelect(c)),
+      el("td", {}, el("button", { class: "icon", title: "O'chirish", onclick: () => { cargo.splice(i, 1); pins = {}; renderCargo(); run(); } }, "×")))))));
+}
+$("#mAdvBtn").onclick = () => { const a = $("#mAdv"); a.hidden = !a.hidden; $("#mAdvBtn").textContent = a.hidden ? "aniq o'lcham kiritish" : "aniq o'lchamni yashirish"; };
 $("#clearCargo").onclick = () => { cargo = []; pins = {}; plan = null; renderCargo(); showPlan(); };
 $("#sampleCargo").onclick = () => { cargo = []; pins = {}; SAMPLE.forEach(s => addCargo({ ...s })); renderCargo(); run(); toast("Namuna yuklandi"); };
 $("#addByVol").onclick = () => {
-  const qty = Math.max(1, Math.round(+$("#mQty").value || 1)), vol = +$("#mVol").value, kg = +$("#mKg").value;
-  if (!vol) return toast("Jami m³ ni yozing");
-  const s = Math.round(Math.cbrt(vol / qty) * 100); // har bir bo'lak kub shaklida
-  addCargo({ name: $("#mName").value || "Yuk " + (cargo.length + 1), L: s, W: s, H: s, kg: kg / qty, qty });
-  renderCargo(); scheduleRun(); $("#mName").value = ""; $("#mVol").value = ""; $("#mKg").value = "";
+  const qty = Math.max(1, Math.round(+$("#mQty").value || 1)), vol = +$("#mVol").value, kg = +$("#mKg").value, pri = +$("#mPri").value, stack = $("#mStack").checked;
+  const name = $("#mName").value.trim() || "Qo'shimcha yuk " + (cargo.filter(c => c.extra).length + 1);
+  const L = +$("#mL").value, W = +$("#mW").value, H = +$("#mH").value;
+  if (!$("#mAdv").hidden && L && W && H) addCargo({ name, L, W, H, kg: kg / qty, qty, pri, stack, extra: true });
+  else if (vol) addByVolume(name, vol, kg, qty, { pri, stack, extra: true });
+  else return toast("Jami m³ ni yozing (yoki aniq o'lcham kiriting)");
+  renderCargo(); run(); toast(name + " qo'shildi");
+  ["mName", "mVol", "mKg", "mL", "mW", "mH"].forEach(id => $("#" + id).value = ""); $("#mQty").value = 1;
 };
 
 // ---------- Excel o'qish ----------
@@ -339,7 +401,8 @@ function readSheet(file) {
       let items = parseKargo(rows);
       if (!items.length) items = parseGeneric(rows);
       if (!items.length) throw new Error("Yuk qatorlari topilmadi");
-      cargo = []; pins = {}; items.forEach(it => addCargo(it)); renderCargo();
+      const keep = cargo.filter(c => c.extra); // qo'shimcha yuklar saqlanib qoladi
+      cargo = []; pins = {}; items.forEach(it => addCargo(it)); keep.forEach(c => cargo.push(c)); renderCargo();
       toast(`${cargo.length} xil, ${fmt(cargoQty(), 0)} dona yuk o'qildi`); run();
     } catch (err) { toast("Xato: " + err.message); }
   };
@@ -434,13 +497,13 @@ function makeTowers(truck, items) {
   const towers = [];
   for (const g of groups.values()) {
     const it = g[0], per = it.stack ? Math.max(1, Math.floor(truck.H / it.H)) : 1;
-    for (let i = 0; i < g.length; i += per) { const chunk = g.slice(i, i + per); towers.push({ L: it.L, W: it.W, H: it.H * chunk.length, kg: chunk.reduce((s, x) => s + x.kg, 0), stack: it.stack, pinned: it.pin != null, items: chunk }); }
+    for (let i = 0; i < g.length; i += per) { const chunk = g.slice(i, i + per); towers.push({ L: it.L, W: it.W, H: it.H * chunk.length, kg: chunk.reduce((s, x) => s + x.kg, 0), stack: it.stack, pinned: it.pin != null, pri: it.pri, items: chunk }); }
   }
   return towers;
 }
 function packTruck(truck, items, order) {
-  // qo'lda shu furaga biriktirilganlar har doim birinchi joylanadi
-  const towers = makeTowers(truck, items).sort((a, b) => (b.pinned - a.pinned) || order(a, b));
+  // qo'lda biriktirilganlar, keyin "Shart" yuklar, keyin qolganlar
+  const towers = makeTowers(truck, items).sort((a, b) => (b.pinned - a.pinned) || (a.pri - b.pri) || order(a, b));
   const r = packBoxes(truck, towers);
   const placed = [];
   for (const t of r.placed) t.items.forEach((it, j) => placed.push({ ...it, x: t.x, y: t.y, z: t.z + j * it.H, L: t.L, W: t.W, rot: t.rot }));
@@ -452,9 +515,10 @@ function packTruck(truck, items, order) {
 }
 function buildPlan() {
   let items = []; let id = 1;
+  const skipped = [];
   cargo.forEach((c, ci) => {
     const pinList = []; for (const [k, q] of Object.entries(pins[ci] || {})) for (let j = 0; j < q; j++) pinList.push(+k);
-    for (let i = 0; i < c.qty; i++) items.push({ id: id++, name: c.name, L: c.L, W: c.W, H: c.H, kg: c.kg, stack: c.stack, color: c.color, ci, pin: pinList[i] ?? null });
+    for (let i = 0; i < c.qty; i++) { const it = { id: id++, name: c.name, L: c.L, W: c.W, H: c.H, kg: c.kg, stack: c.stack, pri: c.pri || 2, color: c.color, ci, pin: pinList[i] ?? null }; (c.pri === 3 ? skipped : items).push(it); }
   });
   // Ustunlarni bir necha tartibda joylab, eng ko'p sig'dirganini olamiz
   const orders = [
@@ -473,8 +537,9 @@ function buildPlan() {
       r.label = t.name.replace(/\s*\(.*\)$/, "") + (t.count > 1 ? " #" + (i + 1) : ""); trucks.push(r);
       rest = r.left.concat(others);
     }
-    const leftVol = rest.reduce((s, p) => s + p.L * p.W * p.H, 0);
-    if (!bestPlan || leftVol < bestPlan.leftVol) bestPlan = { trucks, left: rest, leftVol };
+    // "Shart" yuk qolib ketsa — bu eng yomon natija
+    const leftVol = rest.reduce((s, p) => s + p.L * p.W * p.H * (p.pri === 1 ? 1000 : 1), 0);
+    if (!bestPlan || leftVol < bestPlan.leftVol) bestPlan = { trucks, left: rest, leftVol, skipped };
     if (!rest.length) break;
   }
   return bestPlan;
@@ -583,12 +648,13 @@ function renderVerdict() {
   const lines = plan.trucks.map((tr, i) => { const T = tr.truck; return `${i + 1}. ${tr.label}: ${tr.placed.length} dona, hajm ${Math.round(tr.vol / (T.L * T.W * T.H) * 100)}%, og'irlik ${fmt(tr.kg / 1000, 1)} t / ${fmt(T.kg / 1000, 1)} t`; });
   let cls = "good", head = `Hammasi sig'di — ${used.length} fura kerak`;
   if (plan.left.length) {
-    const kg = plan.left.reduce((s, p) => s + p.kg, 0), vol = plan.left.reduce((s, p) => s + p.L * p.W * p.H, 0) / 1e6;
-    cls = "bad"; head = `${plan.left.length} dona sig'madi (${fmt(vol, 1)} m³, ${fmt(kg / 1000, 2)} t)`;
+    const kg = plan.left.reduce((s, p) => s + p.kg, 0), vol = plan.left.reduce((s, p) => s + p.L * p.W * p.H, 0) / 1e6, must = plan.left.filter(p => p.pri === 1).length;
+    cls = "bad"; head = `${plan.left.length} dona sig'madi (${fmt(vol, 1)} m³, ${fmt(kg / 1000, 2)} t)` + (must ? ` — shu jumladan ${must} dona SHART yuk!` : "");
     const byName = {}; plan.left.forEach(p => byName[p.name] = (byName[p.name] || 0) + 1);
     lines.push("Sig'maganlar: " + Object.entries(byName).slice(0, 8).map(([n, c]) => `${n} × ${c}`).join(", ") + (Object.keys(byName).length > 8 ? " …" : ""));
-    lines.push(fleet.length ? "Yana fura qo'shing yoki kattaroq fura tanlang." : "Avval fura qo'shing.");
+    lines.push("Yana fura qo'shing, yoki pastdagi jadvalda keraksiz yuklarni \"Qolsin\" qiling.");
   } else if (used.length < plan.trucks.length) { cls = "warn"; head += `, ${plan.trucks.length - used.length} ta fura bo'sh qoladi`; }
+  if (plan.skipped?.length) { const kg = plan.skipped.reduce((s, p) => s + p.kg, 0), vol = plan.skipped.reduce((s, p) => s + p.L * p.W * p.H, 0) / 1e6; lines.push(`Keyingi reysga qoldirildi: ${plan.skipped.length} dona (${fmt(vol, 1)} m³, ${fmt(kg / 1000, 2)} t)`); }
   v.append(el("div", { class: "verdict " + cls }, el("h3", {}, head), el("ul", {}, ...lines.map(l => el("li", {}, l)))));
 }
 function showTruck() {
@@ -640,10 +706,14 @@ function groupTable(groups, from) {
   const tot = groups.reduce((a, g) => ({ qty: a.qty + g.qty, vol: a.vol + g.vol, kg: a.kg + g.kg }), { qty: 0, vol: 0, kg: 0 });
   const targets = plan.trucks.map((tr, k) => k).filter(k => k !== from);
   const moveCell = g => {
-    if (!targets.length) return el("td", {});
     const q = el("input", { type: "number", min: 1, max: g.qty, value: g.qty, style: "width:56px" });
-    const sel = el("select", {}, ...targets.map(k => el("option", { value: k }, (k + 1) + "-fura")));
-    return el("td", {}, el("div", { class: "row", style: "flex-wrap:nowrap;gap:4px" }, q, sel, el("button", { class: "icon", title: "Ko'chirish", onclick: () => movePieces(g.ci, from, +sel.value, Math.min(g.qty, Math.max(1, Math.round(+q.value) || 1))) }, "→")));
+    const opts = targets.map(k => el("option", { value: k }, (k + 1) + "-fura"));
+    if (from === "skip") opts.push(el("option", { value: "load" }, "Yuklansin")); else opts.push(el("option", { value: "skip" }, "Qolsin"));
+    const sel = el("select", {}, ...opts);
+    return el("td", {}, el("div", { class: "row", style: "flex-wrap:nowrap;gap:4px" }, q, sel, el("button", { class: "icon", title: "Ko'chirish", onclick: () => {
+      const n = Math.min(g.qty, Math.max(1, Math.round(+q.value) || 1));
+      if (sel.value === "skip") splitCargo(g.ci, n, 3); else if (sel.value === "load") splitCargo(g.ci, n, 2); else movePieces(g.ci, from === -1 ? -1 : from, +sel.value, n);
+    } }, "→")));
   };
   return el("div", { class: "tscroll" }, el("table", {},
     el("thead", {}, el("tr", {}, el("th", {}, "Yuk"), el("th", { class: "num" }, "O'lcham sm"), el("th", { class: "num" }, "Dona"), el("th", { class: "num" }, "m³"), el("th", { class: "num" }, "kg"), el("th", {}, "Ko'chirish"))),
@@ -660,7 +730,12 @@ function renderByTruck() {
       el("h2", { style: "font-size:18px;margin-bottom:6px" }, `${i + 1}. ${tr.label}`, el("span", { class: "hint", style: "font-family:var(--mono);font-weight:400;text-transform:none;letter-spacing:0" }, `${tr.placed.length} dona · ${fmt(tr.vol / 1e6, 1)} m³ (${Math.round(tr.vol / (T.L * T.W * T.H) * 100)}%) · ${fmt(tr.kg / 1000, 2)} t (${Math.round(tr.kg / T.kg * 100)}%)`)),
       tr.placed.length ? groupTable(groupItems(tr.placed), i) : el("p", { class: "hint" }, "Bo'sh. Boshqa furadan yuk ko'chirishingiz mumkin.")));
   });
-  if (plan.left.length) box.append(el("div", {}, el("h2", { style: "font-size:18px;margin-bottom:6px;color:var(--bad)" }, "Sig'madi"), el("p", { class: "hint", style: "margin:0 0 6px" }, "Furaga ko'chirsangiz, o'sha furada birinchi navbatda joylanadi; joy bo'lmasa yana shu yerga qaytadi."), groupTable(groupItems(plan.left), -1)));
+  if (plan.left.length) box.append(el("div", { style: "margin-bottom:16px" },
+    el("div", { class: "row", style: "margin-bottom:6px" }, el("h2", { style: "font-size:18px;margin:0;color:var(--bad)" }, "Sig'madi"),
+      el("button", { onclick: () => { const by = {}; plan.left.forEach(p => by[p.ci] = (by[p.ci] || 0) + 1); Object.entries(by).sort((a, b) => b[0] - a[0]).forEach(([ci, n]) => { const c = cargo[+ci]; if (n >= c.qty) c.pri = 3; else { c.qty -= n; cargo.splice(+ci + 1, 0, { ...c, qty: n, pri: 3 }); } }); pins = {}; renderCargo(); run(); toast("Sig'maganlar keyingi reysga qoldirildi"); } }, "Hammasini keyingi reysga qoldirish")),
+    el("p", { class: "hint", style: "margin:0 0 6px" }, "Furaga ko'chirsangiz, o'sha furada birinchi navbatda joylanadi (joy bo'lmasa qaytadi). \"Qolsin\" — bu reysda yuklanmaydi."),
+    groupTable(groupItems(plan.left), -1)));
+  if (plan.skipped?.length) box.append(el("div", {}, el("h2", { style: "font-size:18px;margin-bottom:6px;color:var(--warn)" }, "Keyingi reysga qoldirilgan (yuklanmaydi)"), groupTable(groupItems(plan.skipped), "skip")));
 }
 function renderResult() {
   renderByTruck();
@@ -686,6 +761,7 @@ function resultRows() {
   const rows = [["Fura", "Yuk", "Uzunlik sm", "Eni sm", "Balandlik sm", "kg", "Old tomondan m", "Chapdan m", "Qavat", "Burilgan"]];
   plan.trucks.forEach(tr => tr.placed.forEach(p => rows.push([tr.label, p.name, p.L, p.W, p.H, +p.kg.toFixed(1), +(p.x / 100).toFixed(2), +(p.y / 100).toFixed(2), 1 + Math.round(p.z / p.H), p.rot ? "ha" : ""])));
   plan.left.forEach(p => rows.push(["SIG'MADI", p.name, p.L, p.W, p.H, +p.kg.toFixed(1), "", "", "", ""]));
+  (plan.skipped || []).forEach(p => rows.push(["KEYINGI REYS", p.name, p.L, p.W, p.H, +p.kg.toFixed(1), "", "", "", ""]));
   return rows;
 }
 // Fura bo'yicha jamlanma qatorlari (Excel va nusxalash uchun)
@@ -694,6 +770,7 @@ function summaryRows() {
   const add = (label, list) => { const gs = groupItems(list); gs.forEach(g => rows.push([label, g.name, g.dims, g.qty, +g.vol.toFixed(3), +g.kg.toFixed(1)])); rows.push([label, "JAMI", "", gs.reduce((a, g) => a + g.qty, 0), +gs.reduce((a, g) => a + g.vol, 0).toFixed(2), +gs.reduce((a, g) => a + g.kg, 0).toFixed(0)]); rows.push([]); };
   plan.trucks.forEach((tr, i) => add(`${i + 1}. ${tr.label}`, tr.placed));
   if (plan.left.length) add("SIG'MADI", plan.left);
+  if (plan.skipped?.length) add("KEYINGI REYS (qoldirildi)", plan.skipped);
   return rows;
 }
 $("#copyRes").onclick = async () => {
@@ -709,6 +786,7 @@ $("#dlRes").onclick = () => {
   const sum = [["Fura", "Ichki o'lcham m", "Sig'im m³", "Ko'taradi t", "Yuk soni", "Yuk m³", "Hajm %", "Yuk t", "Og'irlik %", "Pol %"]];
   plan.trucks.forEach((tr, i) => { const T = tr.truck; sum.push([`${i + 1}. ${tr.label}`, `${T.L / 100}×${T.W / 100}×${T.H / 100}`, +truckVol(T).toFixed(1), T.kg / 1000, tr.placed.length, +(tr.vol / 1e6).toFixed(2), Math.round(tr.vol / (T.L * T.W * T.H) * 100), +(tr.kg / 1000).toFixed(2), Math.round(tr.kg / T.kg * 100), Math.round(tr.floor / (T.L * T.W) * 100)]); });
   if (plan.left.length) sum.push(["SIG'MADI", "", "", "", plan.left.length, +(plan.left.reduce((s, p) => s + p.L * p.W * p.H, 0) / 1e6).toFixed(2), "", +(plan.left.reduce((s, p) => s + p.kg, 0) / 1000).toFixed(2), "", ""]);
+  if (plan.skipped?.length) sum.push(["KEYINGI REYS (qoldirildi)", "", "", "", plan.skipped.length, +(plan.skipped.reduce((s, p) => s + p.L * p.W * p.H, 0) / 1e6).toFixed(2), "", +(plan.skipped.reduce((s, p) => s + p.kg, 0) / 1000).toFixed(2), "", ""]);
   const ws1 = XLSX.utils.aoa_to_sheet(sum); ws1["!cols"] = [{ wch: 28 }, { wch: 16 }, { wch: 10 }, { wch: 11 }, { wch: 9 }, { wch: 9 }, { wch: 8 }, { wch: 8 }, { wch: 11 }, { wch: 7 }];
   XLSX.utils.book_append_sheet(wb, ws1, "Xulosa");
   // 2-varaq: qaysi furaga qaysi yuk

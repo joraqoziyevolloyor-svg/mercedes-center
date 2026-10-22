@@ -119,20 +119,11 @@ details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
         <input type="file" id="file" accept=".xlsx,.xls,.csv">
       </label>
       <div class="sum" id="cargoSum"></div>
-      <details style="margin-top:10px" id="cargoDet">
-        <summary>To'liq ro'yxatni ko'rish / tahrirlash</summary>
-        <div class="tscroll" style="max-height:360px;overflow-y:auto;margin-top:8px">
-        <table id="cargo">
-          <thead><tr><th>Nomi</th><th class="num">U sm</th><th class="num">E sm</th><th class="num">B sm</th><th class="num">kg/dona</th><th class="num">Dona</th><th title="Ustiga boshqa yuk qo'yish mumkin">Ust</th><th>Muhimlik</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
-        </div>
-        <div class="toolbar">
-          <button id="sampleCargo">Namuna</button>
-          <button id="clearCargo">Tozalash</button>
-        </div>
-      </details>
-      <p class="hint" style="margin:8px 0 0">Muhimlik: <b>Shart</b> — birinchi joylanadi, <b>Oddiy</b> — joy qolsa, <b>Qolsin</b> — bu reysda yuklanmaydi.</p>
+      <div class="toolbar">
+        <button id="sampleCargo">Namuna</button>
+        <button id="clearCargo">Tozalash</button>
+      </div>
+      <p class="hint" style="margin:8px 0 0">To'liq ro'yxat — sahifa pastidagi "Barcha yuklar" jadvalida: har bir yuk qaysi furaga tushgani ko'rinadi va tahrirlasa bo'ladi.</p>
     </section>
 
     <section class="panel">
@@ -221,6 +212,24 @@ details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
     </section>
   </div>
 </div>
+
+<!-- TO'LIQ KENGLIK: asosiy yuk jadvali -->
+<section class="panel" style="margin-top:16px">
+  <div class="row" style="justify-content:space-between;margin-bottom:10px">
+    <h2 style="margin:0"><span class="n">≡</span> Barcha yuklar — qaysi furaga tushdi</h2>
+    <div class="row">
+      <label class="row" style="gap:6px;font-size:13px">Ko'rsatish: <select id="cargoFilter"><option value="all">hammasi</option><option value="left">sig'maganlar</option><option value="skip">qoldirilganlar</option><option value="extra">qo'shimcha yuklar</option></select></label>
+      <input type="search" id="cargoSearch" placeholder="qidirish…" style="width:150px">
+    </div>
+  </div>
+  <p class="hint" style="margin:0 0 8px">Muhimlik: <b>Shart</b> — birinchi joylanadi, <b>Oddiy</b> — joy qolsa, <b>Qolsin</b> — bu reysda yuklanmaydi. Qatorni o'zgartirish uchun ✎ ni bosing.</p>
+  <div class="tscroll" style="max-height:560px;overflow-y:auto">
+  <table class="cargo-table" id="cargo">
+    <thead><tr><th class="num">#</th><th>Nomi</th><th class="num">O'lcham sm (U×E×B)</th><th class="num">Dona</th><th class="num">m³</th><th class="num">kg/dona</th><th class="num">Jami kg</th><th title="Ustiga boshqa yuk qo'yish mumkin">Ust</th><th>Muhimlik</th><th>Qayerda</th><th></th></tr></thead>
+    <tbody></tbody>
+  </table>
+  </div>
+</section>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -265,22 +274,63 @@ const cargoQty = () => cargo.reduce((s, c) => s + c.qty, 0);
 const truckVol = t => t.L * t.W * t.H / 1e6;
 
 // ---------- Yuk ro'yxati ----------
+let editing = -1; // qaysi qator tahrirlanmoqda
+// Har bir yuk turi qayerga tushgan: {truckIdx: n, left: n, skip: n}
+function whereIs(ci) {
+  const w = {}; if (!plan) return w;
+  plan.trucks.forEach((tr, k) => { const n = tr.placed.filter(p => p.ci === ci).length; if (n) w[k] = n; });
+  const l = plan.left.filter(p => p.ci === ci).length; if (l) w.left = l;
+  const s = (plan.skipped || []).filter(p => p.ci === ci).length; if (s) w.skip = s;
+  return w;
+}
+function whereCell(ci, qty) {
+  const w = whereIs(ci), td = el("td", {});
+  if (!plan) { td.textContent = "—"; return td; }
+  for (const [k, n] of Object.entries(w)) {
+    const all = n === qty ? "" : ` ×${n}`;
+    if (k === "left") td.append(el("span", { class: "chip bad" }, "sig'madi" + all), " ");
+    else if (k === "skip") td.append(el("span", { class: "chip warn" }, "qolsin" + all), " ");
+    else td.append(el("span", { class: "chip good" }, (+k + 1) + "-fura" + all), " ");
+  }
+  return td;
+}
 function renderCargo() {
   const tb = $("#cargo tbody"); tb.innerHTML = "";
+  const filt = $("#cargoFilter").value, q = $("#cargoSearch").value.trim().toLowerCase();
+  const frag = document.createDocumentFragment();
   cargo.forEach((c, i) => {
-    const bind = (k, inp) => { inp.onchange = () => { c[k] = inp.type === "checkbox" ? inp.checked : inp.type === "number" ? +inp.value : inp.value; renderSums(); scheduleRun(); }; return inp; };
-    const num = (k, step = 1, w = 62) => bind(k, el("input", { type: "number", min: 0, step, value: Math.round(c[k] * 10) / 10, style: "width:" + w + "px" }));
-    tb.append(el("tr", {},
-      el("td", {}, el("span", { class: "legend", style: "--c:" + c.color }, el("span", {})), bind("name", el("input", { type: "text", value: c.name, style: "width:120px" }))),
-      el("td", { class: "num" }, num("L")), el("td", { class: "num" }, num("W")), el("td", { class: "num" }, num("H")),
-      el("td", { class: "num" }, num("kg", 0.1, 68)), el("td", { class: "num" }, num("qty", 1, 56)),
-      el("td", {}, (() => { const cb = el("input", { type: "checkbox" }); cb.checked = c.stack; return bind("stack", cb); })()),
-      el("td", {}, priSelect(c)),
-      el("td", {}, el("button", { class: "icon", title: "O'chirish", onclick: () => { cargo.splice(i, 1); renderCargo(); renderSums(); scheduleRun(); } }, "×")),
-    ));
+    const w = whereIs(i);
+    if (filt === "left" && !w.left) return; if (filt === "skip" && c.pri !== 3) return; if (filt === "extra" && !c.extra) return;
+    if (q && !c.name.toLowerCase().includes(q)) return;
+    const vol = c.L * c.W * c.H * c.qty / 1e6;
+    const name = el("td", {}, el("span", { class: "legend", style: "--c:" + c.color }, el("span", {}, c.name + (c.extra ? " ·qo'shimcha" : ""))));
+    if (editing === i) {
+      const bind = (k, inp) => { inp.onchange = () => { c[k] = inp.type === "checkbox" ? inp.checked : inp.type === "number" ? +inp.value : inp.value; pins = {}; renderCargo(); scheduleRun(); }; return inp; };
+      const num = (k, step = 1, w = 58) => bind(k, el("input", { type: "number", min: 0, step, value: Math.round(c[k] * 10) / 10, style: "width:" + w + "px" }));
+      frag.append(el("tr", { style: "background:var(--panel2)" },
+        el("td", { class: "num" }, i + 1),
+        el("td", {}, bind("name", el("input", { type: "text", value: c.name, style: "width:160px" }))),
+        el("td", { class: "num" }, el("div", { class: "row", style: "flex-wrap:nowrap;gap:2px;justify-content:flex-end" }, num("L"), "×", num("W"), "×", num("H"))),
+        el("td", { class: "num" }, num("qty", 1, 56)), el("td", { class: "num" }, fmt(vol, 2)),
+        el("td", { class: "num" }, num("kg", 0.1, 68)), el("td", { class: "num" }, fmt(c.kg * c.qty, 0)),
+        el("td", {}, (() => { const cb = el("input", { type: "checkbox" }); cb.checked = c.stack; return bind("stack", cb); })()),
+        el("td", {}, priSelect(c)), whereCell(i, c.qty),
+        el("td", {}, el("div", { class: "row", style: "flex-wrap:nowrap;gap:4px" }, el("button", { class: "icon", title: "Tayyor", onclick: () => { editing = -1; renderCargo(); } }, "✓"), el("button", { class: "icon", title: "O'chirish", onclick: () => { cargo.splice(i, 1); editing = -1; pins = {}; renderCargo(); run(); } }, "×")))));
+    } else {
+      frag.append(el("tr", {},
+        el("td", { class: "num" }, i + 1), name,
+        el("td", { class: "num" }, `${c.L}×${c.W}×${c.H}`),
+        el("td", { class: "num" }, c.qty), el("td", { class: "num" }, fmt(vol, 2)),
+        el("td", { class: "num" }, fmt(c.kg, 1)), el("td", { class: "num" }, fmt(c.kg * c.qty, 0)),
+        el("td", {}, c.stack ? "ha" : "yo'q"),
+        el("td", {}, priSelect(c)), whereCell(i, c.qty),
+        el("td", {}, el("button", { class: "icon", title: "Tahrirlash", onclick: () => { editing = i; renderCargo(); } }, "✎"))));
+    }
   });
+  tb.append(frag);
   renderSums(); renderExtra();
 }
+$("#cargoFilter").onchange = renderCargo; $("#cargoSearch").oninput = renderCargo;
 const PRI = { 1: "Shart", 2: "Oddiy", 3: "Qolsin" };
 function priSelect(c) {
   const s = el("select", { style: "padding:3px 4px" }, ...Object.entries(PRI).map(([v, t]) => el("option", { value: v }, t)));
@@ -748,7 +798,7 @@ function renderResult() {
     el("td", { class: "num" }, fmt(p.x / 100, 2)), el("td", { class: "num" }, fmt(p.y / 100, 2)), el("td", { class: "num" }, 1 + Math.round(p.z / p.H))))));
   tb.append(frag);
 }
-function showPlan() { if (!plan || activeTruck >= (plan.trucks.length || 0)) activeTruck = -1; renderVerdict(); showTruck(); renderResult(); }
+function showPlan() { if (!plan || activeTruck >= (plan.trucks.length || 0)) activeTruck = -1; renderVerdict(); showTruck(); renderResult(); renderCargo(); }
 function run() {
   if (!cargo.length) { plan = null; showPlan(); return; }
   if (!fleet.length) { plan = { trucks: [], left: [] }; showPlan(); return toast("Fura qo'shing"); }

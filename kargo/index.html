@@ -227,7 +227,7 @@ const SAMPLE = [
   { name: "Yarim paddon (qadoq)", L: 80, W: 60, H: 90, kg: 180, qty: 16, stack: true },
   { name: "Katta yashik", L: 200, W: 120, H: 110, kg: 900, qty: 4, stack: false },
 ];
-let cargo = [], fleet = [], plan = null, activeTruck = 0;
+let cargo = [], fleet = [], plan = null, activeTruck = -1; // -1 = barcha furalar
 let pins = {}; // qo'lda ko'chirish: yuk turi (ci) -> { fura raqami: dona }
 
 // ---------- Yordamchi ----------

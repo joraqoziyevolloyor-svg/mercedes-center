@@ -228,6 +228,7 @@ const SAMPLE = [
   { name: "Katta yashik", L: 200, W: 120, H: 110, kg: 900, qty: 4, stack: false },
 ];
 let cargo = [], fleet = [], plan = null, activeTruck = 0;
+let pins = {}; // qo'lda ko'chirish: yuk turi (ci) -> { fura raqami: dona }
 
 // ---------- Yordamchi ----------
 const $ = s => document.querySelector(s);
@@ -270,8 +271,8 @@ function addCargo(c = {}) {
   cargo.push({ name: c.name || "Yuk " + (cargo.length + 1), L: c.L || 120, W: c.W || 80, H: c.H || 150, kg: c.kg || 0, qty: c.qty || 1, stack: c.stack !== false, color: c.color || PALETTE[cargo.length % PALETTE.length] });
 }
 $("#addCargo").onclick = () => { addCargo(); renderCargo(); $("#cargoDet").open = true; };
-$("#clearCargo").onclick = () => { cargo = []; plan = null; renderCargo(); showPlan(); };
-$("#sampleCargo").onclick = () => { cargo = []; SAMPLE.forEach(s => addCargo({ ...s })); renderCargo(); run(); toast("Namuna yuklandi"); };
+$("#clearCargo").onclick = () => { cargo = []; pins = {}; plan = null; renderCargo(); showPlan(); };
+$("#sampleCargo").onclick = () => { cargo = []; pins = {}; SAMPLE.forEach(s => addCargo({ ...s })); renderCargo(); run(); toast("Namuna yuklandi"); };
 $("#addByVol").onclick = () => {
   const qty = Math.max(1, Math.round(+$("#mQty").value || 1)), vol = +$("#mVol").value, kg = +$("#mKg").value;
   if (!vol) return toast("Jami m³ ni yozing");
@@ -338,7 +339,7 @@ function readSheet(file) {
       let items = parseKargo(rows);
       if (!items.length) items = parseGeneric(rows);
       if (!items.length) throw new Error("Yuk qatorlari topilmadi");
-      cargo = []; items.forEach(it => addCargo(it)); renderCargo();
+      cargo = []; pins = {}; items.forEach(it => addCargo(it)); renderCargo();
       toast(`${cargo.length} xil, ${fmt(cargoQty(), 0)} dona yuk o'qildi`); run();
     } catch (err) { toast("Xato: " + err.message); }
   };
@@ -355,7 +356,7 @@ PRESETS.forEach((p, i) => $("#truckPreset").append(el("option", { value: i }, p.
 function renderFleet() {
   const box = $("#fleet"); box.innerHTML = "";
   fleet.forEach((t, i) => {
-    const re = () => { renderFleet(); scheduleRun(); };
+    const re = () => { pins = {}; renderFleet(); scheduleRun(); };
     const f = (label, key, step, onch) => { const inp = el("input", { type: "number", min: 0, step, value: key === "vol" ? Math.round(truckVol(t)) : key === "ton" ? Math.round(t.kg / 100) / 10 : t[key] }); inp.onchange = () => { onch(+inp.value); re(); }; return el("label", { class: "f" }, label, inp); };
     const name = el("input", { type: "text", value: t.name, title: "Nomi" }); name.onchange = () => { t.name = name.value; renderSums(); scheduleRun(); };
     const adv = el("div", { class: "adv" },
@@ -373,7 +374,7 @@ function renderFleet() {
   });
   renderSums();
 }
-$("#addTruck").onclick = () => { fleet.push({ ...PRESETS[$("#truckPreset").value], count: 1 }); renderFleet(); scheduleRun(); };
+$("#addTruck").onclick = () => { fleet.push({ ...PRESETS[$("#truckPreset").value], count: 1 }); pins = {}; renderFleet(); scheduleRun(); };
 
 // ---------- Joylashtirish algoritmi ----------
 // 1) Bir xil yuklar fura balandligigacha ustun (stopka) qilinadi.
@@ -429,16 +430,17 @@ function packBoxes(truck, boxes) {
 }
 function makeTowers(truck, items) {
   const groups = new Map();
-  for (const it of items) { const k = it.ci + "|" + it.L + "|" + it.W + "|" + it.H; (groups.get(k) || groups.set(k, []).get(k)).push(it); }
+  for (const it of items) { const k = it.ci + "|" + it.L + "|" + it.W + "|" + it.H + "|" + (it.pin ?? ""); (groups.get(k) || groups.set(k, []).get(k)).push(it); }
   const towers = [];
   for (const g of groups.values()) {
     const it = g[0], per = it.stack ? Math.max(1, Math.floor(truck.H / it.H)) : 1;
-    for (let i = 0; i < g.length; i += per) { const chunk = g.slice(i, i + per); towers.push({ L: it.L, W: it.W, H: it.H * chunk.length, kg: chunk.reduce((s, x) => s + x.kg, 0), stack: it.stack, items: chunk }); }
+    for (let i = 0; i < g.length; i += per) { const chunk = g.slice(i, i + per); towers.push({ L: it.L, W: it.W, H: it.H * chunk.length, kg: chunk.reduce((s, x) => s + x.kg, 0), stack: it.stack, pinned: it.pin != null, items: chunk }); }
   }
   return towers;
 }
 function packTruck(truck, items, order) {
-  const towers = makeTowers(truck, items).sort(order);
+  // qo'lda shu furaga biriktirilganlar har doim birinchi joylanadi
+  const towers = makeTowers(truck, items).sort((a, b) => (b.pinned - a.pinned) || order(a, b));
   const r = packBoxes(truck, towers);
   const placed = [];
   for (const t of r.placed) t.items.forEach((it, j) => placed.push({ ...it, x: t.x, y: t.y, z: t.z + j * it.H, L: t.L, W: t.W, rot: t.rot }));
@@ -450,7 +452,10 @@ function packTruck(truck, items, order) {
 }
 function buildPlan() {
   let items = []; let id = 1;
-  cargo.forEach((c, ci) => { for (let i = 0; i < c.qty; i++) items.push({ id: id++, name: c.name, L: c.L, W: c.W, H: c.H, kg: c.kg, stack: c.stack, color: c.color, ci }); });
+  cargo.forEach((c, ci) => {
+    const pinList = []; for (const [k, q] of Object.entries(pins[ci] || {})) for (let j = 0; j < q; j++) pinList.push(+k);
+    for (let i = 0; i < c.qty; i++) items.push({ id: id++, name: c.name, L: c.L, W: c.W, H: c.H, kg: c.kg, stack: c.stack, color: c.color, ci, pin: pinList[i] ?? null });
+  });
   // Ustunlarni bir necha tartibda joylab, eng ko'p sig'dirganini olamiz
   const orders = [
     (a, b) => b.H - a.H || (b.L * b.W) - (a.L * a.W),            // balandlar birinchi
@@ -461,10 +466,12 @@ function buildPlan() {
   ];
   let bestPlan = null;
   for (const ord of orders) {
-    let rest = items.slice(); const trucks = [];
-    for (const t of fleet) for (let i = 0; i < t.count && rest.length; i++) {
-      const r = packTruck(t, rest, ord); if (!r.placed.length) break;
-      r.label = t.name.replace(/\s*\(.*\)$/, "") + (t.count > 1 ? " #" + (i + 1) : ""); trucks.push(r); rest = r.left;
+    let rest = items.slice(); const trucks = []; let k = 0;
+    for (const t of fleet) for (let i = 0; i < t.count; i++, k++) {
+      const mine = rest.filter(it => it.pin === k || it.pin == null), others = rest.filter(it => it.pin != null && it.pin !== k);
+      const r = packTruck(t, mine, ord);
+      r.label = t.name.replace(/\s*\(.*\)$/, "") + (t.count > 1 ? " #" + (i + 1) : ""); trucks.push(r);
+      rest = r.left.concat(others);
     }
     const leftVol = rest.reduce((s, p) => s + p.L * p.W * p.H, 0);
     if (!bestPlan || leftVol < bestPlan.leftVol) bestPlan = { trucks, left: rest, leftVol };
@@ -573,7 +580,7 @@ function renderVerdict() {
   const v = $("#verdict"); v.innerHTML = "";
   if (!plan) return;
   const used = plan.trucks.filter(t => t.placed.length);
-  const lines = used.map(tr => { const T = tr.truck; return `${tr.label}: ${tr.placed.length} dona, hajm ${Math.round(tr.vol / (T.L * T.W * T.H) * 100)}%, og'irlik ${fmt(tr.kg / 1000, 1)} t / ${fmt(T.kg / 1000, 1)} t`; });
+  const lines = plan.trucks.map((tr, i) => { const T = tr.truck; return `${i + 1}. ${tr.label}: ${tr.placed.length} dona, hajm ${Math.round(tr.vol / (T.L * T.W * T.H) * 100)}%, og'irlik ${fmt(tr.kg / 1000, 1)} t / ${fmt(T.kg / 1000, 1)} t`; });
   let cls = "good", head = `Hammasi sig'di — ${used.length} fura kerak`;
   if (plan.left.length) {
     const kg = plan.left.reduce((s, p) => s + p.kg, 0), vol = plan.left.reduce((s, p) => s + p.L * p.W * p.H, 0) / 1e6;
@@ -620,23 +627,40 @@ function groupItems(list) {
   for (const p of list) { const g = m.get(p.ci) || { ci: p.ci, name: p.name, color: p.color, dims: `${p.L}×${p.W}×${p.H}`, qty: 0, vol: 0, kg: 0 }; g.qty++; g.vol += p.L * p.W * p.H / 1e6; g.kg += p.kg; m.set(p.ci, g); }
   return [...m.values()].sort((a, b) => a.ci - b.ci);
 }
-function groupTable(groups) {
+// Yukni bir furadan boshqasiga ko'chirish: joriy taqsimotni "qotirib", so'ralgan donani ko'chiramiz
+function movePieces(ci, from, to, qty) {
+  const cnt = {}; plan.trucks.forEach((tr, k) => { const n = tr.placed.filter(p => p.ci === ci).length; if (n) cnt[k] = n; });
+  const p = pins[ci] = {}; for (const k in cnt) p[k] = cnt[k];
+  if (from >= 0) { p[from] = Math.max(0, (p[from] || 0) - qty); if (!p[from]) delete p[from]; }
+  p[to] = (p[to] || 0) + qty;
+  run();
+  toast(`${qty} dona ${cargo[ci].name} → ${to + 1}-fura`);
+}
+function groupTable(groups, from) {
   const tot = groups.reduce((a, g) => ({ qty: a.qty + g.qty, vol: a.vol + g.vol, kg: a.kg + g.kg }), { qty: 0, vol: 0, kg: 0 });
+  const targets = plan.trucks.map((tr, k) => k).filter(k => k !== from);
+  const moveCell = g => {
+    if (!targets.length) return el("td", {});
+    const q = el("input", { type: "number", min: 1, max: g.qty, value: g.qty, style: "width:56px" });
+    const sel = el("select", {}, ...targets.map(k => el("option", { value: k }, (k + 1) + "-fura")));
+    return el("td", {}, el("div", { class: "row", style: "flex-wrap:nowrap;gap:4px" }, q, sel, el("button", { class: "icon", title: "Ko'chirish", onclick: () => movePieces(g.ci, from, +sel.value, Math.min(g.qty, Math.max(1, Math.round(+q.value) || 1))) }, "→")));
+  };
   return el("div", { class: "tscroll" }, el("table", {},
-    el("thead", {}, el("tr", {}, el("th", {}, "Yuk"), el("th", { class: "num" }, "O'lcham sm"), el("th", { class: "num" }, "Dona"), el("th", { class: "num" }, "m³"), el("th", { class: "num" }, "kg"))),
-    el("tbody", {}, ...groups.map(g => el("tr", {}, el("td", {}, el("span", { class: "legend", style: "--c:" + g.color }, el("span", {}, g.name))), el("td", { class: "num" }, g.dims), el("td", { class: "num" }, g.qty), el("td", { class: "num" }, fmt(g.vol, 2)), el("td", { class: "num" }, fmt(g.kg, 0)))),
-      el("tr", { style: "font-weight:600" }, el("td", {}, "Jami"), el("td", {}), el("td", { class: "num" }, tot.qty), el("td", { class: "num" }, fmt(tot.vol, 1)), el("td", { class: "num" }, fmt(tot.kg, 0))))));
+    el("thead", {}, el("tr", {}, el("th", {}, "Yuk"), el("th", { class: "num" }, "O'lcham sm"), el("th", { class: "num" }, "Dona"), el("th", { class: "num" }, "m³"), el("th", { class: "num" }, "kg"), el("th", {}, "Ko'chirish"))),
+    el("tbody", {}, ...groups.map(g => el("tr", {}, el("td", {}, el("span", { class: "legend", style: "--c:" + g.color }, el("span", {}, g.name))), el("td", { class: "num" }, g.dims), el("td", { class: "num" }, g.qty), el("td", { class: "num" }, fmt(g.vol, 2)), el("td", { class: "num" }, fmt(g.kg, 0)), moveCell(g))),
+      el("tr", { style: "font-weight:600" }, el("td", {}, "Jami"), el("td", {}), el("td", { class: "num" }, tot.qty), el("td", { class: "num" }, fmt(tot.vol, 1)), el("td", { class: "num" }, fmt(tot.kg, 0)), el("td", {})))));
 }
 function renderByTruck() {
   const box = $("#byTruck"); box.innerHTML = "";
   if (!plan) return;
+  if (Object.keys(pins).length) box.append(el("div", { class: "row", style: "margin-bottom:10px" }, el("span", { class: "hint" }, "Taqsimot qo'lda o'zgartirilgan."), el("button", { onclick: () => { pins = {}; run(); toast("Avtomatik taqsimlandi"); } }, "Avtomatik taqsimlash")));
   plan.trucks.forEach((tr, i) => {
     const T = tr.truck;
     box.append(el("div", { style: "margin-bottom:16px" },
       el("h2", { style: "font-size:18px;margin-bottom:6px" }, `${i + 1}. ${tr.label}`, el("span", { class: "hint", style: "font-family:var(--mono);font-weight:400;text-transform:none;letter-spacing:0" }, `${tr.placed.length} dona · ${fmt(tr.vol / 1e6, 1)} m³ (${Math.round(tr.vol / (T.L * T.W * T.H) * 100)}%) · ${fmt(tr.kg / 1000, 2)} t (${Math.round(tr.kg / T.kg * 100)}%)`)),
-      groupTable(groupItems(tr.placed))));
+      tr.placed.length ? groupTable(groupItems(tr.placed), i) : el("p", { class: "hint" }, "Bo'sh. Boshqa furadan yuk ko'chirishingiz mumkin.")));
   });
-  if (plan.left.length) box.append(el("div", {}, el("h2", { style: "font-size:18px;margin-bottom:6px;color:var(--bad)" }, "Sig'madi"), groupTable(groupItems(plan.left))));
+  if (plan.left.length) box.append(el("div", {}, el("h2", { style: "font-size:18px;margin-bottom:6px;color:var(--bad)" }, "Sig'madi"), el("p", { class: "hint", style: "margin:0 0 6px" }, "Furaga ko'chirsangiz, o'sha furada birinchi navbatda joylanadi; joy bo'lmasa yana shu yerga qaytadi."), groupTable(groupItems(plan.left), -1)));
 }
 function renderResult() {
   renderByTruck();
@@ -649,7 +673,7 @@ function renderResult() {
     el("td", { class: "num" }, fmt(p.x / 100, 2)), el("td", { class: "num" }, fmt(p.y / 100, 2)), el("td", { class: "num" }, 1 + Math.round(p.z / p.H))))));
   tb.append(frag);
 }
-function showPlan() { activeTruck = -1; renderVerdict(); showTruck(); renderResult(); }
+function showPlan() { if (!plan || activeTruck >= (plan.trucks.length || 0)) activeTruck = -1; renderVerdict(); showTruck(); renderResult(); }
 function run() {
   if (!cargo.length) { plan = null; showPlan(); return; }
   if (!fleet.length) { plan = { trucks: [], left: [] }; showPlan(); return toast("Fura qo'shing"); }

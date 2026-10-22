@@ -99,6 +99,13 @@ button.link { background: none; border: none; color: var(--muted); text-decorati
 .toast { position: fixed; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 4px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; }
 .toast.show { opacity: 1; }
 details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+.thumb { width: 44px; height: 44px; object-fit: cover; border-radius: 4px; border: 1px solid var(--line); cursor: zoom-in; display: block; background: var(--panel2); }
+.thumb.none { display: grid; place-items: center; color: var(--muted); font-size: 10px; cursor: default; }
+.cargo-table .d { display: none; } .detail .cargo-table .d { display: table-cell; }
+.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.8); display: grid; place-items: center; z-index: 30; padding: 20px; cursor: zoom-out; }
+.lightbox img { max-width: 100%; max-height: 90vh; border-radius: 6px; }
+.lightbox .cap { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); color: #fff; font-size: 14px; background: rgba(0,0,0,.6); padding: 6px 12px; border-radius: 4px; }
+#cargo td { padding-block: 3px; }
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
 </style>
 
@@ -218,14 +225,15 @@ details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
   <div class="row" style="justify-content:space-between;margin-bottom:10px">
     <h2 style="margin:0"><span class="n">≡</span> Barcha yuklar — qaysi furaga tushdi</h2>
     <div class="row">
-      <label class="row" style="gap:6px;font-size:13px">Ko'rsatish: <select id="cargoFilter"><option value="all">hammasi</option><option value="left">sig'maganlar</option><option value="skip">qoldirilganlar</option><option value="extra">qo'shimcha yuklar</option></select></label>
+      <label class="row" style="gap:6px;font-size:13px">Ko'rsatish: <select id="cargoFilter"><option value="all">hammasi</option><option value="loaded">yuklanadiganlar</option><option value="left">sig'maganlar</option><option value="skip">yuklanmaydiganlar</option><option value="extra">qo'shimcha yuklar</option></select></label>
       <input type="search" id="cargoSearch" placeholder="qidirish…" style="width:150px">
+      <label class="row" style="gap:6px;font-size:13px"><input type="checkbox" id="detailToggle"> batafsil ustunlar</label>
     </div>
   </div>
-  <p class="hint" style="margin:0 0 8px">Muhimlik: <b>Shart</b> — birinchi joylanadi, <b>Oddiy</b> — joy qolsa, <b>Qolsin</b> — bu reysda yuklanmaydi. Qatorni o'zgartirish uchun ✎ ni bosing.</p>
-  <div class="tscroll" style="max-height:560px;overflow-y:auto">
+  <p class="hint" style="margin:0 0 8px"><b>Yuklash</b> katakchasini olib tashlasangiz — yuk furaga kirmaydi (keyingi reys). <b>Shart</b> — birinchi navbatda joylanadi. Rasmni bosib kattalashtiring.</p>
+  <div class="tscroll" style="max-height:600px;overflow-y:auto">
   <table class="cargo-table" id="cargo">
-    <thead><tr><th class="num">#</th><th>Nomi</th><th class="num">O'lcham sm (U×E×B)</th><th class="num">Dona</th><th class="num">m³</th><th class="num">kg/dona</th><th class="num">Jami kg</th><th title="Ustiga boshqa yuk qo'yish mumkin">Ust</th><th>Muhimlik</th><th>Qayerda</th><th></th></tr></thead>
+    <thead><tr><th>Rasm</th><th class="num">#</th><th>Nomi</th><th class="num">Dona</th><th class="num">m³</th><th class="num">kg</th><th class="num d">O'lcham sm (U×E×B)</th><th class="num d">kg/dona</th><th class="d" title="Ustiga boshqa yuk qo'yish mumkin">Ust</th><th>Yuklash</th><th>Shart</th><th>Qayerda</th><th class="d"></th></tr></thead>
     <tbody></tbody>
   </table>
   </div>
@@ -235,6 +243,7 @@ details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 // ---------- Ma'lumotlar ----------
 // Ichki o'lchamlar sm da. Kub va tonna — kargo aytadigan raqamlar.
@@ -294,43 +303,64 @@ function whereCell(ci, qty) {
   }
   return td;
 }
+function thumb(c) {
+  if (!c.img) return el("div", { class: "thumb none" }, "rasm yo'q");
+  const im = el("img", { class: "thumb", src: c.img, alt: c.name, loading: "lazy" });
+  im.onclick = () => showLightbox(c);
+  return im;
+}
+function showLightbox(c) {
+  let i = 0; const list = c.imgs || [c.img];
+  const img = el("img", { src: list[0], alt: c.name }), cap = el("div", { class: "cap" }, `${c.name} · ${c.qty} dona · ${c.L}×${c.W}×${c.H} sm` + (list.length > 1 ? ` · rasm 1/${list.length} (bosib keyingisi)` : ""));
+  const box = el("div", { class: "lightbox" }, img, cap);
+  box.onclick = e => { if (e.target === img && list.length > 1) { i = (i + 1) % list.length; img.src = list[i]; cap.textContent = cap.textContent.replace(/rasm \d+/, "rasm " + (i + 1)); } else box.remove(); };
+  document.body.append(box);
+}
+// Yuklash / Shart katakchalari
+function loadCtl(c) {
+  const cb = el("input", { type: "checkbox", title: "Furaga yuklansin" }); cb.checked = c.pri !== 3;
+  cb.onchange = () => { c.pri = cb.checked ? 2 : 3; pins = {}; renderCargo(); scheduleRun(); }; return cb;
+}
+function mustCtl(c) {
+  const cb = el("input", { type: "checkbox", title: "Birinchi navbatda joylansin" }); cb.checked = c.pri === 1; cb.disabled = c.pri === 3;
+  cb.onchange = () => { c.pri = cb.checked ? 1 : 2; pins = {}; renderCargo(); scheduleRun(); }; return cb;
+}
 function renderCargo() {
   const tb = $("#cargo tbody"); tb.innerHTML = "";
   const filt = $("#cargoFilter").value, q = $("#cargoSearch").value.trim().toLowerCase();
   const frag = document.createDocumentFragment();
   cargo.forEach((c, i) => {
     const w = whereIs(i);
-    if (filt === "left" && !w.left) return; if (filt === "skip" && c.pri !== 3) return; if (filt === "extra" && !c.extra) return;
+    if (filt === "left" && !w.left) return; if (filt === "skip" && c.pri !== 3) return; if (filt === "loaded" && c.pri === 3) return; if (filt === "extra" && !c.extra) return;
     if (q && !c.name.toLowerCase().includes(q)) return;
-    const vol = c.L * c.W * c.H * c.qty / 1e6;
+    const vol = c.L * c.W * c.H * c.qty / 1e6, dim = c.pri === 3 ? "opacity:.55" : "";
     const name = el("td", {}, el("span", { class: "legend", style: "--c:" + c.color }, el("span", {}, c.name + (c.extra ? " ·qo'shimcha" : ""))));
     if (editing === i) {
       const bind = (k, inp) => { inp.onchange = () => { c[k] = inp.type === "checkbox" ? inp.checked : inp.type === "number" ? +inp.value : inp.value; pins = {}; renderCargo(); scheduleRun(); }; return inp; };
       const num = (k, step = 1, w = 58) => bind(k, el("input", { type: "number", min: 0, step, value: Math.round(c[k] * 10) / 10, style: "width:" + w + "px" }));
       frag.append(el("tr", { style: "background:var(--panel2)" },
-        el("td", { class: "num" }, i + 1),
+        el("td", {}, thumb(c)), el("td", { class: "num" }, i + 1),
         el("td", {}, bind("name", el("input", { type: "text", value: c.name, style: "width:160px" }))),
-        el("td", { class: "num" }, el("div", { class: "row", style: "flex-wrap:nowrap;gap:2px;justify-content:flex-end" }, num("L"), "×", num("W"), "×", num("H"))),
-        el("td", { class: "num" }, num("qty", 1, 56)), el("td", { class: "num" }, fmt(vol, 2)),
-        el("td", { class: "num" }, num("kg", 0.1, 68)), el("td", { class: "num" }, fmt(c.kg * c.qty, 0)),
-        el("td", {}, (() => { const cb = el("input", { type: "checkbox" }); cb.checked = c.stack; return bind("stack", cb); })()),
-        el("td", {}, priSelect(c)), whereCell(i, c.qty),
-        el("td", {}, el("div", { class: "row", style: "flex-wrap:nowrap;gap:4px" }, el("button", { class: "icon", title: "Tayyor", onclick: () => { editing = -1; renderCargo(); } }, "✓"), el("button", { class: "icon", title: "O'chirish", onclick: () => { cargo.splice(i, 1); editing = -1; pins = {}; renderCargo(); run(); } }, "×")))));
+        el("td", { class: "num" }, num("qty", 1, 56)), el("td", { class: "num" }, fmt(vol, 2)), el("td", { class: "num" }, fmt(c.kg * c.qty, 0)),
+        el("td", { class: "num d" }, el("div", { class: "row", style: "flex-wrap:nowrap;gap:2px;justify-content:flex-end" }, num("L"), "×", num("W"), "×", num("H"))),
+        el("td", { class: "num d" }, num("kg", 0.1, 68)),
+        el("td", { class: "d" }, (() => { const cb = el("input", { type: "checkbox" }); cb.checked = c.stack; return bind("stack", cb); })()),
+        el("td", {}, loadCtl(c)), el("td", {}, mustCtl(c)), whereCell(i, c.qty),
+        el("td", { class: "d" }, el("div", { class: "row", style: "flex-wrap:nowrap;gap:4px" }, el("button", { class: "icon", title: "Tayyor", onclick: () => { editing = -1; renderCargo(); } }, "✓"), el("button", { class: "icon", title: "O'chirish", onclick: () => { cargo.splice(i, 1); editing = -1; pins = {}; renderCargo(); run(); } }, "×")))));
     } else {
-      frag.append(el("tr", {},
-        el("td", { class: "num" }, i + 1), name,
-        el("td", { class: "num" }, `${c.L}×${c.W}×${c.H}`),
-        el("td", { class: "num" }, c.qty), el("td", { class: "num" }, fmt(vol, 2)),
-        el("td", { class: "num" }, fmt(c.kg, 1)), el("td", { class: "num" }, fmt(c.kg * c.qty, 0)),
-        el("td", {}, c.stack ? "ha" : "yo'q"),
-        el("td", {}, priSelect(c)), whereCell(i, c.qty),
-        el("td", {}, el("button", { class: "icon", title: "Tahrirlash", onclick: () => { editing = i; renderCargo(); } }, "✎"))));
+      frag.append(el("tr", { style: dim },
+        el("td", {}, thumb(c)), el("td", { class: "num" }, i + 1), name,
+        el("td", { class: "num" }, c.qty), el("td", { class: "num" }, fmt(vol, 2)), el("td", { class: "num" }, fmt(c.kg * c.qty, 0)),
+        el("td", { class: "num d" }, `${c.L}×${c.W}×${c.H}`), el("td", { class: "num d" }, fmt(c.kg, 1)), el("td", { class: "d" }, c.stack ? "ha" : "yo'q"),
+        el("td", {}, loadCtl(c)), el("td", {}, mustCtl(c)), whereCell(i, c.qty),
+        el("td", { class: "d" }, el("button", { class: "icon", title: "Tahrirlash", onclick: () => { editing = i; renderCargo(); } }, "✎"))));
     }
   });
   tb.append(frag);
   renderSums(); renderExtra();
 }
 $("#cargoFilter").onchange = renderCargo; $("#cargoSearch").oninput = renderCargo;
+$("#detailToggle").onchange = e => document.body.classList.toggle("detail", e.target.checked);
 const PRI = { 1: "Shart", 2: "Oddiy", 3: "Qolsin" };
 function priSelect(c) {
   const s = el("select", { style: "padding:3px 4px" }, ...Object.entries(PRI).map(([v, t]) => el("option", { value: v }, t)));
@@ -357,7 +387,7 @@ function renderSums() {
     f.append(el("div", {}, el("b", {}, n), el("span", {}, "fura")), el("div", {}, el("b", {}, fmt(v, 0)), el("span", {}, "m³ sig'im")), el("div", {}, el("b", {}, fmt(kg / 1000, 1)), el("span", {}, "t sig'im"))); }
 }
 function addCargo(c = {}) {
-  cargo.push({ name: c.name || "Yuk " + (cargo.length + 1), L: c.L || 120, W: c.W || 80, H: c.H || 150, kg: c.kg || 0, qty: c.qty || 1, stack: c.stack !== false, pri: c.pri || 2, extra: !!c.extra, color: c.color || PALETTE[cargo.length % PALETTE.length] });
+  cargo.push({ name: c.name || "Yuk " + (cargo.length + 1), L: c.L || 120, W: c.W || 80, H: c.H || 150, kg: c.kg || 0, qty: c.qty || 1, stack: c.stack !== false, pri: c.pri || 2, extra: !!c.extra, row: c.row, blk: c.blk, img: c.img, imgs: c.imgs, color: c.color || PALETTE[cargo.length % PALETTE.length] });
 }
 function addByVolume(name, vol, kg, qty, extra = {}) {
   const s = Math.round(Math.cbrt(vol / qty) * 100); // har bo'lak kub shaklida
@@ -406,13 +436,42 @@ const COLS = {
 };
 const excelDate = n => { const d = new Date(Math.round((n - 25569) * 86400000)); return isNaN(d) ? "" : String(d.getUTCDate()).padStart(2, "0") + "." + String(d.getUTCMonth() + 1).padStart(2, "0"); };
 const num = v => parseFloat(String(v).replace(",", ".").replace(/[^\d.\-]/g, "")) || 0;
+// Excel ichidagi rasmlar: qator raqami -> zip ichidagi fayl yo'li (drawing anchor orqali)
+function imagePathsByRow(files) { // files: { path: xml-string } — faqat xml/rels kerak
+  const get = p => files[p] || "";
+  const wb = get("xl/workbook.xml"), wbRels = get("xl/_rels/workbook.xml.rels");
+  const rid = (wb.match(/<sheet [^>]*r:id="([^"]+)"/) || [])[1]; if (!rid) return {};
+  const relTarget = (rels, id) => (new RegExp(`<Relationship [^>]*Id="${id}"[^>]*>`).exec(rels) || [""])[0].match(/Target="([^"]+)"/)?.[1];
+  const norm = (base, t) => t.startsWith("/") ? t.slice(1) : (base + t).replace(/[^/]+\/\.\.\//g, "");
+  const sheetPath = norm("xl/", relTarget(wbRels, rid) || ""); if (!sheetPath) return {};
+  const sheetRels = get(sheetPath.replace(/([^/]+)$/, "_rels/$1.rels"));
+  const dT = (sheetRels.match(/<Relationship [^>]*Target="([^"]*drawings\/[^"]*\.xml)"/) || [])[1]; if (!dT) return {}; // vmlDrawing emas
+  const drawingPath = norm(sheetPath.replace(/[^/]+$/, ""), dT);
+  const dRels = get(drawingPath.replace(/([^/]+)$/, "_rels/$1.rels")), drawing = get(drawingPath);
+  const out = {};
+  for (const m of drawing.matchAll(/<xdr:(twoCellAnchor|oneCellAnchor)[\s\S]*?<\/xdr:\1>/g)) {
+    const a = m[0], row = +(a.match(/<xdr:from>[\s\S]*?<xdr:row>(\d+)<\/xdr:row>/) || [])[1], emb = (a.match(/r:embed="([^"]+)"/) || [])[1];
+    if (!emb || isNaN(row)) continue;
+    const t = relTarget(dRels, emb); if (!t) continue;
+    (out[row] = out[row] || []).push(norm(drawingPath.replace(/[^/]+$/, ""), t));
+  }
+  return out;
+}
+async function extractImages(buf) {
+  const zip = await JSZip.loadAsync(buf), files = {};
+  for (const p of Object.keys(zip.files)) if (/\.(xml|rels)$/.test(p) && !/sharedStrings|styles|theme|calcChain/.test(p)) files[p] = await zip.file(p).async("string");
+  const map = imagePathsByRow(files), res = {};
+  for (const [row, ps] of Object.entries(map)) for (const p of ps) { const f = zip.file(p); if (f && !/\.emf$/i.test(p)) (res[row] = res[row] || []).push(URL.createObjectURL(await f.async("blob"))); }
+  return res;
+}
 function parseKargo(rows) {
   // "Sklad holati": har blokda sarlavha "OMBOR GA KELGAN SANA | YUK SONI (MESTA) | Pcs | TOTAL Pcs | SIZE (L) | SIZE (W) | SIZE (H) | JAMI KUBA | KG | JAMI KG | ..."
   const out = []; let hi = -1, n = 0;
-  for (const r of rows) {
+  for (let ri = 0; ri < rows.length; ri++) {
+    const r = rows[ri];
     const c = r.map(x => String(x).trim());
     const low = c.map(x => x.toLowerCase());
-    if (low.some(x => x.includes("size (l)"))) { hi = 1; continue; }
+    if (low.some(x => x.includes("size (l)"))) { hi = ri; continue; }
     if (hi < 0) continue;
     if (!/^\d+$/.test(c[0]) || c[0] === "0" || /total/i.test(c[0])) continue;
     const qty = Math.round(num(c[1])); if (!qty) continue;
@@ -420,7 +479,7 @@ function parseKargo(rows) {
     let note = "";
     if (!(L && W && H)) { if (!vol) continue; L = W = H = Math.cbrt(vol / qty); note = " (o'lchamsiz)"; }
     n++;
-    out.push({ name: "#" + n + " " + excelDate(+c[0]) + (c[11] ? " " + c[11] : "") + note, L: Math.round(L * 100), W: Math.round(W * 100), H: Math.round(H * 100), kg, qty, stack: true });
+    out.push({ name: "#" + n + " " + excelDate(+c[0]) + (c[11] ? " " + c[11] : "") + note, L: Math.round(L * 100), W: Math.round(W * 100), H: Math.round(H * 100), kg, qty, stack: true, row: ri, blk: hi });
   }
   return out;
 }
@@ -444,9 +503,10 @@ function parseGeneric(rows) {
 function readSheet(file) {
   toast("Excel o'qilmoqda…");
   const r = new FileReader();
-  r.onload = e => {
+  r.onload = async e => {
     try {
-      const wb = XLSX.read(new Uint8Array(e.target.result), { type: "array", cellStyles: false });
+      const buf = e.target.result;
+      const wb = XLSX.read(new Uint8Array(buf), { type: "array", cellStyles: false });
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: "" });
       let items = parseKargo(rows);
       if (!items.length) items = parseGeneric(rows);
@@ -454,6 +514,16 @@ function readSheet(file) {
       const keep = cargo.filter(c => c.extra); // qo'shimcha yuklar saqlanib qoladi
       cargo = []; pins = {}; items.forEach(it => addCargo(it)); keep.forEach(c => cargo.push(c)); renderCargo();
       toast(`${cargo.length} xil, ${fmt(cargoQty(), 0)} dona yuk o'qildi`); run();
+      // rasmlarni alohida, sekinroq yuklaymiz
+      if (/\.xlsx$/i.test(file.name)) {
+        try { const imgs = await extractImages(buf); let n = 0;
+          cargo.forEach(c => { if (c.row == null) return;
+            let u = imgs[c.row]; // o'z qatorida bo'lmasa — shu partiya (blok) ichidagi rasm
+            if (!u && c.blk != null) for (let r = c.blk; r <= c.row + 1 && !u; r++) u = imgs[r];
+            if (u) { c.img = u[0]; c.imgs = u; n++; } });
+          if (n) { renderCargo(); renderResult(); toast(n + " ta rasm yuklandi"); }
+        } catch (err) { console.warn("rasm", err); }
+      }
     } catch (err) { toast("Xato: " + err.message); }
   };
   r.readAsArrayBuffer(file);
@@ -740,7 +810,7 @@ function showTruck() {
 // Har fura uchun yuk turlari bo'yicha jamlanma: [{ci, name, qty, vol, kg}]
 function groupItems(list) {
   const m = new Map();
-  for (const p of list) { const g = m.get(p.ci) || { ci: p.ci, name: p.name, color: p.color, dims: `${p.L}×${p.W}×${p.H}`, qty: 0, vol: 0, kg: 0 }; g.qty++; g.vol += p.L * p.W * p.H / 1e6; g.kg += p.kg; m.set(p.ci, g); }
+  for (const p of list) { const g = m.get(p.ci) || { ci: p.ci, name: p.name, color: p.color, dims: `${p.L}×${p.W}×${p.H}`, qty: 0, vol: 0, kg: 0, c: cargo[p.ci] }; g.qty++; g.vol += p.L * p.W * p.H / 1e6; g.kg += p.kg; m.set(p.ci, g); }
   return [...m.values()].sort((a, b) => a.ci - b.ci);
 }
 // Yukni bir furadan boshqasiga ko'chirish: joriy taqsimotni "qotirib", so'ralgan donani ko'chiramiz
@@ -767,7 +837,7 @@ function groupTable(groups, from) {
   };
   return el("div", { class: "tscroll" }, el("table", {},
     el("thead", {}, el("tr", {}, el("th", {}, "Yuk"), el("th", { class: "num" }, "O'lcham sm"), el("th", { class: "num" }, "Dona"), el("th", { class: "num" }, "m³"), el("th", { class: "num" }, "kg"), el("th", {}, "Ko'chirish"))),
-    el("tbody", {}, ...groups.map(g => el("tr", {}, el("td", {}, el("span", { class: "legend", style: "--c:" + g.color }, el("span", {}, g.name))), el("td", { class: "num" }, g.dims), el("td", { class: "num" }, g.qty), el("td", { class: "num" }, fmt(g.vol, 2)), el("td", { class: "num" }, fmt(g.kg, 0)), moveCell(g))),
+    el("tbody", {}, ...groups.map(g => el("tr", {}, el("td", {}, el("div", { class: "row", style: "flex-wrap:nowrap;gap:8px" }, thumb(g.c || {}), el("span", { class: "legend", style: "--c:" + g.color }, el("span", {}, g.name)))), el("td", { class: "num" }, g.dims), el("td", { class: "num" }, g.qty), el("td", { class: "num" }, fmt(g.vol, 2)), el("td", { class: "num" }, fmt(g.kg, 0)), moveCell(g))),
       el("tr", { style: "font-weight:600" }, el("td", {}, "Jami"), el("td", {}), el("td", { class: "num" }, tot.qty), el("td", { class: "num" }, fmt(tot.vol, 1)), el("td", { class: "num" }, fmt(tot.kg, 0)), el("td", {})))));
 }
 function renderByTruck() {

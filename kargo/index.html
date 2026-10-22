@@ -130,7 +130,7 @@ details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
         <button id="sampleCargo">Namuna</button>
         <button id="clearCargo">Tozalash</button>
       </div>
-      <p class="hint" style="margin:8px 0 0">To'liq ro'yxat — sahifa pastidagi "Barcha yuklar" jadvalida: har bir yuk qaysi furaga tushgani ko'rinadi va tahrirlasa bo'ladi.</p>
+      <p class="hint" style="margin:8px 0 0">Holat (yuklar, furalar, belgilar) shu brauzerda saqlanib qoladi; rasmlar saqlanmaydi — kerak bo'lsa Excelni qayta yuklang. To'liq ro'yxat — sahifa pastidagi "Barcha yuklar" jadvalida.</p>
     </section>
 
     <section class="panel">
@@ -278,6 +278,14 @@ const fmt = (n, d = 1) => Number(n).toLocaleString("ru-RU", { maximumFractionDig
 function toast(m) { const t = $("#toast"); t.textContent = m; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2600); }
 function pctClass(p) { return p > 100 ? "bad" : p > 90 ? "warn" : "good"; }
 let runTimer; function scheduleRun() { clearTimeout(runTimer); runTimer = setTimeout(run, 400); }
+// Oxirgi holatni brauzerda saqlaymiz (rasmlar saqlanmaydi — ular uchun Excelni qayta yuklash kerak)
+const STORE = "fura-rejasi-v1";
+function saveState() {
+  try { localStorage.setItem(STORE, JSON.stringify({ cargo: cargo.map(({ img, imgs, ...c }) => c), fleet, pins, t: Date.now() })); } catch (e) { /* xotira yo'q yoki bloklangan */ }
+}
+function loadState() {
+  try { const s = JSON.parse(localStorage.getItem(STORE) || "null"); if (!s || !Array.isArray(s.cargo) || !Array.isArray(s.fleet)) return false; cargo = s.cargo; fleet = s.fleet; pins = s.pins || {}; return cargo.length > 0 || fleet.length > 0; } catch (e) { return false; }
+}
 const cargoVol = () => cargo.reduce((s, c) => s + c.L * c.W * c.H * c.qty, 0) / 1e6;
 const cargoKg = () => cargo.reduce((s, c) => s + c.kg * c.qty, 0);
 const cargoQty = () => cargo.reduce((s, c) => s + c.qty, 0);
@@ -441,7 +449,7 @@ function renderExtra() {
       el("td", {}, el("button", { class: "icon", title: "O'chirish", onclick: () => { cargo.splice(i, 1); pins = {}; renderCargo(); run(); } }, "×")))))));
 }
 $("#mAdvBtn").onclick = () => { const a = $("#mAdv"); a.hidden = !a.hidden; $("#mAdvBtn").textContent = a.hidden ? "aniq o'lcham kiritish" : "aniq o'lchamni yashirish"; };
-$("#clearCargo").onclick = () => { cargo = []; pins = {}; plan = null; renderCargo(); showPlan(); };
+$("#clearCargo").onclick = () => { cargo = []; pins = {}; plan = null; renderCargo(); showPlan(); saveState(); };
 $("#sampleCargo").onclick = () => { cargo = []; pins = {}; SAMPLE.forEach(s => addCargo({ ...s })); renderCargo(); run(); toast("Namuna yuklandi"); };
 $("#addByVol").onclick = () => {
   const qty = Math.max(1, Math.round(+$("#mQty").value || 1)), vol = +$("#mVol").value, kg = +$("#mKg").value, pri = +$("#mPri").value, stack = $("#mStack").checked;
@@ -924,6 +932,7 @@ function renderResult() {
 }
 function showPlan() { if (!plan || activeTruck >= (plan.trucks.length || 0)) activeTruck = -1; renderVerdict(); showTruck(); renderResult(); renderCargo(); }
 function run() {
+  saveState();
   if (!cargo.length) { plan = null; showPlan(); return; }
   if (!fleet.length) { plan = { trucks: [], left: [] }; showPlan(); return toast("Fura qo'shing"); }
   const t0 = performance.now();
@@ -978,8 +987,13 @@ $("#dlRes").onclick = () => {
 
 // ---------- Boshlang'ich holat ----------
 init3D();
-fleet.push({ ...PRESETS[0], count: 1 }, { ...PRESETS[1], count: 1 }); renderFleet();
-SAMPLE.forEach(s => addCargo({ ...s })); renderCargo();
-run();
+if (loadState()) {
+  renderFleet(); renderCargo(); run();
+  if (cargo.some(c => c.row != null)) toast("Oxirgi holat tiklandi. Rasmlar uchun Excelni qayta yuklang.");
+} else {
+  fleet.push({ ...PRESETS[1], count: 2 }); renderFleet();   // kargo aytgan: 2 ta 80 m³ / 28.5 t
+  SAMPLE.forEach(s => addCargo({ ...s })); renderCargo();
+  run();
+}
 </script>
 </head></html>

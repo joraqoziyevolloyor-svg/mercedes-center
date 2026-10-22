@@ -248,8 +248,11 @@ body.pen .penbar .tools{display:flex}
 @media print{.bar,.tabs,.abar,.nop,.backb,.seg,.search,#modal,.foot{display:none!important}.app{max-width:none;border:0;padding:0}.two .pL{display:none}.two .pR{display:block!important}body{background:#fff;color:#000}.k3{display:block}.k3>div+div{border:0}.print-only{display:block!important}}
 .print-only{display:none}
 .two.wide:not(.has) .pR{display:block}
-.k3{display:block}
 @media (min-width:960px){.kpi b{font-size:clamp(20px,2.2vw,34px)}.two.wide .kpi b,.k3 .kpi b{font-size:clamp(18px,1.7vw,26px)}}
+
+.obsh{display:flex;justify-content:space-between;gap:12px;padding:14px 20px;border-top:2px solid var(--line-2);font-weight:600;font-size:17px}
+@media (min-width:960px){.obsh{padding-left:28px;padding-right:28px}}
+.btn.in{background:var(--accent);color:var(--accent-ink)}.btn.in.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
 </style>
 </head>
 <body>
@@ -370,7 +373,7 @@ const D=window.LEDGER_DATA; const TODAY=(()=>{const t=new Date();return t.getFul
 const KEY='ledger_proto_v2';
 let S={};
 S.ev=S.ev||{}; S.cust=S.cust||[]; S.seq=S.seq||1; S.meta=S.meta||{}; S.rate=S.rate||12450; S.kas=S.kas||{days:{},who:[]}; S.kas.days=S.kas.days||{}; S.kas.who=S.kas.who||[];
-if(window.LOGIN_USER)S.user=window.LOGIN_USER; S.user=S.user||'Olloyor';
+if(window.LOGIN_USER)S.user=window.LOGIN_USER; S.user=S.user||'Admin';
 const $=id=>document.getElementById(id);
 const save=()=>{if(typeof saveCache==='function')saveCache();else updBk()};
 const CUST=[...D.customers,...S.cust];
@@ -478,7 +481,7 @@ function saveCache(){try{localStorage.setItem(CACHE,JSON.stringify({seq:SYNC.seq
 /* amallar serverga navbat bilan, yozilgan tartibda yuboriladi (bog'liq yozuvlar tartibi buzilmasin) */
 SYNC.chain=Promise.resolve();
 function emit(kind,key,data){const o={kind,key,data,by:S.user,at:stamp()};applyOp(o);saveCache();
-  if(!window.DAFTAR_API){toast('Mahalliy rejim: server yo’q');return o}
+  if(!window.DAFTAR_API)return o;
   SYNC.chain=SYNC.chain.then(()=>sendOp(o)).catch(()=>{});return o}
 async function sendOp(o){if(SYNC.pending.length){SYNC.pending.push(o);saveCache();return}
   try{const j=await api('/api/daftar/op',{kind:o.kind,key:o.key,data:o.data,at:o.at});const r=j.ops[0];o.seq=r.seq;SYNC.seq=Math.max(SYNC.seq,r.seq);SYNC.ops.push({...r});saveCache();setSyncSt('')}
@@ -507,6 +510,7 @@ function legacyOps(){let L=null;try{L=JSON.parse(localStorage.getItem('ledger_pr
 async function boot(){let c=null;try{c=JSON.parse(localStorage.getItem(CACHE)||'null')}catch(e){}
   if(c&&c.S){Object.assign(S,{ev:c.S.ev||{},cust:c.S.cust||[],meta:c.S.meta||{},rate:c.S.rate||S.rate,kas:c.S.kas||{days:{},who:[]},bkAt:c.S.bkAt,bkN:c.S.bkN});S.kas.days=S.kas.days||{};S.kas.who=S.kas.who||[];
     for(const x of S.cust){if(!CID.has(x.id)){CUST.push(x);CID.set(x.id,x)}}SYNC.seq=c.seq||0;SYNC.pending=c.pending||[]}
+  if(window.NAMUNA&&/namuna/.test(location.search)&&!Object.keys(S.kas.days).length)NAMUNA();
   render();
   if(!window.DAFTAR_API)return;
   const n=await pull();
@@ -774,7 +778,7 @@ function backupMenu(){const n=newCount();modal(`<h3>Zaxira nusxa</h3><p class="h
 function doBackup(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));a.download=`daftar-zaxira-${TODAY}.json`;a.click();S.bkAt=new Date().toLocaleString('ru-RU').slice(0,16);S.bkN=newCount();save();closeM();render()}
 function doRestore(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!j||!j.ev)throw 0;if(!confirm('Hozirgi yangi yozuvlar fayldagisi bilan almashtiriladi. Davom etilsinmi?'))return;localStorage.setItem(KEY,JSON.stringify(j));location.reload()}catch(e){toast("Fayl noto'g'ri")}};r.readAsText(f)}
 /* ================= kassa ================= */
-const CATS={in:['Savdo',"Qarz to'lovi",'Boshqa kirim'],out:["Ta'minotchiga","Yo'l / yulkira",'Oylik / avans',"Xo'jalik",'Rahbarga berildi','Qaytarish','Boshqa']};
+const CATS={in:['Savdo',"Qarz to'lovi",'Boshqa kirim'],out:["Ta'minotchiga",'Qurilish',"Xo'jalik",'Oylik / avans',"Yo'l / yulkira",'Uyga','Qaytarish','Boshqa']};
 let kdir='in',kcat='Savdo',kform=false,kclose=0,kstep=1,kday=null,KC={cU:'',cS:'',cB:'',why:''},KR={p:'oy',f:'',t:'',flt:'all'};
 const DAYS=()=>S.kas.days;
 function dayOf(d){return DAYS()[d]||null}
@@ -787,10 +791,14 @@ function dayCalc(d){const inU=dsum(d,'in','$'),outU=dsum(d,'out','$'),inS=dsum(d
   const debtU=dsum(d,'in','$',"Qarz to'lovi"),saleU=dsum(d,'in','$','Savdo'),otherU=dsum(d,'in','$','Boshqa kirim');
   return{inU,outU,inS,outS,debtU,saleU,otherU,needU:(d.open.usd||0)+inU-outU,needS:(d.open.uzs||0)+inS-outS,n:(d.ent||[]).filter(k=>!k.void).length}}
 const money=(u,s)=>`${fmt(u)} $${s?' · '+fmt0(s)+" so'm":''}`;
-function kasRow(k,locked){return att(k.void?'b-none':k.dir==='in'?'b-ok':'b-no',`${esc(k.cat)} · ${esc(k.who)}`,`${k.tm}${k.why?' · “'+esc(k.why)+'”':''}${k.by&&k.by!==S.user?' · '+esc(k.by):''}`,`<span class="${k.dir==='in'?'c-ok':'c-no'}">${k.dir==='in'?'+':'−'}${k.cur==='$'?fmt(k.a)+' $':fmt0(k.a)+" so'm"}</span>`,locked?null:`kasMenu('${k.id}')`,k.void?'void':'')}
+const amtStr=k=>(k.dir==='in'?'+':'−')+(k.cur==='$'?fmt(k.a)+' $':fmt0(k.a)+" so'm");
+function kasGroups(ent){const out=[];let prev=null;for(const k of [...ent].reverse()){if(prev&&k.g&&k.g===prev.g){prev.parts.push(k);continue}prev={...k,parts:[k]};out.push(prev)}return out}
+function kasRow(k,locked){const parts=k.parts||[k];const am=parts.map(amtStr).join('<br>');
+  return att(k.void?'b-none':k.dir==='in'?'b-acc':'b-no',`${esc(k.who)}${k.why?' <span class="c-mut">· '+esc(k.why)+'</span>':''}`,`${k.tm} · ${esc(k.cat)}${k.by&&k.by!==S.user?' · '+esc(k.by):''}`,`<span class="${k.dir==='in'?'c-acc':'c-no'}">${am}</span>`,locked?null:`kasMenu('${k.id}')`,k.void?'void':'')}
+const obsh=c=>`<div class="obsh"><span>Obshiy</span><span class="mono">${fmt0(c.needS)} so'm${' + '+fmt(c.needU)+' $'}</span></div>`;
 function kasMenu(id){const r=findKas(id);if(!r||r.day.closed)return;const k=r.e;modal(`<h3>${esc(k.cat)} · ${esc(k.who)}</h3><p>${k.dir==='in'?'+':'−'}${k.cur==='$'?fmt(k.a)+' $':fmt0(k.a)+" so'm"} · ${k.tm} · ${esc(k.by||'')}${k.why?'<br>“'+esc(k.why)+'”':''}${k.cid?'<br><span class="hint">daftardagi mijoz to’loviga bog’langan</span>':''}</p>
   <div class="menu2">${k.void?'<span class="hint">Bekor qilingan</span>':`<button onclick="kasVoid('${k.id}')">Bekor qilish (chizilgan holda qoladi)</button>`}${k.cid?`<button onclick="closeM();openCust('${k.cid}')">Mijoz daftarini ochish</button>`:''}<button onclick="closeM()">Yopish</button></div>`)}
-function kasVoid(id){const r=findKas(id);if(!r||r.day.closed)return;if(!confirm('Bekor qilinsinmi?'))return;emit('kasset',r.day.d+':'+r.e.id,{void:1,voidBy:S.user});
+function kasVoid(id){const r=findKas(id);if(!r||r.day.closed)return;if(!confirm('Bekor qilinsinmi?'))return;for(const e of (r.e.g?r.day.ent.filter(x=>x.g===r.e.g):[r.e]))emit('kasset',r.day.d+':'+e.id,{void:1,voidBy:S.user});
   if(r.e.cid&&r.e.evId)emit('evset',r.e.cid+':'+r.e.evId,{void:1,voidBy:S.user});closeM();render()}
 function vOpenDay(){const lc=lastClosed();const pu=lc?lc.closed.cntU:0,ps=lc?lc.closed.cntS:0;
   return `<div class="closewrap"><div class="status"><span class="dot" style="background:var(--warn-bar)"></span><div><b>Bugun kun ochilmagan · ${fd(TODAY)}</b><small>${lc?'oxirgi yopilgan kun '+fd(lc.d)+' · qoldiq '+money(pu,ps):'Birinchi kun. Kassadagi hozirgi pulni yozing, shundan hisob boshlanadi.'}</small></div></div>
@@ -802,19 +810,18 @@ function openToday(){const d={d:TODAY,open:{usd:+String($('oU').value).replace(/
 function vKassa(){const d=openDay();const tdy=dayOf(TODAY);
   if(!d){if(tdy&&tdy.closed){kday=TODAY;return vDay(TODAY,true)}return vOpenDay()}
   const c=dayCalc(d);const dsk=isDesk();if(dsk)kform=true;
-  const whoList=kdir==='in'?["Do'kon savdo","Optom savdo",...S.kas.who]:[...S.kas.who,'Rahbar'];
+  const whoList=[...new Set([...(kdir==='in'?['Savdo']:[]),...S.kas.who])];
   return `<div class="k3" id="k3" style="${k3cols()}"><div><div class="status"><span class="dot" style="background:var(--ok)"></span><div><b>Kun ochiq · ${c.n} ta yozuv</b><small>${fd(TODAY)} · kassir ${esc(d.by)} · ochilishda ${money(d.open.usd,d.open.uzs)}</small></div></div>
-  <div class="kpi"><div><b class="c-ok">+${fmt0(c.inU)}</b><span>kirim, $${c.inS?' · +'+fmt0(c.inS)+" so'm":''}</span></div><div><b class="c-no">−${fmt0(c.outU)}</b><span>chiqim, $${c.outS?' · −'+fmt0(c.outS)+" so'm":''}</span></div><div><b>${fmt0(c.needU)}</b><span>kassada bo'lishi kerak, $${c.needS?' · '+fmt0(c.needS)+" so'm":''}</span></div></div>
+  <div class="kpi"><div><b class="c-acc">+${fmt0(c.inU)}</b><span>kirim, $${c.inS?' · +'+fmt0(c.inS)+" so'm":''}</span></div><div><b class="c-no">−${fmt0(c.outU)}</b><span>chiqim, $${c.outS?' · −'+fmt0(c.outS)+" so'm":''}</span></div><div><b>${fmt0(c.needU)}</b><span>kassada bo'lishi kerak, $${c.needS?' · '+fmt0(c.needS)+" so'm":''}</span></div></div>
   <div class="abar"><button class="btn in ${kdir==='in'?'':'ghost'}" onclick="openForm('in')">+ Kirim</button><button class="btn out ${kdir==='out'?'':'ghost'}" onclick="openForm('out')">− Chiqim</button></div>
-  ${kform?`<div class="form"><div class="chips" id="kCats">${CATS[kdir].map(x=>`<button class="${x===kcat?'on':''}">${x}</button>`).join('')}</div>
-   <div class="row2"><label class="fld"><span class="l">Summa</span><input id="kA" inputmode="decimal" placeholder="0"></label><label class="fld"><span class="l">Valyuta</span><select id="kC"><option>$</option><option>so'm</option></select></label></div>
-   <label class="fld"><span class="l">${kdir==='in'?'Kimdan':'Kimga'}</span><input id="kW" list="kWho" autocomplete="off" placeholder="${kdir==='in'?"do'kon savdo, optom savdo yoki mijoz":"ta'minotchi, xodim, rahbar…"}"><datalist id="kWho">${whoList.map(x=>`<option>${esc(x)}</option>`).join('')}</datalist></label>
-   <div class="chips" id="kWq">${(kdir==='in'?["Do'kon savdo","Optom savdo","Mijoz…"]:["Ta'minotchi…","Xodim…","Rahbar"]).map(x=>`<button type="button">${x}</button>`).join('')}</div>
+  ${kform?`<div class="form">
+   <div class="row2"><label class="fld"><span class="l">Dollar</span><input id="kA" inputmode="decimal" placeholder="0 $"></label><label class="fld"><span class="l">So'm</span><input id="kS" inputmode="numeric" placeholder="0 so'm"></label></div>
+   <label class="fld"><span class="l">${kdir==='in'?'Kimdan / nima':'Kimga / nima uchun'}</span><input id="kW" list="kWho" autocomplete="off" placeholder="${kdir==='in'?'Savdo, mijoz ismi…':'Sheben, Ustalar choyga, ism…'}"><datalist id="kWho">${whoList.map(x=>`<option>${esc(x)}</option>`).join('')}</datalist></label>
+   <div class="chips" id="kCats">${CATS[kdir].map(x=>`<button class="${x===kcat?'on':''}">${x}</button>`).join('')}</div>
    <div id="kCust" hidden><label class="fld"><span class="l">Mijoz (daftardan)</span><input id="kCq" autocomplete="off" placeholder="ism yozing"><div class="ac" id="kCac" style="display:none;position:static;margin-top:4px"></div></label></div>
-   <label class="fld"><span class="l">Nima uchun</span><textarea id="kY" rows="2" placeholder="masalan: Namanganga yuk eltish, 2 ta quti"></textarea></label>
    <div class="err c-no" id="kErr"></div><div class="row2"><button class="btn ghost mob" onclick="kform=false;render()">Bekor</button><button class="btn" id="kSave" style="grid-column:${dsk?'1 / -1':'auto'}">Saqlash</button></div></div>`:''}</div>
   <div><div class="rsz dsk" data-i="0"></div><div class="lbl2"><span class="grow">Bugungi yozuvlar</span><span class="mono">${c.n}</span></div>
-  ${(d.ent||[]).map(k=>kasRow(k,false)).join('')||'<div class="empty">Hali yozuv yo’q. Yuqoridan + Kirim yoki − Chiqim.</div>'}</div>
+  ${kasGroups(d.ent||[]).map(k=>kasRow(k,false)).join('')||'<div class="empty">Hali yozuv yo’q. Yuqoridan + Kirim yoki − Chiqim.</div>'}${obsh(c)}</div>
   <div><div class="rsz dsk" data-i="1"></div><div class="lbl2">Kunni yopish</div>
   <div class="cmp"><div class="ln"><span>Kassaga tushgan kirim</span><span class="mono">${fmt(c.inU)} $</span></div>
    <div class="ln c-mut"><span>− qarz to'lovlari (daftardan)</span><span class="mono">${fmt(c.debtU)} $</span></div>
@@ -829,21 +836,27 @@ function wireResize(){const g=$('k3');if(!g)return;g.querySelectorAll('.rsz').fo
    h.onpointermove=ev=>{const dx=ev.clientX-x0;KW[i]=Math.max(220,Math.min(640,i===0?w0+dx:w0-dx));g.style.cssText=k3cols()};
    h.onpointerup=()=>{h.classList.remove('on');h.onpointermove=null;try{localStorage.setItem('dk-k3',JSON.stringify(KW))}catch(e){}}};
   h.ondblclick=()=>{KW=[360,380];g.style.cssText=k3cols();try{localStorage.removeItem('dk-k3')}catch(e){}}})}
-function openForm(dd){kdir=dd;kcat=CATS[dd][0];kform=true;render();setTimeout(()=>$('kA')&&$('kA').focus(),0)}
+function openForm(dd){kdir=dd;kcat=dd==='in'?'Savdo':'Boshqa';kform=true;render();setTimeout(()=>$('kA')&&$('kA').focus(),0)}
 let kCid=null;
 function wireKassa(){const d=openDay();if(!d)return;wireResize();
   const calc=()=>{const c=dayCalc(d);KC.cB=$('kBito').value;const b=+String(KC.cB).replace(/\s/g,'').replace(',','.')||0;const df=c.saleU-b;$('kDiff').textContent=fmt(Math.abs(df))+' $';$('kDiffL').textContent=!KC.cB?"Bito'dagi savdoni yozing":df>=0?"Bito'ga kiritilmagan savdo":"Bito'da bor, kassaga tushmagan"};$('kBito').oninput=calc;calc();
   if(!kform)return;kCid=null;
   $('kCats').querySelectorAll('button').forEach(b=>b.onclick=()=>{kcat=b.textContent;$('kCats').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));$('kCust').hidden=kcat!=="Qarz to'lovi";if(kcat==="Qarz to'lovi")$('kCq').focus()});
-  $('kWq').querySelectorAll('button').forEach(b=>b.onclick=()=>{const t=b.textContent;const w=$('kW');if(t==='Mijoz…'){kcat="Qarz to'lovi";$('kCats').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.textContent===kcat));$('kCust').hidden=false;$('kCq').focus();return}if(t.endsWith('…')){w.value='';w.focus()}else{w.value=t;$('kA').focus()}});
+  const setCat=c=>{if(!CATS[kdir].includes(c))return;kcat=c;$('kCats').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.textContent===kcat));$('kCust').hidden=kcat!=="Qarz to'lovi"};
+  const catFor=who=>{const w=who.trim().toLowerCase();if(!w)return null;if(/^(savdo|савдо)$/.test(w))return 'Savdo';for(const dd of Object.values(DAYS()))for(const e of dd.ent||[])if(!e.void&&e.dir===kdir&&(e.who||'').toLowerCase()===w)return e.cat;return null};
+  $('kW').oninput=()=>{const c=catFor($('kW').value);if(c)setCat(c)};
+  $('kS').oninput=()=>{const v=$('kS').value.replace(/\D/g,'');$('kS').value=v.replace(/\B(?=(\d{3})+(?!\d))/g,' ')};
+  $('kA').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('kS').focus()}};$('kS').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('kW').focus()}};$('kW').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('kSave').click()}};
   const cq=$('kCq'),ac=$('kCac');cq.oninput=()=>{kCid=null;const m=matcher(cq.value);const hits=cq.value.trim().length<2?[]:CUST.filter(c=>c.kind!=='sherik'&&(m(c.name)||m(c.city))).slice(0,8);ac.innerHTML=hits.map(c=>`<div data-id="${c.id}"><span>${esc(c.name)}</span><small>${esc(c.city||'')} · ${fmt(balance(c))} $</small></div>`).join('');ac.style.display=hits.length?'':'none'};
   ac.onmousedown=e=>{const el=e.target.closest('div[data-id]');if(!el)return;const c=CID.get(el.dataset.id);kCid=c.id;cq.value=c.name;$('kW').value=c.name;ac.style.display='none';$('kA').focus()};
-  $('kSave').onclick=()=>{const a=+String($('kA').value).replace(/\s/g,'').replace(',','.'),who=$('kW').value.trim(),why=$('kY').value.trim(),curr=$('kC').value;
-    if(!a){$('kErr').textContent='Summani kiriting';$('kA').focus();return}if(!who){$('kErr').textContent=(kdir==='in'?'Kimdan':'Kimga')+' ekanini yozing';$('kW').focus();return}if(!why&&kcat!=='Savdo'&&kcat!=="Qarz to'lovi"){$('kErr').textContent='Nima uchun ekanini yozing';$('kY').focus();return}
-    if(kcat==="Qarz to'lovi"&&!kCid){$('kErr').textContent='Mijozni daftardan tanlang (yoki «Boshqa kirim» deb yozing)';$('kCq').focus();return}
-    const o={dir:kdir,cat:kcat,who,why,a,cur:curr};
-    if(kCid){const c=CID.get(kCid);const u=curr==="so'm"?Math.round(a/S.rate*100)/100:a;const ev=pushEv(c,{t:'pay',d:TODAY,kind:'naqd',amt:u,note:(curr==="so'm"?`${a.toLocaleString('ru-RU')} so'm, kurs ${S.rate}`:'')+(why?' · '+why:'')+' · kassadan'});o.cid=c.id;o.evId=ev.id;const k=kasAdd(o);emit('evset',c.id+':'+ev.id,{kasId:k.id})}else kasAdd(o);
-    kform=!isDesk()?false:true;render();toast('Kassaga yozildi');if(isDesk()){const A=$('kA');if(A)A.focus()}}}
+  $('kSave').onclick=()=>{const a=+String($('kA').value).replace(/\s/g,'').replace(',','.')||0,s=+String($('kS').value).replace(/\D/g,'')||0,who=$('kW').value.trim();
+    if(!a&&!s){$('kErr').textContent='Summani kiriting: dollar yoki so\u2019m';$('kA').focus();return}if(!who){$('kErr').textContent=(kdir==='in'?'Kimdan':'Kimga')+' / nima uchun — yozing';$('kW').focus();return}
+    if(kcat==="Qarz to'lovi"&&!kCid){$('kErr').textContent='Mijozni daftardan tanlang (yoki boshqa turni tanlang)';$('kCq').focus();return}
+    const g=a&&s?newId('g'):'';const mk=(amt,cur)=>({dir:kdir,cat:kcat,who,why:'',a:amt,cur,...(g?{g}:{})});
+    if(kCid){const c=CID.get(kCid);const u=Math.round((a+(s?s/S.rate:0))*100)/100;const ev=pushEv(c,{t:'pay',d:TODAY,kind:'naqd',amt:u,note:(s?`${s.toLocaleString('ru-RU')} so'm, kurs ${S.rate}`:'')+' · kassadan'});const ids=[];
+      if(a){const k=kasAdd({...mk(a,'$'),cid:c.id,evId:ev.id});ids.push(k.id)}if(s){const k=kasAdd({...mk(s,"so'm"),cid:c.id,evId:ev.id});ids.push(k.id)}emit('evset',c.id+':'+ev.id,{kasId:ids[0]})}
+    else{if(a)kasAdd(mk(a,'$'));if(s)kasAdd(mk(s,"so'm"))}
+    kform=!isDesk()?false:true;render();toast('Yozildi');if(isDesk()){const A=$('kA');if(A)A.focus()}}}
 /* ---- day close ---- */
 function vClose(){const d=openDay();if(!d){kclose=0;return vKassa()}const c=dayCalc(d);
   const num=v=>+String(v).replace(/\s/g,'').replace(',','.')||0;const cntU=num(KC.cU),cntS=num(KC.cS),bito=num(KC.cB);const dU=cntU-c.needU,dS=cntS-c.needS,dB=c.saleU-bito;const bad=Math.abs(dU)>0.5||Math.abs(dS)>500;
@@ -913,11 +926,11 @@ function wireKunlar(){const s=$('kmseg');if(s)s.querySelectorAll('button').forEa
 function vDay(k,standalone){const d=DAYS()[k];const c=d.closed||dayCalc(d);const z=d.closed;
   return `${standalone?'':`<button class="backb" onclick="kday=null;render()">‹ Kunlar</button>`}
   <div class="status"><span class="dot" style="background:${z?'var(--ok)':'var(--warn-bar)'}"></span><div><b>${fd(k)} · ${z?'🔒 yopilgan':'ochiq'}</b><small>kassir ${esc(d.by)} · ochilishda ${money(d.open.usd,d.open.uzs)}${z?' · yopdi '+esc(z.by)+' '+z.at:''}</small></div></div>
-  <div class="kpi"><div><b class="c-ok">+${fmt0(c.inU)}</b><span>kirim, $${c.inS?' · '+fmt0(c.inS)+" so'm":''}</span></div><div><b class="c-no">−${fmt0(c.outU)}</b><span>chiqim, $${c.outS?' · '+fmt0(c.outS)+" so'm":''}</span></div><div><b>${fmt0(z?z.cntU:c.needU)}</b><span>${z?'sanalgan, $':'bo’lishi kerak, $'}${z&&z.dU?' · farq '+(z.dU>0?'+':'')+fmt(z.dU):''}</span></div></div>
+  <div class="kpi"><div><b class="c-acc">+${fmt0(c.inU)}</b><span>kirim, $${c.inS?' · '+fmt0(c.inS)+" so'm":''}</span></div><div><b class="c-no">−${fmt0(c.outU)}</b><span>chiqim, $${c.outS?' · '+fmt0(c.outS)+" so'm":''}</span></div><div><b>${fmt0(z?z.cntU:c.needU)}</b><span>${z?'sanalgan, $':'bo’lishi kerak, $'}${z&&z.dU?' · farq '+(z.dU>0?'+':'')+fmt(z.dU):''}</span></div></div>
   ${z?`<div class="ln2"><span>Savdodan tushgan / Bito'da</span><span class="r">${fmt(z.saleU)} / ${fmt(z.bito)} $</span></div><div class="ln2"><span>${z.dB>=0?"Bito'ga kiritilmagan savdo":"Bito'da bor, kassaga tushmagan"}</span><span class="r c-warn">${fmt(Math.abs(z.dB))} $</span></div>${z.why?`<div class="ln2"><span>Farq sababi</span><span class="r" style="font-family:inherit;white-space:normal;text-align:right">${esc(z.why)}</span></div>`:''}`:''}
   ${(d.log||[]).map(l=>`<div class="ln2 c-warn"><span>Ochildi ${l.at} · ${esc(l.by)}</span><span class="r" style="font-family:inherit;white-space:normal;text-align:right">${esc(l.why)}</span></div>`).join('')}
   <div class="abar nop">${z?`<button class="btn" onclick="printDay('${k}')">PDF · imzo uchun</button><button class="btn ghost" onclick="reopenDay('${k}')">Ochish (sabab bilan)</button>`:`<button class="btn" onclick="go('kassa')">Bugungi kassaga</button>`}</div>
-  <div class="lbl2"><span class="grow">Yozuvlar</span><span class="mono">${(d.ent||[]).length}</span></div>${(d.ent||[]).map(x=>kasRow(x,!!z)).join('')||'<div class="empty">Yozuv yo’q</div>'}`}
+  <div class="lbl2"><span class="grow">Yozuvlar</span><span class="mono">${(d.ent||[]).length}</span></div>${kasGroups(d.ent||[]).map(x=>kasRow(x,!!z)).join('')||'<div class="empty">Yozuv yo’q</div>'}${obsh(c)}`}
 function printDay(k){const d=DAYS()[k];if(!d)return;const c=d.closed||dayCalc(d);const z=d.closed;const r=x=>`${x.cur==='$'?fmt(x.a)+' $':fmt0(x.a)+" so'm"}`;
   const w=window.open('','_blank');if(!w){toast('Brauzer yangi oynani bloklaydi');return}
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Kassa ${fd(k)}</title><style>body{font:13px/1.4 system-ui,sans-serif;color:#000;margin:24px;max-width:760px}h1{font-size:18px;margin:0 0 4px}table{width:100%;border-collapse:collapse;margin:10px 0}td,th{border-bottom:1px solid #ccc;padding:5px 6px;text-align:left;vertical-align:top}td.r,th.r{text-align:right;white-space:nowrap}.void{text-decoration:line-through;color:#888}.sig{display:flex;gap:40px;margin-top:40px}.sig div{flex:1;border-top:1px solid #000;padding-top:6px}small{color:#555}</style></head><body>

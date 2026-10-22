@@ -299,6 +299,7 @@ body.pen .penbar .tools{display:flex}
     </div>
     <button id="lb" style="width:100%;min-height:44px;padding:10px;font:inherit;font-weight:600;background:var(--accent);color:var(--accent-ink);border:none;border-radius:8px;cursor:pointer">Kirish</button>
     <div id="le" style="color:var(--no);font-size:13px;margin-top:8px;min-height:18px"></div>
+    <button type="button" id="ltg" hidden style="width:100%;min-height:44px;margin-top:6px;padding:10px;font:inherit;font-weight:600;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:8px;cursor:pointer">Telegram orqali bog'lash</button>
   </form>
 </div>
 <style>.ll{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:4px}.li{width:100%;padding:11px;font:inherit;font-size:16px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);box-sizing:border-box;margin-bottom:10px}</style>
@@ -330,7 +331,7 @@ body.pen .penbar .tools{display:flex}
     const txt=await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
     window.LEDGER_DATA=JSON.parse(txt);
   }
-  function show(st){step=st;$('lb').disabled=false;$('s-login').hidden=st!=='login';$('s-code').hidden=st!=='code';$('s-setup').hidden=st!=='setup';
+  function show(st){step=st;$('lb').disabled=false;$('le').style.color='';$('ltg').hidden=true;$('s-login').hidden=st!=='login';$('s-code').hidden=st!=='code';$('s-setup').hidden=st!=='setup';
     $('lb').textContent=st==='setup'?'Kodni saqlash':st==='code'?'Tasdiqlash':'Kirish';
     $('lt').textContent=st==='code'?'Yangi qurilma: Telegramdagi kodni kiriting.':st==='setup'?'Birinchi kirish: o\'zingizga shaxsiy kod o\'rnating.':'Ismingizni tanlang va shaxsiy kodingizni kiriting.';
     const f=st==='code'?$('lc'):st==='setup'?$('ln1'):$('lp');setTimeout(()=>f.focus(),0)}
@@ -347,7 +348,18 @@ body.pen .penbar .tools{display:flex}
         const j=await post('/api/daftar/verify',{name,dev,code});if(j.step)show(j.step);else await finish(j)}
       else{const a=$('ln1').value.trim(),b=$('ln2').value.trim();if(!/^\d{4,6}$/.test(a)){er.textContent='Kod 4–6 ta raqam bo\'lsin';$('ln1').focus();return}if(a!==b){er.textContent='Ikki kod bir xil emas';$('ln2').focus();return}
         btn.disabled=true;btn.textContent='Saqlanmoqda…';const j=await post('/api/daftar/pin',{name,dev,init:INIT,pin:a});await finish(j)}
-    }catch(ex){btn.disabled=false;show(step);er.textContent=ex.message==='pw'?'Kalit mos kelmadi, adminga ayting':ex.message==='net'?'Internet yo\'q yoki fayl ochilmadi':ex.message||'Xato';if(step==='login'){$('lp').value='';$('lp').focus()}}};
+    }catch(ex){btn.disabled=false;show(step);er.textContent=ex.message==='pw'?'Kalit mos kelmadi, adminga ayting':ex.message==='net'?'Internet yo\'q yoki fayl ochilmadi':ex.message||'Xato';if(step==='login'){$('lp').value='';$('lp').focus()}
+      if(/Telegram bog/.test(ex.message||'')){$('ltg').hidden=false}}};
+  /* Telegram Login (oauth.telegram.org, skriptsiz): ismni o'z Telegram hisobiga bog'lash */
+  $('ltg').onclick=async()=>{const n=$('lu').value.trim();if(!n){$('lu').focus();return}try{localStorage.setItem('dname',n)}catch(e){}
+    let bid='';try{bid=(await (await fetch(API+'/api/config')).json()).botId||''}catch(e){}if(!bid){$('le').textContent='Server javob bermadi';return}
+    location.href='https://oauth.telegram.org/auth?bot_id='+encodeURIComponent(bid)+'&origin='+encodeURIComponent(location.origin)+'&request_access=write&return_to='+encodeURIComponent(location.origin+location.pathname)};
+  (async()=>{const m=/[#&?]tgAuthResult=([^&#]+)/.exec(location.hash+'&'+location.search);if(!m)return;try{history.replaceState(null,'',location.pathname)}catch(e){}
+    const er=$('le');try{const raw=decodeURIComponent(m[1]).replace(/-/g,'+').replace(/_/g,'/');const data=JSON.parse(decodeURIComponent(escape(atob(raw+'==='.slice((raw.length+3)%4)))));
+      if(!data||!data.id)throw new Error('Telegram bekor qilindi');if(!name)throw new Error('Ismni tanlab, qaytadan «Telegram orqali bog\'lash» bosing');
+      $('lt').textContent='Telegram bilan bog\'lanmoqda…';const j=await post('/api/daftar/bind',{name,dev,tg:data});
+      er.textContent='';if(j.step==='setup')show('setup');else{show('login');er.style.color='var(--ok)';er.textContent='Telegram bog\'landi. Endi shaxsiy kodingizni kiriting.'}}
+    catch(ex){er.textContent=ex.message||'Xato'}})();
   show('login');
 })();
 </script>

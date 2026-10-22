@@ -705,16 +705,27 @@ function buildPlan() {
     (a, b) => Math.max(b.L, b.W) - Math.max(a.L, a.W) || b.H - a.H, // uzunlar birinchi
     (a, b) => b.kg - a.kg || b.H - a.H,                          // og'irlar birinchi
   ];
+  // Og'ir yuk turlari (jami og'irligi eng katta furaning 25% dan ko'p) furalar orasida sig'imga proporsional bo'linadi,
+  // aks holda hammasi birinchi furaga tushib, u og'irlikdan to'lib, hajmi bo'sh qoladi.
+  const allTrucks = fleet.flatMap(t => Array.from({ length: t.count }, () => t));
+  const maxKg = Math.max(0, ...allTrucks.map(t => t.kg));
+  const heavy = new Set();
+  cargo.forEach((c, ci) => { if (!(pins[ci] && Object.keys(pins[ci]).length) && c.pri !== 3 && c.kg * c.qty > 0.25 * maxKg && allTrucks.length > 1) heavy.add(ci); });
   let bestPlan = null;
   for (const ord of orders) {
     let rest = items.slice(); const trucks = []; let k = 0;
     for (const t of fleet) for (let i = 0; i < t.count; i++, k++) {
-      const mine = rest.filter(it => it.pin === k || it.pin == null), others = rest.filter(it => it.pin != null && it.pin !== k);
+      // bu furaning og'ir yuk ulushi: qolgan dona × (bu fura sig'imi / qolgan furalar sig'imi)
+      const capLeft = allTrucks.slice(k).reduce((s, x) => s + x.kg, 0), quota = {};
+      for (const ci of heavy) { const n = rest.filter(it => it.ci === ci && it.pin == null).length; quota[ci] = k === allTrucks.length - 1 ? n : Math.ceil(n * t.kg / capLeft); }
+      const mine = rest.filter(it => { if (it.pin === k) return true; if (it.pin != null) return false; if (heavy.has(it.ci)) { if (quota[it.ci] <= 0) return false; quota[it.ci]--; } return true; });
+      const others = rest.filter(it => !mine.includes(it));
       const r = packTruck(t, mine, ord);
       r.label = t.name.replace(/\s*\(.*\)$/, "") + (t.count > 1 ? " #" + (i + 1) : ""); trucks.push(r);
       rest = r.left.concat(others);
     }
     // "Shart" yuk qolib ketsa — bu eng yomon natija
+    // ulush tufayli kechiktirilgan og'ir yuklar oxirgi furada ham sig'masa — "sig'madi"
     const leftVol = rest.reduce((s, p) => s + p.L * p.W * p.H * (p.pri === 1 ? 1000 : 1), 0);
     if (!bestPlan || leftVol < bestPlan.leftVol) bestPlan = { trucks, left: rest, leftVol, skipped };
     if (!rest.length) break;

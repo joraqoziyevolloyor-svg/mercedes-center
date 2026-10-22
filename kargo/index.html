@@ -633,8 +633,11 @@ function packBoxes(truck, boxes, seed = []) {
     eps = eps.filter(e => e.x < truck.L && e.y < truck.W && e.z < truck.H && !inside(e)).sort((a, b) => a.z - b.z || a.x - b.x || a.y - b.y);
     eps = eps.filter((e, i) => !i || e.x !== eps[i - 1].x || e.y !== eps[i - 1].y || e.z !== eps[i - 1].z);
   }
+  const failed = new Set(); // shu o'lchamdagi quti hech qayerga sig'magan bo'lsa, yangi joy ochilmaguncha qayta urinmaymiz
   for (const it of boxes) {
     if (kg + it.kg > truck.kg) { left.push(it); continue; }
+    const fkey = it.L + "|" + it.W + "|" + it.H + "|" + it.stack;
+    if (failed.has(fkey)) { left.push(it); continue; }
     let best = null;
     const ors = it.L === it.W ? [[it.L, it.W]] : [[it.L, it.W], [it.W, it.L]];
     for (const ep of eps) {
@@ -649,7 +652,8 @@ function packBoxes(truck, boxes, seed = []) {
         if (!best || score < best.score) best = { ...box, score, ep };
       }
     }
-    if (!best) { left.push(it); continue; }
+    if (!best) { failed.add(fkey); left.push(it); continue; }
+    failed.clear();
     const pb = { ...it, x: best.x, y: best.y, z: best.z, L: best.L, W: best.W, rot: best.L !== it.L };
     placed.push(pb); for (const i of cellsOf(pb)) (grid[i] = grid[i] || []).push(pb);
     kg += it.kg;
@@ -658,6 +662,7 @@ function packBoxes(truck, boxes, seed = []) {
     eps = eps.filter(e => e !== best.ep).concat(fresh).filter(e => e.x < truck.L && e.y < truck.W && e.z < truck.H && !inside(e));
     eps.sort((a, b) => a.z - b.z || a.x - b.x || a.y - b.y);
     eps = eps.filter((e, i) => !i || e.x !== eps[i - 1].x || e.y !== eps[i - 1].y || e.z !== eps[i - 1].z);
+    if (eps.length > 600) eps.length = 600; // eng pastki/oldingi 600 nuqta yetarli — tezlik uchun
   }
   return { placed: placed.filter(p => !seed.includes(p)), left, kg };
 }
@@ -711,12 +716,15 @@ function explodeTower(t) {
 }
 // "Devor qurish": fura uzunligi bo'ylab ko'ndalang qatorlar (devorlar). Har devor uchun enlari yig'indisi
 // fura eniga eng to'liq sig'adigan ustunlar to'plami tanlanadi (0/1 knapsack, ikki burilish) — en bo'ylab tasma isrofi kamayadi.
-function packWalls(truck, towers) {
+// Takrorlanadigan tasodifiy sonlar (GRASP uchun): bir xil kirish — bir xil natija
+function makeRng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function packWalls(truck, towers, rng = null) {
   const placed = [], grid = {}; let rest = towers.slice(), x = 0, kg = 0;
   const W = Math.round(truck.W);
   while (rest.length && x < truck.L) {
-    // tayanch ustun — tartibdagi birinchi (eng muhim / eng baland)
-    const anchor = rest.find(t => kg + t.kg <= truck.kg && Math.min(t.L, t.W) <= truck.L - x);
+    // tayanch ustun — tartibdagi birinchi (eng muhim / eng baland); GRASP rejimida birinchi 3 tadan tasodifiy
+    const elig = []; for (const t of rest) { if (kg + t.kg <= truck.kg && Math.min(t.L, t.W) <= truck.L - x) { elig.push(t); if (elig.length >= 3) break; } }
+    const anchor = elig.length ? elig[rng ? Math.floor(rng() * elig.length) : 0] : null;
     if (!anchor) break;
     let best = null;
     for (const D of new Set([anchor.L, anchor.W])) {            // devor chuqurligi: tayanchning u yoki bu tomoni
@@ -759,10 +767,14 @@ function packWalls(truck, towers) {
   }
   return { placed, left: rest, kg };
 }
-function packTruck(truck, items, order, strategy = "ep", mix = false) {
+function packTruck(truck, items, order, strategy = "ep", mix = false, rng = null) {
   // qo'lda biriktirilganlar, keyin "Shart" yuklar, keyin qolganlar
   const towers = makeTowers(truck, items, mix).sort((a, b) => (b.pinned - a.pinned) || (a.pri - b.pri) || order(a, b));
-  let r = strategy === "wall" ? packWalls(truck, towers) : packBoxes(truck, towers);
+  if (rng) for (let i = 0; i < towers.length - 1; i++) { // GRASP: tartibni ozgina aralashtiramiz (faqat bir xil muhimlikdagilar orasida)
+    const j = i + Math.floor(rng() * Math.min(4, towers.length - i));
+    if (j !== i && towers[i].pinned === towers[j].pinned && towers[i].pri === towers[j].pri) { const t = towers[i]; towers[i] = towers[j]; towers[j] = t; }
+  }
+  let r = strategy === "wall" ? packWalls(truck, towers, rng) : packBoxes(truck, towers);
   const placed = [];
   for (const t of r.placed) for (const p of explodeTower(t)) placed.push(p);
   if (strategy === "wall" && r.left.length) {                  // devorlar orasidagi bo'shliqlarga qolgan ustunlarni ham sinab ko'ramiz
@@ -805,11 +817,18 @@ function buildPlan() {
   const heavy = new Set();
   cargo.forEach((c, ci) => { if (!(pins[ci] && Object.keys(pins[ci]).length) && c.pri !== 3 && c.kg * c.qty > 0.25 * maxKg && allTrucks.length > 1) heavy.add(ci); });
   let bestPlan = null;
-  const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now()), t0 = now(), BUDGET = 2500; // ms
-  // Strategiyalar: devor qurish / ekstremal nuqtalar × oddiy / aralash ustunlar × tartiblar; vaqt chegarasida eng yaxshisi qoladi
-  const combos = []; for (const strategy of ["wall", "ep"]) for (const mix of [false, true]) for (const ord of orders) combos.push({ strategy, mix, ord });
-  for (const { strategy, mix, ord } of combos) {
-    if (bestPlan && now() - t0 > BUDGET) break;
+  const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now()), t0 = now(), BUDGET = 3000; // ms
+  // Strategiyalar: devor qurish / ekstremal nuqtalar × oddiy / aralash ustunlar × tartiblar; vaqt chegarasida eng yaxshisi qoladi.
+  // Deterministik kombinatsiyalardan so'ng, vaqt qolsa, eng yaxshi kombinatsiyaning tasodifiy variantlari (GRASP) sinaladi.
+  const combos = [];
+  for (const mix of [false, true]) for (const ord of orders.slice(0, 3)) combos.push({ strategy: "wall", mix, ord });
+  for (const ord of orders.slice(0, 2)) combos.push({ strategy: "ep", mix: true, ord });
+  let seed = 1, graspRuns = 0;
+  for (let ci = 0; ; ci++) {
+    let strategy, mix, ord, rng = null;
+    if (ci < combos.length) ({ strategy, mix, ord } = combos[ci]);
+    else { if (!bestPlan?.combo || now() - t0 > BUDGET || graspRuns >= 40) break; ({ strategy, mix, ord } = bestPlan.combo); rng = makeRng(seed++); graspRuns++; }
+    if (bestPlan && now() - t0 > BUDGET && !rng) break;
     let rest = items.slice(); const trucks = []; let k = 0;
     for (const t of fleet) for (let i = 0; i < t.count; i++, k++) {
       // bu furaning og'ir yuk ulushi: qolgan dona × (bu fura sig'imi / qolgan furalar sig'imi)
@@ -817,16 +836,17 @@ function buildPlan() {
       for (const ci of heavy) { const n = rest.filter(it => it.ci === ci && it.pin == null).length; quota[ci] = k === allTrucks.length - 1 ? n : Math.ceil(n * t.kg / capLeft); }
       const mine = rest.filter(it => { if (it.pin === k) return true; if (it.pin != null) return false; if (heavy.has(it.ci)) { if (quota[it.ci] <= 0) return false; quota[it.ci]--; } return true; });
       const others = rest.filter(it => !mine.includes(it));
-      const r = packTruck(t, mine, ord, strategy, mix);
-      r.label = t.name.replace(/\s*\(.*\)$/, "") + (t.count > 1 ? " #" + (i + 1) : ""); r.strategy = strategy + (mix ? "+mix" : ""); trucks.push(r);
+      const r = packTruck(t, mine, ord, strategy, mix, rng);
+      r.label = t.name.replace(/\s*\(.*\)$/, "") + (t.count > 1 ? " #" + (i + 1) : ""); r.strategy = strategy + (mix ? "+mix" : "") + (rng ? "+grasp" : ""); trucks.push(r);
       rest = r.left.concat(others);
     }
     // "Shart" yuk qolib ketsa — bu eng yomon natija
     // ulush tufayli kechiktirilgan og'ir yuklar oxirgi furada ham sig'masa — "sig'madi"
     const leftVol = rest.reduce((s, p) => s + p.L * p.W * p.H * (p.pri === 1 ? 1000 : 1), 0);
-    if (!bestPlan || leftVol < bestPlan.leftVol) bestPlan = { trucks, left: rest, leftVol, skipped };
+    if (!bestPlan || leftVol < bestPlan.leftVol) bestPlan = { trucks, left: rest, leftVol, skipped, combo: { strategy, mix, ord } };
     if (!rest.length) break;
   }
+  bestPlan.ms = Math.round(now() - t0); bestPlan.graspRuns = graspRuns;
   return bestPlan;
 }
 

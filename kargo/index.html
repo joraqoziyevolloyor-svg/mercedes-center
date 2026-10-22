@@ -661,24 +661,117 @@ function packBoxes(truck, boxes, seed = []) {
   }
   return { placed: placed.filter(p => !seed.includes(p)), left, kg };
 }
-function makeTowers(truck, items) {
+// Ustun: { L, W, H, kg, stack (tepasiga yana qo'ysa bo'ladimi), pri, pinned, pin, items: [{ it, dx, dy, dz, L, W }] }
+function makeTowers(truck, items, mix = false) {
   const groups = new Map();
   for (const it of items) { const k = it.ci + "|" + it.L + "|" + it.W + "|" + it.H + "|" + (it.pin ?? ""); (groups.get(k) || groups.set(k, []).get(k)).push(it); }
-  const towers = [];
+  let towers = [];
   for (const g of groups.values()) {
     const it = g[0], per = it.stack ? Math.max(1, Math.floor(truck.H / it.H)) : 1;
-    for (let i = 0; i < g.length; i += per) { const chunk = g.slice(i, i + per); towers.push({ L: it.L, W: it.W, H: it.H * chunk.length, kg: chunk.reduce((s, x) => s + x.kg, 0), stack: it.stack, pinned: it.pin != null, pri: it.pri, items: chunk }); }
+    for (let i = 0; i < g.length; i += per) { const chunk = g.slice(i, i + per); towers.push({ L: it.L, W: it.W, H: it.H * chunk.length, kg: chunk.reduce((s, x) => s + x.kg, 0), stack: it.stack, pinned: it.pin != null, pin: it.pin, pri: it.pri, items: chunk.map((x, j) => ({ it: x, dx: 0, dy: 0, dz: j * it.H, L: it.L, W: it.W })) }); }
   }
-  return towers;
+  if (!mix) return towers;
+  // Aralash ustunlar: pastligi qolgan ustun ustiga, uning TEPASIGA sig'adigan boshqa ustunni qo'yamiz (balandlik tenglashadi)
+  towers.sort((a, b) => b.L * b.W - a.L * a.W || b.H - a.H);
+  const used = new Set();
+  for (const base of towers) {
+    if (used.has(base)) continue;
+    let cur = base; cur.topL = base.L; cur.topW = base.W;
+    while (cur.stack && cur.H < truck.H - 10) {
+      const room = truck.H - cur.H; let best = null, bestScore = 0;
+      for (const top of towers) {
+        if (top === base || used.has(top) || top.pin !== base.pin || top.mixed) continue;
+        const fits = (top.L <= cur.topL + 0.01 && top.W <= cur.topW + 0.01), fitsR = (top.W <= cur.topL + 0.01 && top.L <= cur.topW + 0.01);
+        if (!fits && !fitsR) continue;
+        // ustun to'liq sig'masa — bir xil yukdan iborat bo'lgani uchun faqat sig'adigan qismini olamiz
+        const ih = top.items[0].it.H, n = Math.min(top.items.length, Math.floor((room + 0.01) / ih));
+        if (n < 1) continue;
+        const kgTop = top.kg * n / top.items.length;
+        if (kgTop > cur.kg * 1.5 + 50) continue;              // og'irni yengil ustiga qo'ymaymiz
+        const score = n * ih * (fits ? top.L * top.W : top.W * top.L) / (base.L * base.W);
+        if (score > bestScore) { bestScore = score; best = { top, rot: !fits && fitsR, n }; }
+      }
+      if (!best) break;
+      const { top, rot, n } = best;
+      let take = top.items;
+      if (n < top.items.length) { take = top.items.slice(0, n); const keep = top.items.slice(n); top.items = keep.map((m, j) => ({ ...m, dz: j * top.items[0].it.H })); top.H = keep.length * keep[0].it.H; top.kg = keep.reduce((s, m) => s + m.it.kg, 0); }
+      else used.add(top);
+      for (const m of take) cur.items.push(rot ? { it: m.it, dx: m.dy, dy: m.dx, dz: cur.H + m.dz, L: m.W, W: m.L } : { it: m.it, dx: m.dx, dy: m.dy, dz: cur.H + m.dz, L: m.L, W: m.W });
+      cur.H += n * take[0].it.H; cur.kg += take.reduce((s, m) => s + m.it.kg, 0); cur.stack = take[0].it.stack; cur.pri = Math.min(cur.pri, top.pri); cur.mixed = true;
+      cur.topL = rot ? top.W : top.L; cur.topW = rot ? top.L : top.W;
+    }
+  }
+  return towers.filter(t => !used.has(t));
 }
-function packTruck(truck, items, order) {
+// Ustunni alohida qutilarga ajratish (ustun burilgan bo'lsa, ichidagilar ham buriladi)
+function explodeTower(t) {
+  return t.items.map(m => t.rot
+    ? { ...m.it, x: t.x + m.dy, y: t.y + m.dx, z: t.z + m.dz, L: m.W, W: m.L, rot: true }
+    : { ...m.it, x: t.x + m.dx, y: t.y + m.dy, z: t.z + m.dz, L: m.L, W: m.W, rot: false });
+}
+// "Devor qurish": fura uzunligi bo'ylab ko'ndalang qatorlar (devorlar). Har devor uchun enlari yig'indisi
+// fura eniga eng to'liq sig'adigan ustunlar to'plami tanlanadi (0/1 knapsack, ikki burilish) — en bo'ylab tasma isrofi kamayadi.
+function packWalls(truck, towers) {
+  const placed = [], grid = {}; let rest = towers.slice(), x = 0, kg = 0;
+  const W = Math.round(truck.W);
+  while (rest.length && x < truck.L) {
+    // tayanch ustun — tartibdagi birinchi (eng muhim / eng baland)
+    const anchor = rest.find(t => kg + t.kg <= truck.kg && Math.min(t.L, t.W) <= truck.L - x);
+    if (!anchor) break;
+    let best = null;
+    for (const D of new Set([anchor.L, anchor.W])) {            // devor chuqurligi: tayanchning u yoki bu tomoni
+      if (x + D > truck.L + 0.01) continue;
+      const cand = []; let kgLeft = truck.kg - kg;
+      for (const t of rest.slice(0, 120)) {                      // nomzodlar: tartibning boshidagi 120 ustun
+        if (t.kg > kgLeft) continue;
+        const opts = [];
+        if (t.L <= D + 0.01 && t.W <= W) opts.push({ w: Math.round(t.W), d: t.L, rot: false });
+        if (t.W <= D + 0.01 && t.L <= W && t.L !== t.W) opts.push({ w: Math.round(t.L), d: t.W, rot: true });
+        if (opts.length) cand.push({ t, opts });
+      }
+      // knapsack: en bo'yicha sig'im W, qiymat = devor ichidagi hajm (+ chuqurligi devorga yaqin bo'lsa bonus)
+      const n = cand.length, dp = new Float64Array((n + 1) * (W + 1)), choice = new Int8Array((n + 1) * (W + 1)).fill(-1);
+      for (let i = 1; i <= n; i++) {
+        const c = cand[i - 1];
+        for (let w = 0; w <= W; w++) {
+          let v = dp[(i - 1) * (W + 1) + w], ch = -1;
+          c.opts.forEach((o, oi) => { if (o.w <= w) { const val = dp[(i - 1) * (W + 1) + w - o.w] + o.w * o.d * c.t.H * (0.8 + 0.2 * o.d / D) + (c.t.pinned ? 1e9 : 0) + (c.t.pri === 1 ? 1e8 : 0); if (val > v) { v = val; ch = oi; } } });
+          dp[i * (W + 1) + w] = v; choice[i * (W + 1) + w] = ch;
+        }
+      }
+      // tanlovni tiklash; og'irlikni ham tekshiramiz (knapsack og'irlikni hisobga olmaydi)
+      const pick = []; let w = W, wkg = 0;
+      for (let i = n; i >= 1; i--) { const ch = choice[i * (W + 1) + w]; if (ch >= 0) { const c = cand[i - 1], o = c.opts[ch]; if (wkg + c.t.kg <= kgLeft) { pick.push({ t: c.t, o }); wkg += c.t.kg; } w -= o.w; } }
+      if (!pick.length) continue;
+      const vol = pick.reduce((s, p) => s + p.o.w * p.o.d * p.t.H, 0), dens = vol / D; // chuqurlik birligiga hajm
+      if (!best || dens > best.dens) best = { D, pick, dens };
+    }
+    if (!best) { rest = rest.filter(t => t !== anchor); continue; }
+    // devorni joylash: en bo'ylab ketma-ket, eng og'irlari o'rtaga emas — oddiy tartib (chapdan o'ngga)
+    let y = 0;
+    for (const { t, o } of best.pick) {
+      const pb = { ...t, x, y, z: 0, L: o.d, W: o.w, rot: o.rot };
+      placed.push(pb); for (const i of cellsOf(pb)) (grid[i] = grid[i] || []).push(pb);
+      kg += t.kg; y += o.w;
+    }
+    const used = new Set(best.pick.map(p => p.t)); rest = rest.filter(t => !used.has(t));
+    x += best.D;
+  }
+  return { placed, left: rest, kg };
+}
+function packTruck(truck, items, order, strategy = "ep", mix = false) {
   // qo'lda biriktirilganlar, keyin "Shart" yuklar, keyin qolganlar
-  const towers = makeTowers(truck, items).sort((a, b) => (b.pinned - a.pinned) || (a.pri - b.pri) || order(a, b));
-  const r = packBoxes(truck, towers);
+  const towers = makeTowers(truck, items, mix).sort((a, b) => (b.pinned - a.pinned) || (a.pri - b.pri) || order(a, b));
+  let r = strategy === "wall" ? packWalls(truck, towers) : packBoxes(truck, towers);
   const placed = [];
-  for (const t of r.placed) t.items.forEach((it, j) => placed.push({ ...it, x: t.x, y: t.y, z: t.z + j * it.H, L: t.L, W: t.W, rot: t.rot }));
+  for (const t of r.placed) for (const p of explodeTower(t)) placed.push(p);
+  if (strategy === "wall" && r.left.length) {                  // devorlar orasidagi bo'shliqlarga qolgan ustunlarni ham sinab ko'ramiz
+    const r2 = packBoxes(truck, r.left, placed);                // tayanch — alohida qutilar (aralash ustunning tepasi torroq bo'lishi mumkin)
+    for (const t of r2.placed) for (const p of explodeTower(t)) placed.push(p);
+    r = { placed: r.placed.concat(r2.placed), left: r2.left, kg: r2.kg };
+  }
   // 2-o'tish: sig'magan ustunlarni alohida qutilarga ajratib, qolgan bo'shliqlarga birma-bir joylaymiz
-  let left = r.left.flatMap(t => t.items);
+  let left = r.left.flatMap(t => t.items.map(m => m.it));
   if (left.length && placed.length) {
     const singles = left.map(it => ({ ...it, pinned: it.pin != null })).sort((a, b) => (b.pinned - a.pinned) || (a.pri - b.pri) || b.L * b.W * b.H - a.L * a.W * a.H);
     const r2 = packBoxes(truck, singles, placed);
@@ -712,7 +805,11 @@ function buildPlan() {
   const heavy = new Set();
   cargo.forEach((c, ci) => { if (!(pins[ci] && Object.keys(pins[ci]).length) && c.pri !== 3 && c.kg * c.qty > 0.25 * maxKg && allTrucks.length > 1) heavy.add(ci); });
   let bestPlan = null;
-  for (const ord of orders) {
+  const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now()), t0 = now(), BUDGET = 2500; // ms
+  // Strategiyalar: devor qurish / ekstremal nuqtalar × oddiy / aralash ustunlar × tartiblar; vaqt chegarasida eng yaxshisi qoladi
+  const combos = []; for (const strategy of ["wall", "ep"]) for (const mix of [false, true]) for (const ord of orders) combos.push({ strategy, mix, ord });
+  for (const { strategy, mix, ord } of combos) {
+    if (bestPlan && now() - t0 > BUDGET) break;
     let rest = items.slice(); const trucks = []; let k = 0;
     for (const t of fleet) for (let i = 0; i < t.count; i++, k++) {
       // bu furaning og'ir yuk ulushi: qolgan dona × (bu fura sig'imi / qolgan furalar sig'imi)
@@ -720,8 +817,8 @@ function buildPlan() {
       for (const ci of heavy) { const n = rest.filter(it => it.ci === ci && it.pin == null).length; quota[ci] = k === allTrucks.length - 1 ? n : Math.ceil(n * t.kg / capLeft); }
       const mine = rest.filter(it => { if (it.pin === k) return true; if (it.pin != null) return false; if (heavy.has(it.ci)) { if (quota[it.ci] <= 0) return false; quota[it.ci]--; } return true; });
       const others = rest.filter(it => !mine.includes(it));
-      const r = packTruck(t, mine, ord);
-      r.label = t.name.replace(/\s*\(.*\)$/, "") + (t.count > 1 ? " #" + (i + 1) : ""); trucks.push(r);
+      const r = packTruck(t, mine, ord, strategy, mix);
+      r.label = t.name.replace(/\s*\(.*\)$/, "") + (t.count > 1 ? " #" + (i + 1) : ""); r.strategy = strategy + (mix ? "+mix" : ""); trucks.push(r);
       rest = r.left.concat(others);
     }
     // "Shart" yuk qolib ketsa — bu eng yomon natija

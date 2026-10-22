@@ -158,7 +158,7 @@ details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
         </div>
       </div>
       <div class="toolbar">
-        <button id="addBorder" title="Radiator 28 m³ / 1712 kg va ressor 20 m³ / 27500 kg">Chegaradagi yukni tayyor qo'shish (radiator, ressor)</button>
+        <button id="addBorder" title="Radiator 28.21 m³ / 1712 kg va ressor 14.5 m³ / 27492 kg">Chegaradagi yukni tayyor qo'shish (radiator, ressor)</button>
       </div>
       <div id="extraList" style="margin-top:10px"></div>
     </section>
@@ -250,7 +250,7 @@ details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
 // Ichki o'lchamlar sm da. Kub va tonna — kargo aytadigan raqamlar.
 const PRESETS = [
   { name: "Fura 115 m³ / 26.5 t", L: 1650, W: 245, H: 285, kg: 26500 },
-  { name: "Fura 80 m³ / 28 t", L: 1360, W: 245, H: 240, kg: 28000 },
+  { name: "Fura 80 m³ / 28.5 t", L: 1360, W: 245, H: 240, kg: 28500 },
   { name: "Tent fura 13.6 m (90 m³ / 22 t)", L: 1360, W: 245, H: 270, kg: 22000 },
   { name: "Mega fura (100 m³ / 24 t)", L: 1360, W: 245, H: 300, kg: 24000 },
   { name: "Konteyner 40' HC (76 m³ / 26.5 t)", L: 1203, W: 235, H: 269, kg: 26500 },
@@ -426,10 +426,10 @@ function addByVolume(name, vol, kg, qty, extra = {}) {
 }
 $("#addBorder").onclick = () => {
   if (cargo.some(c => /^Radiator/.test(c.name))) return toast("Chegaradagi yuk allaqachon qo'shilgan");
-  addByVolume("Radiator (chegara)", 28, 1712, 40, { color: "#1fa6a6", extra: true });
-  addByVolume("Ressor (chegara)", 20, 27500, 20, { color: "#555b66", stack: false, extra: true });
+  addByVolume("Radiator (chegara)", 28.21, 1712, 40, { color: "#1fa6a6", extra: true, pri: 1 });
+  addByVolume("Ressor (chegara)", 14.5, 27492, 20, { color: "#555b66", stack: false, extra: true, pri: 1 });
   renderCargo(); run();
-  toast("Radiator 28 m³ va ressor 20 m³ qo'shildi — dona sonini jadvalda to'g'rilang");
+  toast("Radiator 28,21 m³ va ressor 14,5 m³ qo'shildi (Shart) — dona sonini jadvalda to'g'rilang");
 };
 // Qo'shimcha (Excelda yo'q) yuklar ro'yxati
 function renderExtra() {
@@ -611,9 +611,17 @@ function supportRatio(box, cand) {
   return area / (box.L * box.W);
 }
 function dropZ(e, grid) { let z = 0; for (const p of grid[Math.floor(e.x / CELL)] || []) if (e.x >= p.x && e.x < p.x + p.L && e.y >= p.y && e.y < p.y + p.W && p.z + p.H <= e.z + 0.5) z = Math.max(z, p.z + p.H); return z; }
-function packBoxes(truck, boxes) {
-  const placed = [], left = [], grid = {}; let eps = [{ x: 0, y: 0, z: 0 }], kg = 0;
+function packBoxes(truck, boxes, seed = []) {
+  // seed — allaqachon joylangan qutilar (ikkinchi o'tish uchun): ularning atrofidagi bo'sh nuqtalardan boshlaymiz
+  const placed = seed.slice(), left = [], grid = {}; let eps = [{ x: 0, y: 0, z: 0 }], kg = seed.reduce((s, p) => s + p.kg, 0);
+  for (const pb of seed) for (const i of cellsOf(pb)) (grid[i] = grid[i] || []).push(pb);
   const inside = e => { for (const p of grid[Math.floor(e.x / CELL)] || []) if (e.x >= p.x && e.x < p.x + p.L && e.y >= p.y && e.y < p.y + p.W && e.z >= p.z && e.z < p.z + p.H) return true; return false; };
+  if (seed.length) {
+    for (const pb of seed) eps.push({ x: pb.x + pb.L, y: pb.y, z: pb.z }, { x: pb.x, y: pb.y + pb.W, z: pb.z }, { x: pb.x, y: pb.y, z: pb.z + pb.H });
+    for (const e of eps) e.z = dropZ(e, grid);
+    eps = eps.filter(e => e.x < truck.L && e.y < truck.W && e.z < truck.H && !inside(e)).sort((a, b) => a.z - b.z || a.x - b.x || a.y - b.y);
+    eps = eps.filter((e, i) => !i || e.x !== eps[i - 1].x || e.y !== eps[i - 1].y || e.z !== eps[i - 1].z);
+  }
   for (const it of boxes) {
     if (kg + it.kg > truck.kg) { left.push(it); continue; }
     let best = null;
@@ -640,7 +648,7 @@ function packBoxes(truck, boxes) {
     eps.sort((a, b) => a.z - b.z || a.x - b.x || a.y - b.y);
     eps = eps.filter((e, i) => !i || e.x !== eps[i - 1].x || e.y !== eps[i - 1].y || e.z !== eps[i - 1].z);
   }
-  return { placed, left, kg };
+  return { placed: placed.filter(p => !seed.includes(p)), left, kg };
 }
 function makeTowers(truck, items) {
   const groups = new Map();
@@ -658,7 +666,14 @@ function packTruck(truck, items, order) {
   const r = packBoxes(truck, towers);
   const placed = [];
   for (const t of r.placed) t.items.forEach((it, j) => placed.push({ ...it, x: t.x, y: t.y, z: t.z + j * it.H, L: t.L, W: t.W, rot: t.rot }));
-  const left = r.left.flatMap(t => t.items);
+  // 2-o'tish: sig'magan ustunlarni alohida qutilarga ajratib, qolgan bo'shliqlarga birma-bir joylaymiz
+  let left = r.left.flatMap(t => t.items);
+  if (left.length && placed.length) {
+    const singles = left.map(it => ({ ...it, pinned: it.pin != null })).sort((a, b) => (b.pinned - a.pinned) || (a.pri - b.pri) || b.L * b.W * b.H - a.L * a.W * a.H);
+    const r2 = packBoxes(truck, singles, placed);
+    for (const p of r2.placed) placed.push(p);
+    left = r2.left.map(({ pinned, ...it }) => it);
+  }
   const vol = placed.reduce((s, p) => s + p.L * p.W * p.H, 0), floor = placed.filter(p => p.z === 0).reduce((s, p) => s + p.L * p.W, 0);
   const cx = r.kg ? placed.reduce((s, p) => s + p.kg * (p.x + p.L / 2), 0) / r.kg : truck.L / 2;
   const maxX = placed.reduce((m, p) => Math.max(m, p.x + p.L), 0);
@@ -806,7 +821,15 @@ function renderVerdict() {
     lines.push("Yana fura qo'shing, yoki pastdagi jadvalda keraksiz yuklarni \"Qolsin\" qiling.");
   } else if (used.length < plan.trucks.length) { cls = "warn"; head += `, ${plan.trucks.length - used.length} ta fura bo'sh qoladi`; }
   if (plan.skipped?.length) { const kg = plan.skipped.reduce((s, p) => s + p.kg, 0), vol = plan.skipped.reduce((s, p) => s + p.L * p.W * p.H, 0) / 1e6; lines.push(`Keyingi reysga qoldirildi: ${plan.skipped.length} dona (${fmt(vol, 1)} m³, ${fmt(kg / 1000, 2)} t)`); }
-  v.append(el("div", { class: "verdict " + cls }, el("h3", {}, head), el("ul", {}, ...lines.map(l => el("li", {}, l)))));
+  // Qog'ozdagi kabi arifmetik hisob: jami yuk vs fura sig'imi (100% to'lgan deb)
+  const act = cargo.filter(c => c.pri !== 3), tV = act.reduce((a, c) => a + c.L * c.W * c.H * c.qty, 0) / 1e6, tK = act.reduce((a, c) => a + c.kg * c.qty, 0);
+  const cV = fleet.reduce((a, t) => a + truckVol(t) * t.count, 0), cK = fleet.reduce((a, t) => a + t.kg * t.count, 0);
+  const realV = plan.trucks.reduce((a, t) => a + t.vol, 0) / 1e6;
+  const arith = el("div", { style: "margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-family:var(--mono);font-size:13px" },
+    el("div", {}, el("b", {}, "Arifmetik hisob: "), `yuk ${fmt(tV, 1)} m³ / ${fmt(tK, 0)} kg — furalar ${fmt(cV, 0)} m³ / ${fmt(cK, 0)} kg → `,
+      el("b", { style: "color:" + (tV > cV || tK > cK ? "var(--bad)" : "var(--good)") }, (tV > cV ? `${fmt(tV - cV, 1)} m³ ortiqcha` : `${fmt(cV - tV, 1)} m³ bo'sh`) + ", " + (tK > cK ? `${fmt(tK - cK, 0)} kg ortiqcha` : `${fmt(cK - tK, 0)} kg zaxira`))),
+    el("div", { class: "hint", style: "margin-top:4px" }, `3D da real joylangani: ${fmt(realV, 1)} m³ (furalar ${fmt(realV / cV * 100, 0)}% to'ldi). Har xil o'lchamdagi qutilar orasida bo'shliq qolgani uchun 100% to'lmaydi; shuning uchun 3D natija arifmetikdan ko'proq "sig'madi" ko'rsatadi.`));
+  v.append(el("div", { class: "verdict " + cls }, el("h3", {}, head), el("ul", {}, ...lines.map(l => el("li", {}, l))), arith));
 }
 function showTruck() {
   renderTabs();

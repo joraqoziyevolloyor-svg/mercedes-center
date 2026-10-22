@@ -3,82 +3,91 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: ish stoli — chapda yuk va fura parki, o'ngda 3D ko'rinish va ko'rsatkichlar, pastda natija jadvali */
+/* Layout: 3 qadam ketma-ket chapda (Excel → furalar → xulosa), o'ngda 3D va natija */
 :root {
-  --bg: #eef0f2;
-  --panel: #ffffff;
-  --panel2: #f6f7f9;
-  --fg: #1b2028;
-  --muted: #5d6673;
-  --line: #d6dae0;
-  --accent: #e8731a;      /* xavfsizlik to'q sariq */
-  --accent-fg: #ffffff;
-  --good: #2f9e5b;
-  --warn: #d9a400;
-  --bad: #d64545;
-  --floor: #c9ccd1;
+  --bg: #eef0f2; --panel: #ffffff; --panel2: #f6f7f9; --fg: #1b2028; --muted: #5d6673; --line: #d6dae0;
+  --accent: #e8731a; --accent-fg: #ffffff; --good: #2f9e5b; --warn: #d9a400; --bad: #d64545; --floor: #c9ccd1;
   --display: "Barlow Condensed", "Arial Narrow", Impact, sans-serif;
   --body: "IBM Plex Sans", "Segoe UI", Roboto, sans-serif;
   --mono: "IBM Plex Mono", Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #15181d; --panel: #1e2229; --panel2: #262b33; --fg: #e8eaed; --muted: #9aa3ad;
-    --line: #353b45; --accent: #f08430; --accent-fg: #15181d; --good: #46b872; --warn: #e5b733; --bad: #e06060; --floor: #3a4049;
-    color-scheme: dark;
+    --bg: #15181d; --panel: #1e2229; --panel2: #262b33; --fg: #e8eaed; --muted: #9aa3ad; --line: #353b45;
+    --accent: #f08430; --accent-fg: #15181d; --good: #46b872; --warn: #e5b733; --bad: #e06060; --floor: #3a4049; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #15181d; --panel: #1e2229; --panel2: #262b33; --fg: #e8eaed; --muted: #9aa3ad;
-  --line: #353b45; --accent: #f08430; --accent-fg: #15181d; --good: #46b872; --warn: #e5b733; --bad: #e06060; --floor: #3a4049;
-  color-scheme: dark;
+  --bg: #15181d; --panel: #1e2229; --panel2: #262b33; --fg: #e8eaed; --muted: #9aa3ad; --line: #353b45;
+  --accent: #f08430; --accent-fg: #15181d; --good: #46b872; --warn: #e5b733; --bad: #e06060; --floor: #3a4049; color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 14px; line-height: 1.45; margin: 0; }
 .wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px 32px; max-width: 1500px; margin: 0 auto; }
 header.top { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 14px; }
 h1 { font-family: var(--display); font-weight: 700; font-size: 30px; letter-spacing: .01em; margin: 0; text-wrap: balance; }
 h1 small { font-family: var(--body); font-weight: 400; font-size: 13px; color: var(--muted); margin-left: 10px; }
-h2 { font-family: var(--display); font-weight: 600; font-size: 18px; letter-spacing: .04em; text-transform: uppercase; margin: 0 0 10px; color: var(--muted); }
-.grid { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 16px; align-items: start; }
+h2 { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: .03em; margin: 0 0 10px; display: flex; align-items: center; gap: 10px; }
+h2 .n { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--accent-fg); font-size: 15px; }
+.grid { display: grid; grid-template-columns: 420px minmax(0, 1fr); gap: 16px; align-items: start; }
 @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; min-width: 0; }
 .stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
 th, td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
-td.num, th.num { text-align: right; font-family: var(--mono); font-size: 13px; }
+td.num, th.num { text-align: right; font-family: var(--mono); font-size: 13px; white-space: nowrap; }
 .tscroll { overflow-x: auto; }
-input, select { font: inherit; color: var(--fg); background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 5px 7px; min-width: 0; }
+input, select { font: inherit; color: var(--fg); background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; min-width: 0; }
 input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-input[type=number] { width: 70px; font-family: var(--mono); font-size: 13px; padding: 5px 4px; }
-#fleet input[type=text] { width: 110px; }
-input[type=color] { width: 32px; height: 28px; padding: 1px; }
+input[type=number] { width: 80px; font-family: var(--mono); font-size: 13px; padding: 6px 6px; }
 input[type=checkbox] { width: 16px; height: 16px; }
-.cargo-table input[type=text] { width: 110px; }
-button { font: inherit; font-weight: 500; cursor: pointer; border-radius: 4px; border: 1px solid var(--line); background: var(--panel2); color: var(--fg); padding: 6px 12px; }
+label.f { display: flex; flex-direction: column; gap: 3px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+button { font: inherit; font-weight: 500; cursor: pointer; border-radius: 4px; border: 1px solid var(--line); background: var(--panel2); color: var(--fg); padding: 7px 12px; }
 button:hover { border-color: var(--muted); }
-button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-family: var(--display); font-size: 18px; letter-spacing: .04em; text-transform: uppercase; padding: 8px 18px; width: 100%; }
+button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-family: var(--display); font-size: 19px; letter-spacing: .04em; text-transform: uppercase; padding: 9px 18px; width: 100%; }
 button.icon { padding: 2px 8px; line-height: 1.2; }
+button.link { background: none; border: none; color: var(--muted); text-decoration: underline; padding: 0; font-size: 12px; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .hint { color: var(--muted); font-size: 12px; }
-.drop { border: 1.5px dashed var(--line); border-radius: 6px; padding: 10px; text-align: center; color: var(--muted); font-size: 12px; cursor: pointer; }
+.drop { display: block; border: 2px dashed var(--line); border-radius: 6px; padding: 18px 12px; text-align: center; color: var(--muted); cursor: pointer; background: var(--panel2); }
+.drop b { display: block; color: var(--fg); font-size: 15px; margin-bottom: 3px; }
 .drop.over { border-color: var(--accent); color: var(--accent); }
 .drop input { display: none; }
+.sum { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; font-family: var(--mono); font-size: 13px; }
+.sum b { font-family: var(--display); font-size: 22px; font-weight: 700; margin-right: 3px; }
+.sum span { color: var(--muted); }
+/* fura kartalari */
+.truck { border: 1px solid var(--line); border-radius: 6px; padding: 10px; margin-bottom: 8px; background: var(--panel2); }
+.truck .head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.truck .head input[type=text] { font-weight: 600; flex: 1; background: transparent; border-color: transparent; padding: 3px 4px; }
+.truck .head input[type=text]:hover, .truck .head input[type=text]:focus { border-color: var(--line); background: var(--panel); }
+.truck .fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.truck .fields input { width: 100%; }
+.truck .dims { margin-top: 6px; font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.truck .adv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+.truck .adv input { width: 100%; }
 /* 3D */
 .viewer { position: relative; background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; height: 460px; max-width: 100%; overflow: hidden; }
 .viewer canvas { display: block; width: 100%; height: 100%; }
-.viewer .legend { position: absolute; left: 10px; bottom: 10px; display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; pointer-events: none; }
+.viewer .legend { position: absolute; left: 10px; bottom: 10px; right: 10px; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; pointer-events: none; }
 .legend span::before { content: ""; display: inline-block; width: 11px; height: 11px; border-radius: 2px; background: var(--c); margin-right: 5px; vertical-align: -1px; }
 .viewer .views { position: absolute; right: 10px; top: 10px; display: flex; gap: 4px; }
 .viewer .views button { padding: 3px 9px; font-size: 12px; }
-.viewer .tip { position: absolute; left: 10px; top: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 6px 9px; font-size: 12px; font-family: var(--mono); pointer-events: none; }
+.viewer .tip { position: absolute; left: 10px; top: 10px; max-width: 60%; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 6px 9px; font-size: 12px; font-family: var(--mono); pointer-events: none; }
+.viewer .empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); text-align: center; padding: 20px; }
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .tabs button { font-family: var(--display); font-size: 16px; letter-spacing: .03em; padding: 5px 12px; }
 .tabs button.active { background: var(--fg); color: var(--bg); border-color: var(--fg); }
 .tabs button .pct { font-family: var(--mono); font-size: 12px; margin-left: 6px; opacity: .8; }
-/* stats */
+/* xulosa */
+.verdict { border-radius: 6px; padding: 12px 14px; margin-bottom: 12px; border-left: 4px solid var(--good); background: color-mix(in srgb, var(--good) 10%, transparent); }
+.verdict.bad { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 9%, transparent); }
+.verdict.warn { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+.verdict h3 { margin: 0 0 4px; font-family: var(--display); font-size: 22px; font-weight: 700; }
+.verdict ul { margin: 6px 0 0; padding-left: 18px; }
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
 .stat { background: var(--panel2); border-radius: 4px; padding: 8px 10px; }
 .stat .k { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
@@ -87,70 +96,78 @@ button.icon { padding: 2px 8px; line-height: 1.2; }
 .meter { height: 6px; background: var(--line); border-radius: 3px; margin-top: 6px; overflow: hidden; }
 .meter i { display: block; height: 100%; background: var(--good); width: 0; }
 .meter i.warn { background: var(--warn); } .meter i.bad { background: var(--bad); }
-.chip { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 11px; font-weight: 600; }
-.chip.good { background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good); }
-.chip.warn { background: color-mix(in srgb, var(--warn) 22%, transparent); color: var(--warn); }
-.chip.bad { background: color-mix(in srgb, var(--bad) 18%, transparent); color: var(--bad); }
-.leftover { border-left: 3px solid var(--bad); padding: 8px 10px; background: color-mix(in srgb, var(--bad) 8%, transparent); border-radius: 0 4px 4px 0; margin-top: 10px; }
 .toast { position: fixed; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 4px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; }
 .toast.show { opacity: 1; }
+details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
 </style>
 
 <div class="wrap">
 <header class="top">
-  <h1>Fura Yuklash Rejasi <small>paddonlarni furalarga 3D joylashtirish</small></h1>
-  <span class="hint">O'lchamlar sm da, og'irlik kg da. 3D ko'rinishda sichqoncha bilan aylantiring, g'ildirak bilan yaqinlashtiring.</span>
+  <h1>Fura Yuklash Rejasi <small>kargodan kelgan yukni furalarga 3D joylashtirish</small></h1>
+  <span class="hint">3D ko'rinishni sichqoncha bilan aylantiring, g'ildirak bilan yaqinlashtiring.</span>
 </header>
 
 <div class="grid">
   <!-- CHAP: kiritish -->
   <div class="stack">
     <section class="panel">
-      <h2>1. Yuk (paddonlar)</h2>
+      <h2><span class="n">1</span> Yuk ro'yxati</h2>
       <label class="drop" id="drop">
-        Kargo yuborgan Excel faylni shu yerga tashlang yoki bosing (.xlsx / .csv)
+        <b>Kargo Excelini shu yerga tashlang</b>
+        yoki bosib tanlang (.xlsx). "Sklad holati" formati avtomatik taniladi.
         <input type="file" id="file" accept=".xlsx,.xls,.csv">
       </label>
-      <p class="hint" style="margin:6px 0 10px">Ustunlar: Nomi, Uzunlik, Eni, Balandlik, Og'irlik, Soni, Ustma-ust (ha/yo'q). Ustun nomlari ruscha yoki inglizcha bo'lsa ham taniydi.</p>
-      <div class="tscroll">
-      <table class="cargo-table" id="cargo">
-        <thead><tr><th></th><th>Nomi</th><th class="num">U</th><th class="num">E</th><th class="num">B</th><th class="num">kg</th><th class="num">Soni</th><th title="Ustiga boshqa paddon qo'yish mumkin">Ust</th><th></th></tr></thead>
-        <tbody></tbody>
-      </table>
-      </div>
-      <div class="toolbar">
-        <button id="addCargo">+ Qator</button>
-        <button id="sampleCargo">Namuna yuklash</button>
-        <button id="clearCargo">Tozalash</button>
-      </div>
+      <div class="sum" id="cargoSum"></div>
+      <details style="margin-top:10px" id="cargoDet">
+        <summary>Ro'yxatni ko'rish / qo'lda qo'shish</summary>
+        <div class="row" style="margin:10px 0 6px;align-items:flex-end">
+          <label class="f">Nomi<input type="text" id="mName" placeholder="Radiator" style="width:110px"></label>
+          <label class="f">Dona<input type="number" id="mQty" value="1" min="1"></label>
+          <label class="f">Jami m³<input type="number" id="mVol" step="0.1" placeholder="28"></label>
+          <label class="f">Jami kg<input type="number" id="mKg" placeholder="1712"></label>
+          <button id="addByVol">+ Qo'shish</button>
+        </div>
+        <p class="hint" style="margin:0 0 8px">O'lchami noma'lum yuk uchun: jami kub va kg ni yozing, dastur uni teng bo'laklarga bo'lib hisoblaydi. Aniq o'lchamni jadvalda tahrirlasa bo'ladi.</p>
+        <div class="tscroll" style="max-height:360px;overflow-y:auto">
+        <table id="cargo">
+          <thead><tr><th>Nomi</th><th class="num">U sm</th><th class="num">E sm</th><th class="num">B sm</th><th class="num">kg/dona</th><th class="num">Dona</th><th title="Ustiga boshqa yuk qo'yish mumkin">Ust</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        </div>
+        <div class="toolbar">
+          <button id="addCargo">+ O'lcham bilan qator</button>
+          <button id="sampleCargo">Namuna</button>
+          <button id="clearCargo">Tozalash</button>
+        </div>
+      </details>
     </section>
 
     <section class="panel">
-      <h2>2. Fura parki</h2>
-      <div class="row" style="margin-bottom:8px">
-        <select id="truckPreset"></select>
+      <h2><span class="n">2</span> Furalar</h2>
+      <div class="row" style="margin-bottom:10px">
+        <select id="truckPreset" style="flex:1"></select>
         <button id="addTruck">+ Qo'shish</button>
       </div>
-      <div class="tscroll">
-      <table id="fleet">
-        <thead><tr><th>Fura</th><th class="num">U×E×B (sm)</th><th class="num">Max kg</th><th class="num">Soni</th><th></th></tr></thead>
-        <tbody></tbody>
-      </table>
-      </div>
-      <p class="hint" style="margin:8px 0 0">Furalar jadval tartibida to'ldiriladi. Og'irlik yoki hajm yetmasa, qolgan yuk alohida ko'rsatiladi.</p>
+      <div id="fleet"></div>
+      <div class="sum" id="fleetSum"></div>
+      <p class="hint" style="margin:8px 0 0">Furalar yuqoridan pastga tartibda to'ldiriladi. Kub va tonnani kargo aytgandek yozing; aniq ichki o'lcham ma'lum bo'lsa "o'lchamlar" ni oching.</p>
     </section>
 
     <section class="panel">
       <button class="primary" id="run">Hisoblash</button>
+      <p class="hint" style="margin:8px 0 0;text-align:center">Excel yuklanganda yoki fura o'zgarganda avtomatik qayta hisoblanadi.</p>
     </section>
   </div>
 
-  <!-- O'NG: 3D va natija -->
+  <!-- O'NG: xulosa, 3D va natija -->
   <div class="stack">
     <section class="panel">
+      <h2><span class="n">3</span> Xulosa</h2>
+      <div id="verdict"></div>
       <div class="tabs" id="tabs"></div>
       <div class="viewer" id="viewer">
+        <div class="empty" id="empty">Excel yuklang yoki "Namuna" ni bosing — fura shu yerda 3D ko'rinadi.</div>
         <div class="tip" id="tip" hidden></div>
         <div class="views">
           <button data-view="iso">3D</button><button data-view="top">Tepadan</button><button data-view="side">Yondan</button><button data-view="back">Orqadan</button>
@@ -158,18 +175,17 @@ button.icon { padding: 2px 8px; line-height: 1.2; }
         <div class="legend" id="legend"></div>
       </div>
       <div class="stats" id="stats"></div>
-      <div id="leftover"></div>
     </section>
 
     <section class="panel">
-      <h2>Natija: har bir paddon qaysi furada</h2>
+      <h2>Har bir yuk qaysi furada</h2>
       <div class="toolbar" style="margin:0 0 10px">
         <button id="copyRes">Jadvalni nusxalash (Excelga qo'yish uchun)</button>
         <button id="dlRes">Excel yuklab olish</button>
       </div>
       <div class="tscroll" style="max-height:420px;overflow-y:auto">
       <table id="result">
-        <thead><tr><th>Fura</th><th>Paddon</th><th class="num">U×E×B</th><th class="num">kg</th><th class="num">X (m)</th><th class="num">Y (m)</th><th class="num">Qavat</th></tr></thead>
+        <thead><tr><th>Fura</th><th>Yuk</th><th class="num">U×E×B</th><th class="num">kg</th><th class="num">Old tomondan, m</th><th class="num">Chapdan, m</th><th class="num">Qavat</th></tr></thead>
         <tbody></tbody>
       </table>
       </div>
@@ -183,18 +199,21 @@ button.icon { padding: 2px 8px; line-height: 1.2; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ---------- Ma'lumotlar ----------
+// Ichki o'lchamlar sm da. Kub va tonna — kargo aytadigan raqamlar.
 const PRESETS = [
-  { name: "Tent fura 13.6 m", L: 1360, W: 245, H: 270, kg: 22000 },
-  { name: "Mega fura 13.6 m (3.0 m)", L: 1360, W: 245, H: 300, kg: 24000 },
-  { name: "Konteyner 40' HC", L: 1203, W: 235, H: 269, kg: 26500 },
-  { name: "Konteyner 40'", L: 1203, W: 235, H: 239, kg: 26500 },
-  { name: "Konteyner 20'", L: 590, W: 235, H: 239, kg: 21700 },
-  { name: "Yuk mashinasi 10 t", L: 800, W: 245, H: 250, kg: 10000 },
-  { name: "Isuzu 5 t", L: 620, W: 230, H: 230, kg: 5000 },
-  { name: "Gazel 1.5 t", L: 300, W: 190, H: 180, kg: 1500 },
-  { name: "Boshqa (qo'lda)", L: 1000, W: 240, H: 250, kg: 15000 },
+  { name: "Fura 115 m³ / 26.5 t", L: 1650, W: 245, H: 285, kg: 26500 },
+  { name: "Fura 80 m³ / 28 t", L: 1360, W: 245, H: 240, kg: 28000 },
+  { name: "Tent fura 13.6 m (90 m³ / 22 t)", L: 1360, W: 245, H: 270, kg: 22000 },
+  { name: "Mega fura (100 m³ / 24 t)", L: 1360, W: 245, H: 300, kg: 24000 },
+  { name: "Konteyner 40' HC (76 m³ / 26.5 t)", L: 1203, W: 235, H: 269, kg: 26500 },
+  { name: "Konteyner 40' (67 m³ / 26.5 t)", L: 1203, W: 235, H: 239, kg: 26500 },
+  { name: "Konteyner 20' (33 m³ / 21.7 t)", L: 590, W: 235, H: 239, kg: 21700 },
+  { name: "Yuk mashinasi 10 t (49 m³)", L: 800, W: 245, H: 250, kg: 10000 },
+  { name: "Isuzu 5 t (33 m³)", L: 620, W: 230, H: 230, kg: 5000 },
+  { name: "Gazel 1.5 t (10 m³)", L: 300, W: 190, H: 180, kg: 1500 },
+  { name: "Boshqa fura", L: 1360, W: 245, H: 270, kg: 20000 },
 ];
-const PALETTE = ["#e8731a","#2f7fd1","#2f9e5b","#c94c9c","#d9a400","#5f6fd1","#1fa6a6","#b85c2a","#7a9a2a","#8a5bd1"];
+const PALETTE = ["#e8731a","#2f7fd1","#2f9e5b","#c94c9c","#d9a400","#5f6fd1","#1fa6a6","#b85c2a","#7a9a2a","#8a5bd1","#d1512f","#2f9ed1","#9e2f6b","#6b8e23","#c47a1a","#4a6fa5"];
 const SAMPLE = [
   { name: "Evro paddon (konditsioner)", L: 120, W: 80, H: 150, kg: 450, qty: 24, stack: true },
   { name: "Standart paddon (mebel)", L: 120, W: 100, H: 190, kg: 700, qty: 10, stack: false },
@@ -207,66 +226,113 @@ let cargo = [], fleet = [], plan = null, activeTruck = 0;
 const $ = s => document.querySelector(s);
 const el = (t, a = {}, ...kids) => { const e = document.createElement(t); for (const k in a) { if (k === "class") e.className = a[k]; else if (k.startsWith("on")) e[k] = a[k]; else e.setAttribute(k, a[k]); } for (const c of kids) e.append(c); return e; };
 const fmt = (n, d = 1) => Number(n).toLocaleString("ru-RU", { maximumFractionDigits: d, minimumFractionDigits: 0 });
-function toast(m) { const t = $("#toast"); t.textContent = m; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2200); }
+function toast(m) { const t = $("#toast"); t.textContent = m; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2600); }
 function pctClass(p) { return p > 100 ? "bad" : p > 90 ? "warn" : "good"; }
+let runTimer; function scheduleRun() { clearTimeout(runTimer); runTimer = setTimeout(run, 400); }
+const cargoVol = () => cargo.reduce((s, c) => s + c.L * c.W * c.H * c.qty, 0) / 1e6;
+const cargoKg = () => cargo.reduce((s, c) => s + c.kg * c.qty, 0);
+const cargoQty = () => cargo.reduce((s, c) => s + c.qty, 0);
+const truckVol = t => t.L * t.W * t.H / 1e6;
 
-// ---------- Yuk jadvali ----------
+// ---------- Yuk ro'yxati ----------
 function renderCargo() {
   const tb = $("#cargo tbody"); tb.innerHTML = "";
   cargo.forEach((c, i) => {
-    const bind = (k, inp) => { inp.oninput = () => { c[k] = inp.type === "checkbox" ? inp.checked : inp.type === "number" ? +inp.value : inp.value; }; return inp; };
-    const num = (k, step = 1) => bind(k, el("input", { type: "number", min: 0, step, value: c[k] }));
+    const bind = (k, inp) => { inp.onchange = () => { c[k] = inp.type === "checkbox" ? inp.checked : inp.type === "number" ? +inp.value : inp.value; renderSums(); scheduleRun(); }; return inp; };
+    const num = (k, step = 1, w = 62) => bind(k, el("input", { type: "number", min: 0, step, value: Math.round(c[k] * 10) / 10, style: "width:" + w + "px" }));
     tb.append(el("tr", {},
-      el("td", {}, bind("color", el("input", { type: "color", value: c.color }))),
-      el("td", {}, bind("name", el("input", { type: "text", value: c.name }))),
+      el("td", {}, el("span", { class: "legend", style: "--c:" + c.color }, el("span", {})), bind("name", el("input", { type: "text", value: c.name, style: "width:120px" }))),
       el("td", { class: "num" }, num("L")), el("td", { class: "num" }, num("W")), el("td", { class: "num" }, num("H")),
-      el("td", { class: "num" }, num("kg", 0.1)), el("td", { class: "num" }, num("qty")),
+      el("td", { class: "num" }, num("kg", 0.1, 68)), el("td", { class: "num" }, num("qty", 1, 56)),
       el("td", {}, (() => { const cb = el("input", { type: "checkbox" }); cb.checked = c.stack; return bind("stack", cb); })()),
-      el("td", {}, el("button", { class: "icon", title: "O'chirish", onclick: () => { cargo.splice(i, 1); renderCargo(); } }, "×")),
+      el("td", {}, el("button", { class: "icon", title: "O'chirish", onclick: () => { cargo.splice(i, 1); renderCargo(); renderSums(); scheduleRun(); } }, "×")),
     ));
   });
+  renderSums();
+}
+function renderSums() {
+  const s = $("#cargoSum"); s.innerHTML = "";
+  if (!cargo.length) { s.append(el("span", {}, "Hali yuk yo'q")); }
+  else { s.append(el("div", {}, el("b", {}, fmt(cargoQty(), 0)), el("span", {}, "dona")), el("div", {}, el("b", {}, fmt(cargoVol(), 1)), el("span", {}, "m³")), el("div", {}, el("b", {}, fmt(cargoKg() / 1000, 2)), el("span", {}, "tonna")), el("div", {}, el("b", {}, cargo.length), el("span", {}, "xil"))); }
+  const f = $("#fleetSum"); f.innerHTML = "";
+  const n = fleet.reduce((a, t) => a + t.count, 0);
+  if (n) { const v = fleet.reduce((a, t) => a + truckVol(t) * t.count, 0), kg = fleet.reduce((a, t) => a + t.kg * t.count, 0);
+    f.append(el("div", {}, el("b", {}, n), el("span", {}, "fura")), el("div", {}, el("b", {}, fmt(v, 0)), el("span", {}, "m³ sig'im")), el("div", {}, el("b", {}, fmt(kg / 1000, 1)), el("span", {}, "t sig'im"))); }
 }
 function addCargo(c = {}) {
-  cargo.push({ name: c.name || "Paddon " + (cargo.length + 1), L: c.L || 120, W: c.W || 80, H: c.H || 150, kg: c.kg || 500, qty: c.qty || 1, stack: c.stack !== false, color: c.color || PALETTE[cargo.length % PALETTE.length] });
+  cargo.push({ name: c.name || "Yuk " + (cargo.length + 1), L: c.L || 120, W: c.W || 80, H: c.H || 150, kg: c.kg || 0, qty: c.qty || 1, stack: c.stack !== false, color: c.color || PALETTE[cargo.length % PALETTE.length] });
 }
-$("#addCargo").onclick = () => { addCargo(); renderCargo(); };
-$("#clearCargo").onclick = () => { cargo = []; renderCargo(); };
-$("#sampleCargo").onclick = () => { cargo = []; SAMPLE.forEach(s => addCargo({ ...s })); renderCargo(); toast("Namuna yuklandi"); };
+$("#addCargo").onclick = () => { addCargo(); renderCargo(); $("#cargoDet").open = true; };
+$("#clearCargo").onclick = () => { cargo = []; plan = null; renderCargo(); showPlan(); };
+$("#sampleCargo").onclick = () => { cargo = []; SAMPLE.forEach(s => addCargo({ ...s })); renderCargo(); run(); toast("Namuna yuklandi"); };
+$("#addByVol").onclick = () => {
+  const qty = Math.max(1, Math.round(+$("#mQty").value || 1)), vol = +$("#mVol").value, kg = +$("#mKg").value;
+  if (!vol) return toast("Jami m³ ni yozing");
+  const s = Math.round(Math.cbrt(vol / qty) * 100); // har bir bo'lak kub shaklida
+  addCargo({ name: $("#mName").value || "Yuk " + (cargo.length + 1), L: s, W: s, H: s, kg: kg / qty, qty });
+  renderCargo(); scheduleRun(); $("#mName").value = ""; $("#mVol").value = ""; $("#mKg").value = "";
+};
 
-// Excel o'qish: ustun nomlarini uzb / rus / eng bo'yicha taniymiz
+// ---------- Excel o'qish ----------
 const COLS = {
   name: ["nomi","nom","название","наименование","товар","name","item","product","paddon","паллет","pallet"],
-  L: ["uzunlik","uzun","длина","length","l","u"],
-  W: ["eni","en","kenglik","ширина","width","w","e"],
-  H: ["balandlik","baland","высота","height","h","b"],
-  kg: ["og'irlik","ogirlik","og‘irlik","vazn","вес","масса","weight","kg","кг"],
-  qty: ["soni","son","dona","miqdor","кол-во","количество","колво","qty","quantity","count","pcs","шт"],
-  stack: ["ustma-ust","ustmaust","ust","stack","stackable","штабел","штабелир","штабелируемый"],
-  vol: ["kub","kubi","hajm","объем","объём","m3","м3","volume","cbm"],
+  L: ["uzunlik","uzun","длина","length","size (l)","l","u"],
+  W: ["eni","en","kenglik","ширина","width","size (w)","w","e"],
+  H: ["balandlik","baland","высота","height","size (h)","h","b"],
+  kg: ["og'irlik","ogirlik","vazn","вес","масса","weight","kg","кг"],
+  qty: ["soni","son","dona","miqdor","mesta","кол-во","количество","qty","quantity","count","pcs","шт"],
+  stack: ["ustma-ust","ust","stack","штабел"],
+  vol: ["kub","kuba","hajm","объем","объём","m3","м3","volume","cbm"],
 };
+const excelDate = n => { const d = new Date(Math.round((n - 25569) * 86400000)); return isNaN(d) ? "" : String(d.getUTCDate()).padStart(2, "0") + "." + String(d.getUTCMonth() + 1).padStart(2, "0"); };
+const num = v => parseFloat(String(v).replace(",", ".").replace(/[^\d.\-]/g, "")) || 0;
+function parseKargo(rows) {
+  // "Sklad holati": har blokda sarlavha "OMBOR GA KELGAN SANA | YUK SONI (MESTA) | Pcs | TOTAL Pcs | SIZE (L) | SIZE (W) | SIZE (H) | JAMI KUBA | KG | JAMI KG | ..."
+  const out = []; let hi = -1, n = 0;
+  for (const r of rows) {
+    const c = r.map(x => String(x).trim());
+    const low = c.map(x => x.toLowerCase());
+    if (low.some(x => x.includes("size (l)"))) { hi = 1; continue; }
+    if (hi < 0) continue;
+    if (!/^\d+$/.test(c[0]) || c[0] === "0" || /total/i.test(c[0])) continue;
+    const qty = Math.round(num(c[1])); if (!qty) continue;
+    let L = num(c[4]), W = num(c[5]), H = num(c[6]); const vol = num(c[7]), kg = num(c[8]) || num(c[9]) / qty;
+    let note = "";
+    if (!(L && W && H)) { if (!vol) continue; L = W = H = Math.cbrt(vol / qty); note = " (o'lchamsiz)"; }
+    n++;
+    out.push({ name: "#" + n + " " + excelDate(+c[0]) + (c[11] ? " " + c[11] : "") + note, L: Math.round(L * 100), W: Math.round(W * 100), H: Math.round(H * 100), kg, qty, stack: true });
+  }
+  return out;
+}
+function parseGeneric(rows) {
+  const hi = rows.findIndex(r => r.filter(x => String(x).trim()).length >= 3);
+  if (hi < 0) throw new Error("Jadval topilmadi");
+  const head = rows[hi].map(h => String(h).toLowerCase().replace(/[\s.,:;]+/g, " ").trim());
+  const idx = {};
+  for (const k in COLS) idx[k] = head.findIndex(h => COLS[k].some(a => h === a || h.startsWith(a + " ") || (a.length > 2 && h.includes(a))));
+  if (idx.L < 0 || idx.W < 0 || idx.H < 0) throw new Error("Uzunlik / Eni / Balandlik ustunlari topilmadi. Sarlavha: " + rows[hi].filter(Boolean).join(" | "));
+  const toCm = v => (v > 0 && v < 10 ? v * 100 : v);
+  const out = [];
+  for (const r of rows.slice(hi + 1)) {
+    if (!(num(r[idx.L]) && num(r[idx.W]) && num(r[idx.H]))) continue;
+    const st = idx.stack >= 0 ? String(r[idx.stack]).toLowerCase() : "";
+    out.push({ name: idx.name >= 0 ? String(r[idx.name]) || undefined : undefined, L: toCm(num(r[idx.L])), W: toCm(num(r[idx.W])), H: toCm(num(r[idx.H])),
+      kg: idx.kg >= 0 ? num(r[idx.kg]) : 0, qty: idx.qty >= 0 ? Math.max(1, Math.round(num(r[idx.qty]))) : 1, stack: !/^(yo|no|нет|0|false|-)/.test(st) });
+  }
+  return out;
+}
 function readSheet(file) {
+  toast("Excel o'qilmoqda…");
   const r = new FileReader();
   r.onload = e => {
     try {
-      const wb = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: "array", cellStyles: false });
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: "" });
-      const hi = rows.findIndex(r => r.filter(x => String(x).trim()).length >= 3);
-      if (hi < 0) throw new Error("Jadval topilmadi");
-      const head = rows[hi].map(h => String(h).toLowerCase().replace(/[\s().,:;]+/g, " ").trim());
-      const idx = {};
-      for (const k in COLS) idx[k] = head.findIndex(h => COLS[k].some(a => h === a || h.startsWith(a + " ") || h.includes(a) && a.length > 2));
-      if (idx.L < 0 || idx.W < 0 || idx.H < 0) throw new Error("Uzunlik / Eni / Balandlik ustunlari topilmadi. Birinchi qator: " + rows[hi].join(" | "));
-      const num = v => parseFloat(String(v).replace(",", ".").replace(/[^\d.\-]/g, "")) || 0;
-      const toCm = v => (v > 0 && v < 10 ? v * 100 : v); // metrda berilgan bo'lsa
-      cargo = [];
-      for (const r of rows.slice(hi + 1)) {
-        if (!(num(r[idx.L]) && num(r[idx.W]) && num(r[idx.H]))) continue;
-        const st = idx.stack >= 0 ? String(r[idx.stack]).toLowerCase() : "ha";
-        addCargo({ name: idx.name >= 0 ? String(r[idx.name]) || undefined : undefined, L: toCm(num(r[idx.L])), W: toCm(num(r[idx.W])), H: toCm(num(r[idx.H])),
-          kg: idx.kg >= 0 ? num(r[idx.kg]) : 0, qty: idx.qty >= 0 ? Math.max(1, Math.round(num(r[idx.qty]))) : 1,
-          stack: !/^(yo|no|нет|0|false|-)/.test(st) && st !== "" || st === "" });
-      }
-      renderCargo(); toast(cargo.length + " xil yuk o'qildi");
+      let items = parseKargo(rows);
+      if (!items.length) items = parseGeneric(rows);
+      if (!items.length) throw new Error("Yuk qatorlari topilmadi");
+      cargo = []; items.forEach(it => addCargo(it)); renderCargo();
+      toast(`${cargo.length} xil, ${fmt(cargoQty(), 0)} dona yuk o'qildi`); run();
     } catch (err) { toast("Xato: " + err.message); }
   };
   r.readAsArrayBuffer(file);
@@ -277,71 +343,127 @@ drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
 drop.ondragleave = () => drop.classList.remove("over");
 drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); e.dataTransfer.files[0] && readSheet(e.dataTransfer.files[0]); };
 
-// ---------- Fura parki ----------
+// ---------- Furalar ----------
 PRESETS.forEach((p, i) => $("#truckPreset").append(el("option", { value: i }, p.name)));
 function renderFleet() {
-  const tb = $("#fleet tbody"); tb.innerHTML = "";
+  const box = $("#fleet"); box.innerHTML = "";
   fleet.forEach((t, i) => {
-    const n = (k, w) => { const inp = el("input", { type: "number", min: 1, value: t[k], style: "width:" + w + "px" }); inp.oninput = () => t[k] = +inp.value; return inp; };
-    tb.append(el("tr", {},
-      el("td", {}, (() => { const inp = el("input", { type: "text", value: t.name }); inp.oninput = () => t.name = inp.value; return inp; })()),
-      el("td", { class: "num" }, el("div", { class: "row", style: "flex-wrap:nowrap;gap:2px" }, n("L", 52), "×", n("W", 44), "×", n("H", 44))),
-      el("td", { class: "num" }, n("kg", 70)),
-      el("td", { class: "num" }, n("count", 50)),
-      el("td", {}, el("button", { class: "icon", onclick: () => { fleet.splice(i, 1); renderFleet(); } }, "×")),
-    ));
+    const re = () => { renderFleet(); scheduleRun(); };
+    const f = (label, key, step, onch) => { const inp = el("input", { type: "number", min: 0, step, value: key === "vol" ? Math.round(truckVol(t)) : key === "ton" ? Math.round(t.kg / 100) / 10 : t[key] }); inp.onchange = () => { onch(+inp.value); re(); }; return el("label", { class: "f" }, label, inp); };
+    const name = el("input", { type: "text", value: t.name, title: "Nomi" }); name.onchange = () => { t.name = name.value; renderSums(); scheduleRun(); };
+    const adv = el("div", { class: "adv" },
+      f("Uzunlik sm", "L", 10, v => t.L = v), f("Eni sm", "W", 5, v => t.W = v), f("Balandlik sm", "H", 5, v => t.H = v));
+    adv.hidden = !t.adv;
+    box.append(el("div", { class: "truck" },
+      el("div", { class: "head" }, name, el("button", { class: "icon", title: "O'chirish", onclick: () => { fleet.splice(i, 1); re(); } }, "×")),
+      el("div", { class: "fields" },
+        f("Hajmi, m³", "vol", 1, v => { t.L = Math.round(v * 1e6 / (t.W * t.H)); }),   // kub o'zgarsa uzunlikni moslaymiz
+        f("Ko'taradi, tonna", "ton", 0.5, v => t.kg = v * 1000),
+        f("Nechta", "count", 1, v => t.count = Math.max(1, Math.round(v)))),
+      el("div", { class: "dims" }, el("span", {}, `ichki o'lcham ${fmt(t.L / 100, 2)} × ${fmt(t.W / 100, 2)} × ${fmt(t.H / 100, 2)} m`),
+        el("button", { class: "link", onclick: () => { t.adv = !t.adv; renderFleet(); } }, t.adv ? "o'lchamlarni yashirish" : "o'lchamlarni o'zgartirish")),
+      adv));
   });
+  renderSums();
 }
-$("#addTruck").onclick = () => { fleet.push({ ...PRESETS[$("#truckPreset").value], count: 1 }); renderFleet(); };
+$("#addTruck").onclick = () => { fleet.push({ ...PRESETS[$("#truckPreset").value], count: 1 }); renderFleet(); scheduleRun(); };
 
-// ---------- Joylashtirish algoritmi (ekstremal nuqtalar, 3D) ----------
+// ---------- Joylashtirish algoritmi ----------
+// 1) Bir xil yuklar fura balandligigacha ustun (stopka) qilinadi.
+// 2) Ustunlar "ekstremal nuqtalar" usuli bilan polga va bir-birining ustiga joylanadi.
+// 3) Ustunlar yana alohida yuklarga ajratiladi (3D va jadval uchun).
 function overlaps(a, b) { return a.x < b.x + b.L && b.x < a.x + a.L && a.y < b.y + b.W && b.y < a.y + a.W && a.z < b.z + b.H && b.z < a.z + a.H; }
-function supportRatio(box, placed) {
+const CELL = 100; // joylashganlarni uzunlik bo'ylab 1 m li kataklarda saqlaymiz — tekshiruv tez bo'ladi
+function cellsOf(b) { const r = []; for (let i = Math.floor(b.x / CELL), e = Math.floor((b.x + b.L - 0.01) / CELL); i <= e; i++) r.push(i); return r; }
+function near(grid, b) { const out = new Set(); for (const i of cellsOf(b)) if (grid[i]) for (const p of grid[i]) out.add(p); return out; }
+function supportRatio(box, cand) {
   if (box.z === 0) return 1;
   let area = 0;
-  for (const p of placed) {
+  for (const p of cand) {
     if (Math.abs(p.z + p.H - box.z) > 0.5) continue;
-    if (!p.stack) { const ox = Math.max(0, Math.min(box.x + box.L, p.x + p.L) - Math.max(box.x, p.x)), oy = Math.max(0, Math.min(box.y + box.W, p.y + p.W) - Math.max(box.y, p.y)); if (ox * oy > 0) return 0; continue; }
-    area += Math.max(0, Math.min(box.x + box.L, p.x + p.L) - Math.max(box.x, p.x)) * Math.max(0, Math.min(box.y + box.W, p.y + p.W) - Math.max(box.y, p.y));
+    const ox = Math.max(0, Math.min(box.x + box.L, p.x + p.L) - Math.max(box.x, p.x)), oy = Math.max(0, Math.min(box.y + box.W, p.y + p.W) - Math.max(box.y, p.y));
+    if (ox * oy <= 0) continue;
+    if (!p.stack) return 0;
+    area += ox * oy;
   }
   return area / (box.L * box.W);
 }
-function packTruck(truck, items) {
-  const placed = [], left = []; let eps = [{ x: 0, y: 0, z: 0 }], kg = 0;
-  for (const it of items) {
+function dropZ(e, grid) { let z = 0; for (const p of grid[Math.floor(e.x / CELL)] || []) if (e.x >= p.x && e.x < p.x + p.L && e.y >= p.y && e.y < p.y + p.W && p.z + p.H <= e.z + 0.5) z = Math.max(z, p.z + p.H); return z; }
+function packBoxes(truck, boxes) {
+  const placed = [], left = [], grid = {}; let eps = [{ x: 0, y: 0, z: 0 }], kg = 0;
+  const inside = e => { for (const p of grid[Math.floor(e.x / CELL)] || []) if (e.x >= p.x && e.x < p.x + p.L && e.y >= p.y && e.y < p.y + p.W && e.z >= p.z && e.z < p.z + p.H) return true; return false; };
+  for (const it of boxes) {
     if (kg + it.kg > truck.kg) { left.push(it); continue; }
     let best = null;
-    for (const ep of eps) for (const [L, W] of [[it.L, it.W], [it.W, it.L]]) {
-      const box = { x: ep.x, y: ep.y, z: ep.z, L, W, H: it.H };
-      if (box.x + L > truck.L + 0.01 || box.y + W > truck.W + 0.01 || box.z + it.H > truck.H + 0.01) continue;
-      if (placed.some(p => overlaps(box, p))) continue;
-      if (supportRatio(box, placed) < 0.75) continue;
-      // Pastroq, oldinroq (x), chapga yaqinroq afzal; kam bo'sh joy qoldiradigan burilish
-      const score = box.z * 1e6 + box.x * 1e3 + box.y + (L !== it.L ? 0.5 : 0);
-      if (!best || score < best.score) best = { ...box, score, ep };
+    const ors = it.L === it.W ? [[it.L, it.W]] : [[it.L, it.W], [it.W, it.L]];
+    for (const ep of eps) {
+      if (best && ep.z * 1e6 + ep.x * 1e3 + ep.y >= best.score) break;
+      for (const [L, W] of ors) {
+        const box = { x: ep.x, y: ep.y, z: ep.z, L, W, H: it.H };
+        if (box.x + L > truck.L + 0.01 || box.y + W > truck.W + 0.01 || box.z + it.H > truck.H + 0.01) continue;
+        const cand = near(grid, box); let bad = false;
+        for (const p of cand) if (overlaps(box, p)) { bad = true; break; }
+        if (bad || supportRatio(box, cand) < 0.7) continue;
+        const score = box.z * 1e6 + box.x * 1e3 + box.y + (L !== it.L ? 0.5 : 0);
+        if (!best || score < best.score) best = { ...box, score, ep };
+      }
     }
     if (!best) { left.push(it); continue; }
-    placed.push({ ...it, x: best.x, y: best.y, z: best.z, L: best.L, W: best.W, rot: best.L !== it.L });
+    const pb = { ...it, x: best.x, y: best.y, z: best.z, L: best.L, W: best.W, rot: best.L !== it.L };
+    placed.push(pb); for (const i of cellsOf(pb)) (grid[i] = grid[i] || []).push(pb);
     kg += it.kg;
-    eps = eps.filter(e => e !== best.ep);
-    eps.push({ x: best.x + best.L, y: best.y, z: best.z }, { x: best.x, y: best.y + best.W, z: best.z }, { x: best.x, y: best.y, z: best.z + best.H });
-    // ekstremal nuqtalarni "tushirish": ostida hech narsa bo'lmasa pastga tushadi
-    eps = eps.filter(e => e.x < truck.L && e.y < truck.W && e.z < truck.H && !placed.some(p => e.x >= p.x && e.x < p.x + p.L && e.y >= p.y && e.y < p.y + p.W && e.z >= p.z && e.z < p.z + p.H));
+    const fresh = [{ x: pb.x + pb.L, y: pb.y, z: pb.z }, { x: pb.x, y: pb.y + pb.W, z: pb.z }, { x: pb.x, y: pb.y, z: pb.z + pb.H }];
+    for (const e of fresh) e.z = dropZ(e, grid);
+    eps = eps.filter(e => e !== best.ep).concat(fresh).filter(e => e.x < truck.L && e.y < truck.W && e.z < truck.H && !inside(e));
     eps.sort((a, b) => a.z - b.z || a.x - b.x || a.y - b.y);
+    eps = eps.filter((e, i) => !i || e.x !== eps[i - 1].x || e.y !== eps[i - 1].y || e.z !== eps[i - 1].z);
   }
+  return { placed, left, kg };
+}
+function makeTowers(truck, items) {
+  const groups = new Map();
+  for (const it of items) { const k = it.ci + "|" + it.L + "|" + it.W + "|" + it.H; (groups.get(k) || groups.set(k, []).get(k)).push(it); }
+  const towers = [];
+  for (const g of groups.values()) {
+    const it = g[0], per = it.stack ? Math.max(1, Math.floor(truck.H / it.H)) : 1;
+    for (let i = 0; i < g.length; i += per) { const chunk = g.slice(i, i + per); towers.push({ L: it.L, W: it.W, H: it.H * chunk.length, kg: chunk.reduce((s, x) => s + x.kg, 0), stack: it.stack, items: chunk }); }
+  }
+  return towers;
+}
+function packTruck(truck, items, order) {
+  const towers = makeTowers(truck, items).sort(order);
+  const r = packBoxes(truck, towers);
+  const placed = [];
+  for (const t of r.placed) t.items.forEach((it, j) => placed.push({ ...it, x: t.x, y: t.y, z: t.z + j * it.H, L: t.L, W: t.W, rot: t.rot }));
+  const left = r.left.flatMap(t => t.items);
   const vol = placed.reduce((s, p) => s + p.L * p.W * p.H, 0), floor = placed.filter(p => p.z === 0).reduce((s, p) => s + p.L * p.W, 0);
-  const cx = kg ? placed.reduce((s, p) => s + p.kg * (p.x + p.L / 2), 0) / kg : truck.L / 2;
+  const cx = r.kg ? placed.reduce((s, p) => s + p.kg * (p.x + p.L / 2), 0) / r.kg : truck.L / 2;
   const maxX = placed.reduce((m, p) => Math.max(m, p.x + p.L), 0);
-  return { truck, placed, left, kg, vol, floor, cx, maxX };
+  return { truck, placed, left, kg: r.kg, vol, floor, cx, maxX };
 }
 function buildPlan() {
   let items = []; let id = 1;
   cargo.forEach((c, ci) => { for (let i = 0; i < c.qty; i++) items.push({ id: id++, name: c.name, L: c.L, W: c.W, H: c.H, kg: c.kg, stack: c.stack, color: c.color, ci }); });
-  // Og'ir va katta asosli yuklar birinchi — ular polga tushadi; ustma-ust qo'yib bo'lmaydiganlar oxirroqda
-  items.sort((a, b) => (b.L * b.W) - (a.L * a.W) || b.H - a.H || b.kg - a.kg);
-  const trucks = [];
-  for (const t of fleet) { for (let i = 0; i < t.count && items.length; i++) { const r = packTruck(t, items); if (!r.placed.length) break; r.label = t.name + (t.count > 1 ? " #" + (i + 1) : ""); trucks.push(r); items = r.left; } }
-  return { trucks, left: items };
+  // Ustunlarni bir necha tartibda joylab, eng ko'p sig'dirganini olamiz
+  const orders = [
+    (a, b) => b.H - a.H || (b.L * b.W) - (a.L * a.W),            // balandlar birinchi
+    (a, b) => (b.L * b.W) - (a.L * a.W) || b.H - a.H,            // katta asoslilar birinchi
+    (a, b) => b.L * b.W * b.H - a.L * a.W * a.H,                 // hajmi kattalar birinchi
+    (a, b) => Math.max(b.L, b.W) - Math.max(a.L, a.W) || b.H - a.H, // uzunlar birinchi
+    (a, b) => b.kg - a.kg || b.H - a.H,                          // og'irlar birinchi
+  ];
+  let bestPlan = null;
+  for (const ord of orders) {
+    let rest = items.slice(); const trucks = [];
+    for (const t of fleet) for (let i = 0; i < t.count && rest.length; i++) {
+      const r = packTruck(t, rest, ord); if (!r.placed.length) break;
+      r.label = t.name.replace(/\s*\(.*\)$/, "") + (t.count > 1 ? " #" + (i + 1) : ""); trucks.push(r); rest = r.left;
+    }
+    const leftVol = rest.reduce((s, p) => s + p.L * p.W * p.H, 0);
+    if (!bestPlan || leftVol < bestPlan.leftVol) bestPlan = { trucks, left: rest, leftVol };
+    if (!rest.length) break;
+  }
+  return bestPlan;
 }
 
 // ---------- 3D ko'rinish ----------
@@ -357,7 +479,6 @@ function init3D() {
   scene.add(new THREE.HemisphereLight(0xffffff, 0x777777, 0.9));
   const d = new THREE.DirectionalLight(0xffffff, 0.55); d.position.set(5, 10, 7); scene.add(d);
   root = new THREE.Group(); scene.add(root);
-  // boshqaruv
   let drag = null;
   const c = renderer.domElement;
   c.addEventListener("pointerdown", e => { drag = { x: e.clientX, y: e.clientY, pan: e.button === 2 || e.shiftKey }; c.setPointerCapture(e.pointerId); });
@@ -385,21 +506,22 @@ function draw() {
 }
 function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 function build3D(tr) {
-  while (root.children.length) root.remove(root.children[0]);
+  while (root.children.length) { const o = root.children[0]; root.remove(o); o.geometry?.dispose(); o.material?.dispose(); }
+  $("#empty").hidden = !!tr;
   if (!tr) { draw(); return; }
   const s = 0.01, { L, W, H } = tr.truck;
-  // pol va karkas: x = uzunlik (old tomon x=0), y = balandlik, z = eni
+  // x = uzunlik (old tomon x=0), y = balandlik, z = eni
   const floor = new THREE.Mesh(new THREE.BoxGeometry(L * s, 0.06, W * s), new THREE.MeshLambertMaterial({ color: css("--floor") }));
   floor.position.set(L * s / 2, -0.03, 0); root.add(floor);
   const frame = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(L * s, H * s, W * s)), new THREE.LineBasicMaterial({ color: css("--muted") }));
   frame.position.set(L * s / 2, H * s / 2, 0); root.add(frame);
-  // kabina belgisi (old tomon)
   const cab = new THREE.Mesh(new THREE.BoxGeometry(0.4, H * s * 0.6, W * s), new THREE.MeshLambertMaterial({ color: css("--muted"), transparent: true, opacity: 0.25 }));
   cab.position.set(-0.25, H * s * 0.3, 0); root.add(cab);
   const edgeMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35 });
+  const mats = {};
   for (const p of tr.placed) {
     const g = new THREE.BoxGeometry(p.L * s - 0.01, p.H * s - 0.01, p.W * s - 0.01);
-    const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: p.color }));
+    const m = new THREE.Mesh(g, mats[p.color] || (mats[p.color] = new THREE.MeshLambertMaterial({ color: p.color })));
     m.position.set((p.x + p.L / 2) * s, (p.z + p.H / 2) * s, (p.y + p.W / 2) * s - W * s / 2);
     m.userData = p; root.add(m);
     const e = new THREE.LineSegments(new THREE.EdgesGeometry(g), edgeMat); e.position.copy(m.position); root.add(e);
@@ -414,56 +536,73 @@ function pick(e) {
   const tip = $("#tip");
   if (!hit) { tip.hidden = true; return; }
   const p = hit.object.userData;
-  tip.textContent = `#${p.id} ${p.name} · ${p.L}×${p.W}×${p.H} sm · ${fmt(p.kg)} kg · old tomondan ${fmt(p.x / 100, 2)} m · ${p.z ? Math.round(p.z) + " sm balandlikda" : "polda"}`;
+  tip.textContent = `${p.name} · ${p.L}×${p.W}×${p.H} sm · ${fmt(p.kg)} kg · old tomondan ${fmt(p.x / 100, 2)} m · ${p.z ? Math.round(p.z) + " sm balandlikda" : "polda"}`;
   tip.hidden = false;
 }
 
 // ---------- Natijani chiqarish ----------
 function renderTabs() {
   const t = $("#tabs"); t.innerHTML = "";
+  if (!plan) return;
   plan.trucks.forEach((tr, i) => t.append(el("button", { class: i === activeTruck ? "active" : "", onclick: () => { activeTruck = i; showTruck(); } }, tr.label, el("span", { class: "pct" }, Math.round(tr.vol / (tr.truck.L * tr.truck.W * tr.truck.H) * 100) + "%"))));
-  if (!plan.trucks.length) t.append(el("span", { class: "hint" }, "Fura parkiga fura qo'shing."));
+}
+function renderVerdict() {
+  const v = $("#verdict"); v.innerHTML = "";
+  if (!plan) return;
+  const used = plan.trucks.filter(t => t.placed.length);
+  const lines = used.map(tr => { const T = tr.truck; return `${tr.label}: ${tr.placed.length} dona, hajm ${Math.round(tr.vol / (T.L * T.W * T.H) * 100)}%, og'irlik ${fmt(tr.kg / 1000, 1)} t / ${fmt(T.kg / 1000, 1)} t`; });
+  let cls = "good", head = `Hammasi sig'di — ${used.length} fura kerak`;
+  if (plan.left.length) {
+    const kg = plan.left.reduce((s, p) => s + p.kg, 0), vol = plan.left.reduce((s, p) => s + p.L * p.W * p.H, 0) / 1e6;
+    cls = "bad"; head = `${plan.left.length} dona sig'madi (${fmt(vol, 1)} m³, ${fmt(kg / 1000, 2)} t)`;
+    const byName = {}; plan.left.forEach(p => byName[p.name] = (byName[p.name] || 0) + 1);
+    lines.push("Sig'maganlar: " + Object.entries(byName).slice(0, 8).map(([n, c]) => `${n} × ${c}`).join(", ") + (Object.keys(byName).length > 8 ? " …" : ""));
+    lines.push(fleet.length ? "Yana fura qo'shing yoki kattaroq fura tanlang." : "Avval fura qo'shing.");
+  } else if (used.length < plan.trucks.length) { cls = "warn"; head += `, ${plan.trucks.length - used.length} ta fura bo'sh qoladi`; }
+  v.append(el("div", { class: "verdict " + cls }, el("h3", {}, head), el("ul", {}, ...lines.map(l => el("li", {}, l)))));
 }
 function showTruck() {
   renderTabs();
-  const tr = plan.trucks[activeTruck]; build3D(tr); setView("iso");
+  const tr = plan?.trucks[activeTruck]; build3D(tr); setView("iso");
   const st = $("#stats"), lg = $("#legend"); st.innerHTML = ""; lg.innerHTML = "";
   if (!tr) return;
   const T = tr.truck, volP = tr.vol / (T.L * T.W * T.H) * 100, kgP = tr.kg / T.kg * 100, flP = tr.floor / (T.L * T.W) * 100, lenP = tr.maxX / T.L * 100;
-  const bal = (tr.cx - T.L / 2) / (T.L / 2) * 100; // + orqaga, − oldinga
+  const bal = (tr.cx - T.L / 2) / (T.L / 2) * 100;
   const stat = (k, v, unit, p) => st.append(el("div", { class: "stat" }, el("div", { class: "k" }, k), el("div", { class: "v" }, v, el("small", {}, unit)), ...(p != null ? [el("div", { class: "meter" }, el("i", { class: pctClass(p), style: "width:" + Math.min(100, p) + "%" }))] : [])));
-  stat("Hajm", fmt(volP, 0) + "%", fmt(tr.vol / 1e6, 1) + " / " + fmt(T.L * T.W * T.H / 1e6, 1) + " m³", volP);
-  stat("Og'irlik", fmt(kgP, 0) + "%", fmt(tr.kg, 0) + " / " + fmt(T.kg, 0) + " kg", kgP);
+  stat("Hajm", fmt(volP, 0) + "%", fmt(tr.vol / 1e6, 1) + " / " + fmt(truckVol(T), 0) + " m³", volP);
+  stat("Og'irlik", fmt(kgP, 0) + "%", fmt(tr.kg / 1000, 2) + " / " + fmt(T.kg / 1000, 1) + " t", kgP);
   stat("Pol maydoni", fmt(flP, 0) + "%", fmt(tr.floor / 1e4, 1) + " / " + fmt(T.L * T.W / 1e4, 1) + " m²", flP);
   stat("Band uzunlik", fmt(tr.maxX / 100, 2), "/ " + fmt(T.L / 100, 2) + " m", lenP);
-  stat("Paddonlar", tr.placed.length, "dona");
+  stat("Yuklar", tr.placed.length, "dona");
   stat("Og'irlik markazi", (bal > 0 ? "+" : "") + fmt(bal, 0) + "%", Math.abs(bal) < 10 ? "muvozanatda" : bal > 0 ? "orqaga og'gan" : "oldinga og'gan");
   const seen = new Map(); tr.placed.forEach(p => seen.set(p.ci, (seen.get(p.ci) || 0) + 1));
-  for (const [ci, n] of seen) lg.append(el("span", { style: "--c:" + cargo[ci].color }, `${cargo[ci].name} × ${n}`));
+  const top = [...seen].sort((a, b) => b[1] - a[1]).slice(0, 10);
+  for (const [ci, n] of top) lg.append(el("span", { style: "--c:" + cargo[ci].color }, `${cargo[ci].name} × ${n}`));
+  if (seen.size > top.length) lg.append(el("span", { style: "--c:transparent" }, `… yana ${seen.size - top.length} xil`));
 }
 function renderResult() {
   const tb = $("#result tbody"); tb.innerHTML = "";
-  plan.trucks.forEach(tr => tr.placed.slice().sort((a, b) => a.z - b.z || a.x - b.x || a.y - b.y).forEach(p => tb.append(el("tr", {},
-    el("td", {}, tr.label), el("td", {}, el("span", { class: "legend", style: "--c:" + p.color }, el("span", {}, "#" + p.id + " " + p.name)) ),
-    el("td", { class: "num" }, `${p.L}×${p.W}×${p.H}` + (p.rot ? " ↻" : "")), el("td", { class: "num" }, fmt(p.kg, 0)),
-    el("td", { class: "num" }, fmt(p.x / 100, 2)), el("td", { class: "num" }, fmt(p.y / 100, 2)), el("td", { class: "num" }, p.z ? 2 + Math.round(p.z / p.H - 1) : 1)))));
-  const lo = $("#leftover"); lo.innerHTML = "";
-  if (plan.left.length) {
-    const kg = plan.left.reduce((s, p) => s + p.kg, 0), vol = plan.left.reduce((s, p) => s + p.L * p.W * p.H, 0) / 1e6;
-    const byName = {}; plan.left.forEach(p => byName[p.name] = (byName[p.name] || 0) + 1);
-    lo.append(el("div", { class: "leftover" }, el("b", {}, `Sig'madi: ${plan.left.length} dona (${fmt(vol, 1)} m³, ${fmt(kg, 0)} kg). `), Object.entries(byName).map(([n, c]) => `${n} × ${c}`).join(", "), el("div", { class: "hint" }, "Yana fura qo'shing yoki kattaroq fura tanlang.")));
-  }
+  if (!plan) return;
+  const frag = document.createDocumentFragment();
+  plan.trucks.forEach(tr => tr.placed.slice().sort((a, b) => a.x - b.x || a.y - b.y || a.z - b.z).forEach(p => frag.append(el("tr", {},
+    el("td", {}, tr.label), el("td", {}, el("span", { class: "legend", style: "--c:" + p.color }, el("span", {}, p.name))),
+    el("td", { class: "num" }, `${p.L}×${p.W}×${p.H}` + (p.rot ? " ↻" : "")), el("td", { class: "num" }, fmt(p.kg, 1)),
+    el("td", { class: "num" }, fmt(p.x / 100, 2)), el("td", { class: "num" }, fmt(p.y / 100, 2)), el("td", { class: "num" }, 1 + Math.round(p.z / p.H))))));
+  tb.append(frag);
 }
-$("#run").onclick = () => {
-  if (!cargo.length) return toast("Avval yuk kiriting");
-  if (!fleet.length) return toast("Fura parkiga fura qo'shing");
-  plan = buildPlan(); activeTruck = 0; showTruck(); renderResult();
-  toast(plan.trucks.length + " fura ishlatildi" + (plan.left.length ? ", " + plan.left.length + " dona sig'madi" : ", hammasi sig'di"));
-};
+function showPlan() { activeTruck = 0; renderVerdict(); showTruck(); renderResult(); }
+function run() {
+  if (!cargo.length) { plan = null; showPlan(); return; }
+  if (!fleet.length) { plan = { trucks: [], left: [] }; showPlan(); return toast("Fura qo'shing"); }
+  const t0 = performance.now();
+  plan = buildPlan(); showPlan();
+  toast(plan.left.length ? `${plan.left.length} dona sig'madi` : `Hammasi sig'di — ${plan.trucks.filter(t => t.placed.length).length} fura` + ` (${((performance.now() - t0) / 1000).toFixed(1)} s)`);
+}
+$("#run").onclick = run;
 function resultRows() {
-  const rows = [["Fura", "ID", "Paddon", "Uzunlik", "Eni", "Balandlik", "kg", "X (m)", "Y (m)", "Qavat", "Burilgan"]];
-  plan.trucks.forEach(tr => tr.placed.forEach(p => rows.push([tr.label, p.id, p.name, p.L, p.W, p.H, p.kg, +(p.x / 100).toFixed(2), +(p.y / 100).toFixed(2), p.z ? 2 + Math.round(p.z / p.H - 1) : 1, p.rot ? "ha" : ""])));
-  plan.left.forEach(p => rows.push(["SIG'MADI", p.id, p.name, p.L, p.W, p.H, p.kg, "", "", "", ""]));
+  const rows = [["Fura", "Yuk", "Uzunlik sm", "Eni sm", "Balandlik sm", "kg", "Old tomondan m", "Chapdan m", "Qavat", "Burilgan"]];
+  plan.trucks.forEach(tr => tr.placed.forEach(p => rows.push([tr.label, p.name, p.L, p.W, p.H, +p.kg.toFixed(1), +(p.x / 100).toFixed(2), +(p.y / 100).toFixed(2), 1 + Math.round(p.z / p.H), p.rot ? "ha" : ""])));
+  plan.left.forEach(p => rows.push(["SIG'MADI", p.name, p.L, p.W, p.H, +p.kg.toFixed(1), "", "", "", ""]));
   return rows;
 }
 $("#copyRes").onclick = async () => {
@@ -475,18 +614,18 @@ $("#copyRes").onclick = async () => {
 $("#dlRes").onclick = () => {
   if (!plan) return toast("Avval hisoblang");
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resultRows()), "Joylashuv");
-  const sum = [["Fura", "Paddon", "Hajm %", "Og'irlik %", "Pol %", "kg", "m³"]];
-  plan.trucks.forEach(tr => { const T = tr.truck; sum.push([tr.label, tr.placed.length, Math.round(tr.vol / (T.L * T.W * T.H) * 100), Math.round(tr.kg / T.kg * 100), Math.round(tr.floor / (T.L * T.W) * 100), tr.kg, +(tr.vol / 1e6).toFixed(2)]); });
+  const sum = [["Fura", "Yuk soni", "Hajm %", "Og'irlik %", "Pol %", "kg", "m³"]];
+  plan.trucks.forEach(tr => { const T = tr.truck; sum.push([tr.label, tr.placed.length, Math.round(tr.vol / (T.L * T.W * T.H) * 100), Math.round(tr.kg / T.kg * 100), Math.round(tr.floor / (T.L * T.W) * 100), Math.round(tr.kg), +(tr.vol / 1e6).toFixed(2)]); });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sum), "Xulosa");
-  XLSX.writeFile(wb, "yuk-rejasi.xlsx");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resultRows()), "Joylashuv");
+  XLSX.writeFile(wb, "fura-rejasi.xlsx");
   toast("Agar fayl tushmasa, 'Nusxalash' tugmasini ishlating");
 };
 
-// ---------- Boshlang'ich holat: namuna bilan ochiladi ----------
+// ---------- Boshlang'ich holat ----------
 init3D();
+fleet.push({ ...PRESETS[0], count: 1 }, { ...PRESETS[1], count: 1 }); renderFleet();
 SAMPLE.forEach(s => addCargo({ ...s })); renderCargo();
-fleet.push({ ...PRESETS[0], count: 1 }, { ...PRESETS[5], count: 1 }); renderFleet();
-$("#run").click();
+run();
 </script>
 </head></html>

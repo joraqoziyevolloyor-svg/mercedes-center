@@ -330,7 +330,7 @@ body.pen .penbar .tools{display:flex}
     const txt=await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
     window.LEDGER_DATA=JSON.parse(txt);
   }
-  function show(st){step=st;$('s-login').hidden=st!=='login';$('s-code').hidden=st!=='code';$('s-setup').hidden=st!=='setup';
+  function show(st){step=st;$('lb').disabled=false;$('s-login').hidden=st!=='login';$('s-code').hidden=st!=='code';$('s-setup').hidden=st!=='setup';
     $('lb').textContent=st==='setup'?'Kodni saqlash':st==='code'?'Tasdiqlash':'Kirish';
     $('lt').textContent=st==='code'?'Yangi qurilma: Telegramdagi kodni kiriting.':st==='setup'?'Birinchi kirish: o\'zingizga shaxsiy kod o\'rnating.':'Ismingizni tanlang va shaxsiy kodingizni kiriting.';
     const f=st==='code'?$('lc'):st==='setup'?$('ln1'):$('lp');setTimeout(()=>f.focus(),0)}
@@ -343,7 +343,7 @@ body.pen .penbar .tools{display:flex}
         btn.disabled=true;btn.textContent='Tekshirilmoqda…';
         const j=await post('/api/daftar/login',{name,pin,dev,init:INIT});
         if(j.step)show(j.step);else await finish(j)}
-      else if(step==='code'){const code=$('lc').value.trim();if(code.length<6){$('lc').focus();return}btn.disabled=true;btn.textContent='Tekshirilmoqda…';
+      else if(step==='code'){const code=$('lc').value.replace(/\D/g,'');if(code.length!==6){er.textContent='Telegramdan kelgan 6 xonali kodni yozing';$('lc').focus();return}btn.disabled=true;btn.textContent='Tekshirilmoqda…';
         const j=await post('/api/daftar/verify',{name,dev,code});if(j.step)show(j.step);else await finish(j)}
       else{const a=$('ln1').value.trim(),b=$('ln2').value.trim();if(!/^\d{4,6}$/.test(a)){er.textContent='Kod 4–6 ta raqam bo\'lsin';$('ln1').focus();return}if(a!==b){er.textContent='Ikki kod bir xil emas';$('ln2').focus();return}
         btn.disabled=true;btn.textContent='Saqlanmoqda…';const j=await post('/api/daftar/pin',{name,dev,init:INIT,pin:a});await finish(j)}

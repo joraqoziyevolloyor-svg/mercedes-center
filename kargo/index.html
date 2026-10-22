@@ -497,35 +497,49 @@ function init3D() {
   new ResizeObserver(resize).observe(v); resize();
 }
 function resize() { const v = $("#viewer"); renderer.setSize(v.clientWidth, v.clientHeight, false); camera.aspect = v.clientWidth / v.clientHeight; camera.updateProjectionMatrix(); draw(); }
-function setView(k) { const t = plan?.trucks[activeTruck]?.truck; const L = t ? t.L / 100 : 13.6;
+let sceneSize = { L: 13.6, W: 2.45 };
+function setView(k) { const { L, W } = sceneSize;
   if (k === "top") { cam.theta = -Math.PI / 2; cam.phi = 0.05; } else if (k === "side") { cam.theta = -Math.PI / 2; cam.phi = Math.PI / 2 - 0.02; } else if (k === "back") { cam.theta = 0; cam.phi = Math.PI / 2 - 0.05; } else { cam.theta = -0.9; cam.phi = 1.05; }
-  cam.dist = L * 1.35 + 2; cam.target.set(L / 2, 0.8, 0); draw(); }
+  cam.dist = Math.max(L * 1.35, W * 2.2) + 2; cam.target.set(L / 2, 0.8, 0); draw(); }
+function labelSprite(text) {
+  const c = document.createElement("canvas"); c.width = 512; c.height = 96; const g = c.getContext("2d");
+  g.fillStyle = css("--panel"); g.fillRect(0, 0, 512, 96); g.strokeStyle = css("--line"); g.lineWidth = 4; g.strokeRect(2, 2, 508, 92);
+  g.fillStyle = css("--fg"); g.font = "bold 44px Barlow Condensed, Arial Narrow, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(text, 256, 48);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false })); sp.scale.set(5.2, 1, 1); return sp;
+}
 function draw() {
   camera.position.set(cam.target.x + cam.dist * Math.sin(cam.phi) * Math.cos(cam.theta), cam.target.y + cam.dist * Math.cos(cam.phi), cam.target.z + cam.dist * Math.sin(cam.phi) * Math.sin(cam.theta));
   camera.lookAt(cam.target); renderer.render(scene, camera);
 }
 function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
-function build3D(tr) {
+// Bir yoki bir nechta furani yonma-yon chizadi
+function build3D(trs) {
   while (root.children.length) { const o = root.children[0]; root.remove(o); o.geometry?.dispose(); o.material?.dispose(); }
-  $("#empty").hidden = !!tr;
-  if (!tr) { draw(); return; }
-  const s = 0.01, { L, W, H } = tr.truck;
-  // x = uzunlik (old tomon x=0), y = balandlik, z = eni
-  const floor = new THREE.Mesh(new THREE.BoxGeometry(L * s, 0.06, W * s), new THREE.MeshLambertMaterial({ color: css("--floor") }));
-  floor.position.set(L * s / 2, -0.03, 0); root.add(floor);
-  const frame = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(L * s, H * s, W * s)), new THREE.LineBasicMaterial({ color: css("--muted") }));
-  frame.position.set(L * s / 2, H * s / 2, 0); root.add(frame);
-  const cab = new THREE.Mesh(new THREE.BoxGeometry(0.4, H * s * 0.6, W * s), new THREE.MeshLambertMaterial({ color: css("--muted"), transparent: true, opacity: 0.25 }));
-  cab.position.set(-0.25, H * s * 0.3, 0); root.add(cab);
-  const edgeMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35 });
-  const mats = {};
-  for (const p of tr.placed) {
-    const g = new THREE.BoxGeometry(p.L * s - 0.01, p.H * s - 0.01, p.W * s - 0.01);
-    const m = new THREE.Mesh(g, mats[p.color] || (mats[p.color] = new THREE.MeshLambertMaterial({ color: p.color })));
-    m.position.set((p.x + p.L / 2) * s, (p.z + p.H / 2) * s, (p.y + p.W / 2) * s - W * s / 2);
-    m.userData = p; root.add(m);
-    const e = new THREE.LineSegments(new THREE.EdgesGeometry(g), edgeMat); e.position.copy(m.position); root.add(e);
-  }
+  $("#empty").hidden = !!trs.length;
+  if (!trs.length) { draw(); return; }
+  const s = 0.01, GAP = 1.6, edgeMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35 }), mats = {};
+  const totalW = trs.reduce((a, t) => a + t.truck.W * s, 0) + GAP * (trs.length - 1);
+  let zOff = -totalW / 2, maxL = 0;
+  trs.forEach((tr, i) => {
+    const { L, W, H } = tr.truck; const zc = zOff + W * s / 2; maxL = Math.max(maxL, L * s);
+    // x = uzunlik (old tomon x=0), y = balandlik, z = eni
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(L * s, 0.06, W * s), new THREE.MeshLambertMaterial({ color: css("--floor") }));
+    floor.position.set(L * s / 2, -0.03, zc); root.add(floor);
+    const frame = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(L * s, H * s, W * s)), new THREE.LineBasicMaterial({ color: css("--muted") }));
+    frame.position.set(L * s / 2, H * s / 2, zc); root.add(frame);
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(0.4, H * s * 0.6, W * s), new THREE.MeshLambertMaterial({ color: css("--muted"), transparent: true, opacity: 0.25 }));
+    cab.position.set(-0.25, H * s * 0.3, zc); root.add(cab);
+    if (trs.length > 1) { const lb = labelSprite(`${i + 1}. ${tr.label} — ${Math.round(tr.vol / (L * W * H) * 100)}%`); lb.position.set(L * s / 2, H * s + 0.9, zc); root.add(lb); }
+    for (const p of tr.placed) {
+      const g = new THREE.BoxGeometry(p.L * s - 0.01, p.H * s - 0.01, p.W * s - 0.01);
+      const m = new THREE.Mesh(g, mats[p.color] || (mats[p.color] = new THREE.MeshLambertMaterial({ color: p.color })));
+      m.position.set((p.x + p.L / 2) * s, (p.z + p.H / 2) * s, (p.y + p.W / 2) * s - W * s / 2 + zc);
+      m.userData = p; root.add(m);
+      const e = new THREE.LineSegments(new THREE.EdgesGeometry(g), edgeMat); e.position.copy(m.position); root.add(e);
+    }
+    zOff += W * s + GAP;
+  });
+  sceneSize = { L: maxL, W: totalW };
   draw();
 }
 function pick(e) {
@@ -536,15 +550,17 @@ function pick(e) {
   const tip = $("#tip");
   if (!hit) { tip.hidden = true; return; }
   const p = hit.object.userData;
-  tip.textContent = `${p.name} · ${p.L}×${p.W}×${p.H} sm · ${fmt(p.kg)} kg · old tomondan ${fmt(p.x / 100, 2)} m · ${p.z ? Math.round(p.z) + " sm balandlikda" : "polda"}`;
+  const trk = activeTruck >= 0 ? "" : (plan.trucks.find(t => t.placed.includes(p))?.label || "") + " · ";
+  tip.textContent = `${trk}${p.name} · ${p.L}×${p.W}×${p.H} sm · ${fmt(p.kg)} kg · old tomondan ${fmt(p.x / 100, 2)} m · ${p.z ? Math.round(p.z) + " sm balandlikda" : "polda"}`;
   tip.hidden = false;
 }
 
 // ---------- Natijani chiqarish ----------
 function renderTabs() {
   const t = $("#tabs"); t.innerHTML = "";
-  if (!plan) return;
-  plan.trucks.forEach((tr, i) => t.append(el("button", { class: i === activeTruck ? "active" : "", onclick: () => { activeTruck = i; showTruck(); } }, tr.label, el("span", { class: "pct" }, Math.round(tr.vol / (tr.truck.L * tr.truck.W * tr.truck.H) * 100) + "%"))));
+  if (!plan || !plan.trucks.length) return;
+  t.append(el("button", { class: activeTruck === -1 ? "active" : "", onclick: () => { activeTruck = -1; showTruck(); } }, `Barcha furalar`, el("span", { class: "pct" }, plan.trucks.length + " ta")));
+  plan.trucks.forEach((tr, i) => t.append(el("button", { class: i === activeTruck ? "active" : "", onclick: () => { activeTruck = i; showTruck(); } }, (i + 1) + ". " + tr.label, el("span", { class: "pct" }, Math.round(tr.vol / (tr.truck.L * tr.truck.W * tr.truck.H) * 100) + "%"))));
 }
 function renderVerdict() {
   const v = $("#verdict"); v.innerHTML = "";
@@ -563,12 +579,23 @@ function renderVerdict() {
 }
 function showTruck() {
   renderTabs();
-  const tr = plan?.trucks[activeTruck]; build3D(tr); setView("iso");
+  const all = plan?.trucks || [];
+  const tr = activeTruck >= 0 ? all[activeTruck] : null;
+  build3D(tr ? [tr] : all); setView("iso");
   const st = $("#stats"), lg = $("#legend"); st.innerHTML = ""; lg.innerHTML = "";
-  if (!tr) return;
+  const stat = (k, v, unit, p) => st.append(el("div", { class: "stat" }, el("div", { class: "k" }, k), el("div", { class: "v" }, v, el("small", {}, unit)), ...(p != null ? [el("div", { class: "meter" }, el("i", { class: pctClass(p), style: "width:" + Math.min(100, p) + "%" }))] : [])));
+  if (!tr) {
+    if (!all.length) return;
+    // Barcha furalar bo'yicha jami
+    const cap = all.reduce((s, t) => s + t.truck.L * t.truck.W * t.truck.H, 0), vol = all.reduce((s, t) => s + t.vol, 0), kg = all.reduce((s, t) => s + t.kg, 0), kgCap = all.reduce((s, t) => s + t.truck.kg, 0), n = all.reduce((s, t) => s + t.placed.length, 0);
+    stat("Furalar", all.length, "ta");
+    stat("Jami hajm", fmt(vol / cap * 100, 0) + "%", fmt(vol / 1e6, 1) + " / " + fmt(cap / 1e6, 0) + " m³", vol / cap * 100);
+    stat("Jami og'irlik", fmt(kg / kgCap * 100, 0) + "%", fmt(kg / 1000, 1) + " / " + fmt(kgCap / 1000, 1) + " t", kg / kgCap * 100);
+    stat("Yuklangan", n, "dona" + (plan.left.length ? ", " + plan.left.length + " sig'madi" : ""));
+    return;
+  }
   const T = tr.truck, volP = tr.vol / (T.L * T.W * T.H) * 100, kgP = tr.kg / T.kg * 100, flP = tr.floor / (T.L * T.W) * 100, lenP = tr.maxX / T.L * 100;
   const bal = (tr.cx - T.L / 2) / (T.L / 2) * 100;
-  const stat = (k, v, unit, p) => st.append(el("div", { class: "stat" }, el("div", { class: "k" }, k), el("div", { class: "v" }, v, el("small", {}, unit)), ...(p != null ? [el("div", { class: "meter" }, el("i", { class: pctClass(p), style: "width:" + Math.min(100, p) + "%" }))] : [])));
   stat("Hajm", fmt(volP, 0) + "%", fmt(tr.vol / 1e6, 1) + " / " + fmt(truckVol(T), 0) + " m³", volP);
   stat("Og'irlik", fmt(kgP, 0) + "%", fmt(tr.kg / 1000, 2) + " / " + fmt(T.kg / 1000, 1) + " t", kgP);
   stat("Pol maydoni", fmt(flP, 0) + "%", fmt(tr.floor / 1e4, 1) + " / " + fmt(T.L * T.W / 1e4, 1) + " m²", flP);
@@ -590,7 +617,7 @@ function renderResult() {
     el("td", { class: "num" }, fmt(p.x / 100, 2)), el("td", { class: "num" }, fmt(p.y / 100, 2)), el("td", { class: "num" }, 1 + Math.round(p.z / p.H))))));
   tb.append(frag);
 }
-function showPlan() { activeTruck = 0; renderVerdict(); showTruck(); renderResult(); }
+function showPlan() { activeTruck = -1; renderVerdict(); showTruck(); renderResult(); }
 function run() {
   if (!cargo.length) { plan = null; showPlan(); return; }
   if (!fleet.length) { plan = { trucks: [], left: [] }; showPlan(); return toast("Fura qo'shing"); }

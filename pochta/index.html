@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Pochta nazorati</title>
+<script src="telegram-web-app.js"></script>
+<style>
+/* HR mini app (@uzparts_hr_bot) bilan bir xil ko'rinish: oq/qora fon, chiziqli bo'limlar, yengil yumaloq tugmalar,
+   IBM Plex Sans matn, IBM Plex Mono sonlar. Rang faqat ma'nosi bo'lganda: pul kutilmoqda (sariq), kechikkan (qizil), olindi (yashil). */
+@font-face{font-family:"IBM Plex Sans";font-weight:400;font-display:swap;src:url(fonts/ibm-plex-sans-latin-400-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"IBM Plex Sans";font-weight:600;font-display:swap;src:url(fonts/ibm-plex-sans-latin-600-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"IBM Plex Sans";font-weight:400;font-display:swap;src:url(fonts/ibm-plex-sans-cyrillic-400-normal.woff2) format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:"IBM Plex Sans";font-weight:600;font-display:swap;src:url(fonts/ibm-plex-sans-cyrillic-600-normal.woff2) format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:"IBM Plex Mono";font-weight:400;font-display:swap;src:url(fonts/ibm-plex-mono-latin-400-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+2000-206F,U+2212}
+:root{
+  --bg:#ffffff;--ink:#111316;--muted:#5c6370;--line:#e3e5e8;--line-2:#111316;--accent:#1f5fa8;--accent-ink:#ffffff;--tile:#f6f7f8;
+  --warn:#9a6200;--warn-bar:#c8860a;--warn-bg:#fbf3e3;--no:#a3241c;--no-bg:#f9e9e7;--ok:#1e7a4f;--ok-bg:#e6f3ec;--off:#c9cdd3;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1013;--ink:#e8eaed;--muted:#9aa0a8;--line:#262a30;--line-2:#3a3f47;--accent:#7fb2e5;--accent-ink:#0e1013;--tile:#15181c;
+  --warn:#e0a33a;--warn-bar:#e0a33a;--warn-bg:#2a2112;--no:#ff8f86;--no-bg:#311513;--ok:#3fb37f;--ok-bg:#12261c;--off:#4a4f57;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1013;--ink:#e8eaed;--muted:#9aa0a8;--line:#262a30;--line-2:#3a3f47;--accent:#7fb2e5;--accent-ink:#0e1013;--tile:#15181c;
+  --warn:#e0a33a;--warn-bar:#e0a33a;--warn-bg:#2a2112;--no:#ff8f86;--no-bg:#311513;--ok:#3fb37f;--ok-bg:#12261c;--off:#4a4f57;color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--f-body);-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+h1,h2{margin:0;font-weight:600;text-wrap:balance}
+
+.bar{padding:18px 20px 12px;border-bottom:1px solid var(--line-2)}
+.bar h1{font-size:22px;line-height:1.25}
+.bar .meta{margin-top:4px;color:var(--muted);font-size:13px;display:flex;flex-wrap:wrap;gap:4px 12px}
+.bar .meta .mono{color:var(--ink)}
+main{max-width:560px;margin:0 auto;padding-bottom:calc(90px + env(safe-area-inset-bottom))}
+
+.kpi{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-bottom:1px solid var(--line)}
+.kpi>div{padding:16px 8px 14px 20px;border-right:1px solid var(--line);min-width:0}
+.kpi>div:last-child{border-right:0}
+.kpi b{display:block;font-family:var(--f-mono);font-weight:400;font-size:32px;line-height:1}
+.kpi b.sm{font-size:19px;line-height:32px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kpi span{display:block;font-size:13px;color:var(--muted);margin-top:6px}
+.c-warn{color:var(--warn)} .c-no{color:var(--no)} .c-ok{color:var(--ok)}
+
+.lbl2{padding:16px 20px 8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;align-items:baseline;gap:8px}
+.lbl2 .grow{flex:1}
+.lbl2 .mono{letter-spacing:0;text-transform:none}
+.search{padding:12px 20px 0}
+.empty{padding:16px 20px;color:var(--muted)}
+.note{padding:14px 20px;color:var(--muted);font-size:13px}
+
+/* ro'yxat qatori: chapda holat chizig'i */
+.row{border-top:1px solid var(--line)}
+.att{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;width:100%;padding:12px 20px;-webkit-tap-highlight-color:transparent}
+.att:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.bar4{width:4px;align-self:stretch;min-height:38px;border-radius:2px;flex:none;background:var(--off)}
+.bar4.warn{background:var(--warn-bar)} .bar4.no{background:var(--no)} .bar4.ok{background:var(--ok)}
+.gr{flex:1;min-width:0}
+.t1{font-size:15px;font-weight:600;overflow-wrap:anywhere}
+.t1 .car{font-weight:400;color:var(--muted)}
+.t2{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.rt{text-align:right;flex:none;max-width:42%}
+.rt .sum{font-family:var(--f-mono);font-size:14px;white-space:nowrap}
+.rt .age{font-size:12px;color:var(--muted);white-space:nowrap}
+.rt .age.warn{color:var(--warn);font-weight:600} .rt .age.no{color:var(--no);font-weight:600}
+.row.open>.att{background:var(--tile)}
+.det{background:var(--tile);padding:2px 20px 16px;display:flex;flex-direction:column;gap:12px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;margin:0;font-size:14px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.kv a{color:var(--accent);font-family:var(--f-mono);font-size:14px;text-decoration:none}
+
+button,.btn{appearance:none;border:0;border-radius:8px;min-height:44px;padding:10px 14px;font:600 15px/1.2 var(--f-body);background:var(--accent);color:var(--accent-ink);cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:disabled{opacity:.55}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line-2)}
+button.danger{background:transparent;color:var(--no);border:1px solid var(--no)}
+button.okb{background:var(--ok);color:#fff}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.acts .wide{grid-column:1/-1}
+.abar{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px 16px;border-top:1px solid var(--line)}
+
+input,select,textarea{font:16px/1.3 var(--f-body);color:var(--ink);background:var(--tile);border:1px solid var(--line);border-radius:8px;padding:10px 11px;width:100%;min-width:0;appearance:none;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 16px) 55%,calc(100% - 11px) 55%;background-size:5px 5px;background-repeat:no-repeat;padding-right:30px}
+.form{padding:4px 20px 16px;display:flex;flex-direction:column;gap:12px}
+.fld{display:flex;flex-direction:column;gap:5px;min-width:0}
+.fld .lb{font-size:13px;font-weight:600;color:var(--muted)}
+.req{color:var(--no)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.col1{display:grid;gap:12px}
+.grp{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding-top:10px;border-top:1px solid var(--line);margin-top:4px}
+.grp:first-child{border-top:0;padding-top:12px;margin-top:0}
+.hint{font-size:12px;color:var(--muted)}
+.msg{font-size:13px;color:var(--muted)} .msg.bad{color:var(--no);font-weight:600} .msg.good{color:var(--ok);font-weight:600}
+.msg:empty{display:none}
+.datebox,.sumbox{display:flex;gap:6px}
+.datebox input[type=text]{flex:1;font-family:var(--f-mono)}
+.cal{position:relative;flex:0 0 46px;display:grid;place-items:center;border:1px solid var(--line);border-radius:8px;background:var(--tile);color:var(--muted)}
+.cal input{position:absolute;inset:0;width:100%;height:100%;opacity:0;padding:0;border:0}
+.cal input::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0}
+.sumbox input{flex:1;font-family:var(--f-mono)}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:8px;overflow:hidden;flex:none}
+.seg button{border-radius:0;background:transparent;color:var(--ink);min-height:42px;padding:8px 12px;font-weight:500}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.segw{padding:12px 20px 0;display:flex}
+.segw .seg{flex:1} .segw .seg button{flex:1}
+.chk{display:flex;gap:10px;align-items:center;font-size:15px;min-height:36px}
+.chk input{width:22px;height:22px;padding:0;flex:none;appearance:auto;-webkit-appearance:checkbox;accent-color:var(--accent)}
+
+/* takliflar ro'yxati */
+.sw{position:relative;display:block}
+.sugg{position:absolute;z-index:30;top:calc(100% + 4px);left:0;right:0;max-height:260px;overflow:auto;background:var(--bg);border:1px solid var(--line-2);border-radius:8px;box-shadow:0 10px 28px rgba(0,0,0,.16);padding:4px}
+.sopt{all:unset;box-sizing:border-box;display:flex;justify-content:space-between;gap:10px;width:100%;padding:10px;border-radius:6px;cursor:pointer}
+.sopt b{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.sopt span{color:var(--muted);font-family:var(--f-mono);font-size:12px;text-align:right}
+.sopt.on,.sopt:hover{background:var(--tile)}
+
+.tag{display:inline-block;font-size:12px;font-weight:600;line-height:1.2;padding:2px 6px;border-radius:4px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.tag.ok{color:var(--ok);border-color:currentColor}
+.err{margin:16px 20px;border:1px solid var(--no);background:var(--no-bg);color:var(--no);padding:12px 14px;font-weight:600;border-radius:8px}
+.gate{padding:40px 24px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
+.gate b{font-size:18px}
+
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;background:var(--bg);border-top:1px solid var(--line-2);padding-bottom:env(safe-area-inset-bottom)}
+.tabs button{flex:1 1 0;min-width:0;border-radius:0;background:transparent;color:var(--muted);font:500 11px/1.2 var(--f-body);min-height:60px;padding:8px 2px;border-top:3px solid transparent;margin-top:-1px;position:relative}
+.tabs button[aria-selected="true"]{color:var(--ink);font-weight:600;border-top-color:var(--accent)}
+.tabs button svg{display:block;margin:0 auto 3px}
+.tabs .bdg{position:absolute;top:5px;left:50%;margin-left:6px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--warn-bar);color:#fff;font-size:11px;font-weight:600;line-height:18px}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:40;max-width:520px;margin:0 auto;background:var(--ink);color:var(--bg);padding:12px 14px;border-radius:8px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <h1 id="title">Pochta</h1>
+  <div class="meta"><span id="who">…</span><span id="today"></span><span>yangilangan <span class="mono" id="upd">—</span></span></div>
+</header>
+
+<main id="app">
+  <div class="gate" id="loading"><span class="msg">Yuklanmoqda…</span></div>
+
+  <!-- 1. Pul kutilmoqda -->
+  <section id="v-wait" hidden>
+    <div class="kpi">
+      <div><b class="c-warn" id="kWait">0</b><span>pul kutilmoqda</span></div>
+      <div><b class="c-no" id="kLate">0</b><span id="kLateLbl">eslatmada</span></div>
+      <div><b class="c-ok" id="kDone">0</b><span>bu oy olindi</span></div>
+    </div>
+    <div class="search"><input id="qWait" type="search" placeholder="Qidirish: shofyor, mijoz, telefon, viloyat"></div>
+    <div class="lbl2"><span>Shofyordan pul kutilmoqda</span><span class="grow"></span><span class="mono" id="sumWait"></span></div>
+    <div id="listWait"></div>
+    <div class="abar"><button id="goNew">Pochta yuborish</button><button class="ghost" id="goBase">Shofyor qo'shish</button></div>
+  </section>
+
+  <!-- 2. Yangi pochta -->
+  <section id="v-new" hidden>
+    <div class="lbl2" id="formTitleWrap" hidden><span id="formTitle">Pochtani tahrirlash</span></div>
+    <form class="form" id="f" autocomplete="off" novalidate>
+      <div class="grp">Shofyor</div>
+      <label class="fld"><span class="lb">Shofyor ismi <span class="req">*</span></span><input id="fDriver" maxlength="80" placeholder="Masalan: Nuriddin aka"></label>
+      <div class="row2">
+        <label class="fld"><span class="lb">Mashinasi va raqami</span><input id="fCar" maxlength="40" placeholder="969 kobalt"></label>
+        <label class="fld"><span class="lb">Telefoni <span class="req">*</span></span><input id="fPhone" inputmode="tel" maxlength="30" placeholder="91-599-99-93"></label>
+      </div>
+      <div class="grp">Kimga (mijoz)</div>
+      <div class="row2">
+        <label class="fld"><span class="lb">Mijoz ismi <span class="req">*</span></span><input id="fClient" maxlength="80" placeholder="Elyor aka"></label>
+        <label class="fld"><span class="lb">Telefoni</span><input id="fClientPhone" inputmode="tel" maxlength="30" placeholder="90-123-45-67"></label>
+      </div>
+      <label class="fld"><span class="lb">Viloyat <span class="req">*</span></span>
+        <select id="fRegion">
+          <option value="">Viloyatni tanlang</option>
+          <option>Qoraqalpog'iston Respublikasi</option><option>Andijon viloyati</option><option>Buxoro viloyati</option>
+          <option>Farg'ona viloyati</option><option>Jizzax viloyati</option><option>Namangan viloyati</option>
+          <option>Navoiy viloyati</option><option>Qashqadaryo viloyati</option><option>Samarqand viloyati</option>
+          <option>Sirdaryo viloyati</option><option>Surxondaryo viloyati</option><option>Toshkent viloyati</option>
+          <option>Xorazm viloyati</option>
+        </select>
+      </label>
+      <div class="grp">Pochta</div>
+      <label class="fld"><span class="lb">Nima yuborildi</span><input id="fNote" maxlength="300" placeholder="Masalan: 12 ta zapchast"></label>
+      <div class="col1">
+        <label class="fld"><span class="lb">Yuborilgan kuni <span class="req">*</span></span>
+          <span class="datebox">
+            <input id="fDateTxt" type="text" inputmode="numeric" maxlength="10" placeholder="kk.oo.yyyy">
+            <span class="cal" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><input id="fDate" type="date" tabindex="-1" aria-label="Kalendardan tanlash"></span>
+          </span>
+        </label>
+        <div class="fld"><span class="lb">Qaytadigan pul</span>
+          <span class="sumbox"><input id="fAmount" inputmode="numeric" maxlength="18" placeholder="6 370 000" aria-label="Qaytadigan pul">
+            <span class="seg" id="fCur"><button type="button" data-v="som" aria-pressed="true">so'm</button><button type="button" data-v="usd" aria-pressed="false">$</button></span></span>
+        </div>
+      </div>
+      <div class="msg" id="fMsg"></div>
+      <div class="acts"><button type="submit" class="wide" id="fSubmit">Ro'yxatga qo'shish</button><button type="button" class="ghost wide" id="fCancel" hidden>Bekor qilish</button></div>
+    </form>
+  </section>
+
+  <!-- 3. Tugagan -->
+  <section id="v-done" hidden>
+    <div class="search"><input id="qDone" type="search" placeholder="Qidirish: shofyor, mijoz, telefon, viloyat"></div>
+    <div class="lbl2"><span>Pul olingan, tugagan pochtalar</span><span class="grow"></span><span class="mono" id="cntDone"></span></div>
+    <div id="listDone"></div>
+  </section>
+
+  <!-- 4. Baza -->
+  <section id="v-base" hidden>
+    <div class="segw"><span class="seg" id="baseSeg"><button type="button" data-v="d" aria-pressed="true">Shofyorlar</button><button type="button" data-v="c" aria-pressed="false">Mijozlar</button></span></div>
+    <div class="search"><input id="qBase" type="search" placeholder="Qidirish: ism, mashina yoki telefon"></div>
+    <div class="lbl2"><span id="baseLbl">Shofyorlar</span><span class="grow"></span><span class="mono" id="cntBase"></span></div>
+    <div id="listBase"></div>
+    <div class="lbl2"><span id="addLbl">Shofyor qo'shish</span></div>
+    <form class="form" id="bf" autocomplete="off" novalidate>
+      <label class="fld"><span class="lb">Ismi <span class="req">*</span></span><input id="bName" maxlength="80"></label>
+      <div class="row2">
+        <label class="fld" id="bCarWrap"><span class="lb">Mashinasi va raqami</span><input id="bCar" maxlength="40" placeholder="969 kobalt"></label>
+        <label class="fld"><span class="lb">Telefoni</span><input id="bPhone" inputmode="tel" maxlength="30"></label>
+      </div>
+      <div class="msg" id="bMsg"></div>
+      <div class="acts"><button type="submit" class="wide" id="bSubmit">Bazaga qo'shish</button></div>
+    </form>
+  </section>
+
+  <!-- 5. Sozlama (faqat admin) -->
+  <section id="v-set" hidden>
+    <div class="lbl2"><span>Eslatma</span></div>
+    <div class="form">
+      <label class="chk"><input type="checkbox" id="sOn"> Pul olinmagan pochtalarni eslatish</label>
+      <div class="row2">
+        <label class="fld"><span class="lb">Soat (Toshkent)</span><select id="sHour"></select></label>
+        <label class="fld"><span class="lb">Qanchada bir</span><select id="sEvery"><option value="1">har kuni</option><option value="2">2 kunda bir</option><option value="3">3 kunda bir</option><option value="7">haftada bir</option></select></label>
+      </div>
+      <label class="fld"><span class="lb">Qachondan boshlab eslatsin</span>
+        <select id="sAfter"><option value="0">yuborilgan kunidan</option><option value="1">1 kun o'tgach</option><option value="2">2 kun o'tgach</option><option value="3">3 kun o'tgach</option><option value="4">4 kun o'tgach</option><option value="5">5 kun o'tgach</option><option value="7">7 kun o'tgach</option></select>
+      </label>
+      <div class="hint">Eslatma bot orqali Telegramga keladi: pul hali olinmagan pochtalar ro'yxati. Pul olingani tasdiqlansa, pochta ro'yxatdan chiqadi.</div>
+      <div class="msg" id="sMsg"></div>
+      <div class="acts"><button type="button" id="sSave">Saqlash</button><button type="button" class="ghost" id="sTest">Menga hozir yuborish</button></div>
+    </div>
+    <div class="lbl2"><span>Kim ishlaydi va kim eslatma oladi</span></div>
+    <div id="listUsers"></div>
+    <div class="note">Ro'yxatda faqat bu bo'limni bir marta ochgan yoki daftarga Telegrami bog'langan xodimlar chiqadi. "Ishlaydi" ni yoqsangiz, xodimga botdan «Pochtani ochish» tugmasi boradi.</div>
+    <div class="lbl2"><span>Telegram ID bo'yicha qo'shish</span></div>
+    <form class="form" id="uf" autocomplete="off" novalidate>
+      <div class="row2">
+        <label class="fld"><span class="lb">Ismi</span><input id="uName" maxlength="80"></label>
+        <label class="fld"><span class="lb">Telegram ID</span><input id="uId" inputmode="numeric" maxlength="15"></label>
+      </div>
+      <div class="msg" id="uMsg"></div>
+      <div class="acts"><button type="submit" class="wide">Qo'shish va tugma yuborish</button></div>
+    </form>
+  </section>
+</main>
+
+<nav class="tabs" id="tabs" role="tablist" hidden>
+  <button role="tab" data-v="wait" aria-selected="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Kutilmoqda<span class="bdg" id="bdgWait" hidden></span></button>
+  <button role="tab" data-v="new" aria-selected="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/></svg>Yuborish</button>
+  <button role="tab" data-v="done" aria-selected="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12l3 3 5-6"/></svg>Tugagan</button>
+  <button role="tab" data-v="base" aria-selected="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 010 7M18 14.8c1.8.8 3 2.6 3.5 5.2"/></svg>Baza</button>
+  <button role="tab" data-v="set" aria-selected="false" id="tabSet" hidden><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Sozlama</button>
+</nav>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const qs = new URLSearchParams(location.search);
+  const API = (qs.get('api') || 'https://mc-api.joraqoziyevolloyor.workers.dev') + '/api/pochta';
+  const TG = window.Telegram && window.Telegram.WebApp;
+  const INIT = (TG && TG.initData) || qs.get('init') || '';   // ?init= faqat mahalliy sinov uchun (imzo baribir tekshiriladi)
+  if (TG) { try { TG.ready(); TG.expand(); if (TG.colorScheme) document.documentElement.dataset.theme = TG.colorScheme; } catch (e) {} }
+
+  let S = { me:null, items:[], drivers:[], clients:[], settings:{}, today:'' };
+  let view = 'wait', openKey = null, confirmKey = null, payKey = null, editingId = null, baseMode = 'd', editBaseId = null, adm = null;
+
+  /* ---------- yordamchilar ---------- */
+  function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function btn(cls, text, fn){ const b = el('button', cls, text); b.type = 'button'; b.onclick = fn; return b; }
+  const norm = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const digits = s => String(s || '').replace(/\D/g, '');
+  const fmtDate = s => s ? s.slice(8,10) + '.' + s.slice(5,7) + '.' + s.slice(0,4) : '';
+  const fmtShort = s => s ? s.slice(8,10) + '.' + s.slice(5,7) : '';
+  const days = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 864e5);
+  const money = (v, c) => v == null ? '' : (Math.round(v * 100) / 100).toLocaleString('ru-RU').replace(/ |,/g, m => m === ',' ? '.' : ' ') + (c === 'usd' ? ' $' : " so'm");
+  const shortRegion = r => String(r || '').replace(' viloyati', '').replace(' Respublikasi', '');
+  function matches(q, texts, phones){
+    const t = norm(q), d = digits(q);
+    if (!t) return true;
+    if (texts.some(x => norm(x).includes(t))) return true;
+    return d.length >= 2 && phones.some(p => digits(p).includes(d));
+  }
+  function toast(t){ const e = $('toast'); e.textContent = t; e.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => e.hidden = true, 2600); }
+  function haptic(k){ try { TG && TG.HapticFeedback && TG.HapticFeedback.notificationOccurred(k); } catch (e) {} }
+  function telLink(p){ const a = el('a', null, p); a.href = 'tel:' + p.replace(/[^\d+]/g, ''); return a; }
+  function stamp(){ const d = new Date(); $('upd').textContent = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); }
+
+  async function api(path, data){
+    const r = await fetch(API + path, { method: data ? 'POST' : 'GET', headers: Object.assign({ 'Authorization': 'tma ' + INIT }, data ? { 'Content-Type': 'application/json' } : {}),
+      body: data ? JSON.stringify(data) : undefined, cache: 'no-store' });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { const e = new Error(j.error || ('xato ' + r.status)); e.status = r.status; throw e; }
+    return j;
+  }
+  function take(j){ if (j && j.items) { S = j; render(); } }
+
+  /* ---------- kirish ---------- */
+  async function start(){
+    if (!INIT) { gate('Telegram ichida oching', 'Bu bo\'lim @uzparts_hr_bot ichidagi «Pochtani ochish» tugmasi orqali ishlaydi.'); return; }
+    try {
+      const { me } = await api('/me');
+      $('who').textContent = me.name;
+      if (!me.access) { gate('Sizga hali ruxsat berilmagan', 'Admin Sozlamalarda yoqsa, botdan «Pochtani ochish» tugmasi keladi.'); return; }
+      take(await api('/data'));
+      $('loading').hidden = true; $('tabs').hidden = false; $('tabSet').hidden = !me.admin;
+      show(location.hash === '#yangi' ? 'new' : 'wait');
+      setInterval(refresh, 60000);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+    } catch (e) { gate('Ochilmadi', e.message + '. Ilovani yopib, qaytadan oching.'); }
+  }
+  async function refresh(){ try { take(await api('/data')); } catch (e) {} }
+  function gate(title, text){ const g = $('loading'); g.replaceChildren(el('b', null, title), el('span', 'msg', text)); g.hidden = false; }
+
+  /* ---------- ko'rinishlar ---------- */
+  const TITLES = { wait:'Pochta', new:'Pochta yuborish', done:'Tugagan pochtalar', base:'Baza', set:'Sozlama' };
+  function show(v){
+    view = v;
+    for (const k of ['wait','new','done','base','set']) $('v-' + k).hidden = k !== v;
+    for (const b of $('tabs').children) b.setAttribute('aria-selected', b.dataset.v === v ? 'true' : 'false');
+    $('title').textContent = TITLES[v];
+    if (v === 'set') loadAdmin();
+    window.scrollTo(0, 0);
+  }
+  for (const b of $('tabs').children) b.onclick = () => { if (b.dataset.v === 'new' && view !== 'new' && !editingId) resetForm(); show(b.dataset.v); };
+  $('goNew').onclick = () => { resetForm(); show('new'); };
+  $('goBase').onclick = () => { setBase('d'); show('base'); $('bName').focus(); };
+
+  function render(){
+    stamp();
+    $('today').textContent = fmtDate(S.today);
+    renderWait(); renderDone(); renderBase();
+  }
+
+  const lateAt = () => Number(S.settings.remind_after || 0);
+  function renderWait(){
+    const wait = S.items.filter(i => i.status === 'wait');
+    const late = wait.filter(i => days(i.sent_date, S.today) >= Math.max(1, lateAt()));
+    const month = S.today.slice(0, 7);
+    $('kWait').textContent = wait.length;
+    $('kLate').textContent = late.length;
+    $('kLateLbl').textContent = (Math.max(1, lateAt())) + '+ kun';
+    $('kDone').textContent = S.items.filter(i => i.status === 'done' && (i.paid_at || '').slice(0, 7) === month).length;
+    $('bdgWait').hidden = !wait.length; $('bdgWait').textContent = wait.length;
+    const tot = {}; for (const i of wait) if (i.amount != null) tot[i.currency] = (tot[i.currency] || 0) + i.amount;
+    $('sumWait').textContent = Object.entries(tot).map(([c, v]) => money(v, c)).join(' + ');
+    const q = $('qWait').value;
+    const shown = wait.filter(i => matches(q, [i.driver, i.car, i.client, i.region, i.note], [i.driver_phone, i.client_phone]))
+      .sort((a, b) => a.sent_date.localeCompare(b.sent_date) || a.id - b.id);   // eng eskisi tepada
+    const list = $('listWait'); list.replaceChildren();
+    if (!shown.length) { list.append(el('div', 'empty', wait.length ? 'Qidiruv bo\'yicha topilmadi.' : 'Pul kutilayotgan pochta yo\'q. Yangi pochtani «Yuborish» bo\'limida qo\'shing.')); return; }
+    for (const i of shown) list.append(itemRow(i));
+  }
+  function renderDone(){
+    const done = S.items.filter(i => i.status === 'done');
+    const q = $('qDone').value;
+    const shown = done.filter(i => matches(q, [i.driver, i.car, i.client, i.region, i.note], [i.driver_phone, i.client_phone]))
+      .sort((a, b) => (b.paid_at || '').localeCompare(a.paid_at || ''));
+    $('cntDone').textContent = shown.length;
+    const list = $('listDone'); list.replaceChildren();
+    if (!shown.length) { list.append(el('div', 'empty', done.length ? 'Qidiruv bo\'yicha topilmadi.' : 'Hali tugagan pochta yo\'q. Pul olingani tasdiqlansa, shu yerga o\'tadi.')); return; }
+    for (const i of shown) list.append(itemRow(i));
+  }
+
+  function itemRow(i){
+    const key = 'i' + i.id, done = i.status === 'done', age = days(i.sent_date, S.today);
+    const lvl = done ? 'ok' : age >= Math.max(1, lateAt()) + 2 ? 'no' : age >= Math.max(1, lateAt()) ? 'warn' : '';
+    const row = el('div', 'row' + (openKey === key ? ' open' : ''));
+    const head = el('button', 'att'); head.type = 'button'; head.setAttribute('aria-expanded', openKey === key);
+    head.onclick = () => { openKey = openKey === key ? null : key; confirmKey = payKey = null; render(); };
+    head.append(el('span', 'bar4 ' + lvl));
+    const gr = el('span', 'gr');
+    const t1 = el('div', 't1', i.driver); if (i.car) t1.append(el('span', 'car', ' · ' + i.car));
+    gr.append(t1, el('div', 't2', '→ ' + i.client + ' · ' + shortRegion(i.region)));
+    const rt = el('span', 'rt');
+    if (i.amount != null) rt.append(el('div', 'sum', money(done && i.paid_amount != null ? i.paid_amount : i.amount, i.currency)));
+    rt.append(el('div', 'age ' + (done ? '' : lvl), done ? 'olindi ' + fmtShort(i.paid_at && i.paid_at.slice(0, 10)) : fmtShort(i.sent_date) + ' · ' + (age <= 0 ? 'bugun' : age + ' kun')));
+    head.append(gr, rt); row.append(head);
+    if (openKey !== key) return row;
+
+    const det = el('div', 'det'); const kv = el('dl', 'kv');
+    const add = (k, v) => { if (v == null || v === '') return; kv.append(el('dt', null, k)); const dd = el('dd'); typeof v === 'string' ? dd.textContent = v : dd.append(v); kv.append(dd); };
+    add('Shofyor tel.', i.driver_phone ? telLink(i.driver_phone) : '');
+    add('Mijoz tel.', i.client_phone ? telLink(i.client_phone) : '');
+    add('Viloyat', i.region);
+    add('Yuborilgan', fmtDate(i.sent_date) + (done ? '' : ' (' + (age <= 0 ? 'bugun' : age + ' kun oldin') + ')'));
+    add('Nima', i.note);
+    add('Qaytadigan pul', i.amount != null ? money(i.amount, i.currency) : 'yozilmagan');
+    add('Kiritgan', i.created_name);
+    if (done) { add('Pul olindi', fmtDate(i.paid_at.slice(0, 10)) + ' · ' + (i.paid_name || '')); add('Olingan summa', i.paid_amount != null ? money(i.paid_amount, i.currency) : ''); add('Izoh', i.paid_note); }
+    det.append(kv);
+
+    const acts = el('div', 'acts');
+    if (!done && payKey === key) {
+      const f = el('div', 'form'); f.style.padding = '0';
+      const lab = el('label', 'fld'); lab.append(el('span', 'lb', 'Shofyordan olingan pul' + (i.currency === 'usd' ? ' ($)' : " (so'm)")));
+      const amt = el('input'); amt.inputMode = 'numeric'; amt.value = i.amount != null ? groupNum(String(i.amount)) : ''; amt.oninput = () => { amt.value = groupNum(amt.value); };
+      lab.append(amt);
+      const lab2 = el('label', 'fld'); lab2.append(el('span', 'lb', 'Izoh (ixtiyoriy)'));
+      const nt = el('input'); nt.maxLength = 200; nt.placeholder = 'Masalan: 100 $ kam keldi'; lab2.append(nt);
+      const m = el('div', 'msg');
+      const a2 = el('div', 'acts');
+      a2.append(btn('okb', 'Tasdiqlash', async ev => {
+        ev.target.disabled = true;
+        try { take(await api('/pay', { id: i.id, amount: amt.value.replace(/\s/g, ''), note: nt.value })); haptic('success'); toast('Pul olindi: ' + i.driver + ' → ' + i.client + '. Tugaganlarga o\'tdi.'); openKey = payKey = null; render(); }
+        catch (e) { m.textContent = e.message; m.className = 'msg bad'; ev.target.disabled = false; }
+      }), btn('ghost', 'Bekor', () => { payKey = null; render(); }));
+      f.append(lab, lab2, m, a2); det.append(f);
+      setTimeout(() => amt.focus(), 30);
+    } else if (confirmKey === key) {
+      acts.append(el('div', 'msg wide', 'Bu pochta ro\'yxatdan o\'chirilsinmi?'));
+      acts.append(btn('danger', 'Ha, o\'chirish', async () => { try { take(await api('/del', { id: i.id })); toast('O\'chirildi.'); } catch (e) { toast(e.message); } }), btn('ghost', 'Yo\'q', () => { confirmKey = null; render(); }));
+      det.append(acts);
+    } else if (!done) {
+      acts.append(btn('okb wide', 'Pul olindi', () => { payKey = key; render(); }), btn('ghost', 'Tahrirlash', () => startEdit(i)), btn('danger', 'O\'chirish', () => { confirmKey = key; render(); }));
+      det.append(acts);
+    } else {
+      acts.append(btn('ghost', 'Qaytarish', async () => { try { take(await api('/unpay', { id: i.id })); toast('Pul kutilayotganlarga qaytarildi.'); } catch (e) { toast(e.message); } }), btn('danger', 'O\'chirish', () => { confirmKey = key; render(); }));
+      det.append(acts, el('div', 'hint', '«Qaytarish»: pul olindi deb xato bosilgan bo\'lsa, pochta yana kutilayotganlarga o\'tadi.'));
+    }
+    row.append(det);
+    return row;
+  }
+
+  /* ---------- baza ---------- */
+  function setBase(mode){
+    baseMode = mode; editBaseId = null; openKey = null;
+    for (const b of $('baseSeg').children) b.setAttribute('aria-pressed', b.dataset.v === mode ? 'true' : 'false');
+    $('baseLbl').textContent = mode === 'd' ? 'Shofyorlar' : 'Mijozlar';
+    $('addLbl').textContent = mode === 'd' ? 'Shofyor qo\'shish' : 'Mijoz qo\'shish';
+    $('bCarWrap').hidden = mode !== 'd';
+    $('bf').reset(); $('bMsg').textContent = ''; $('bSubmit').textContent = 'Bazaga qo\'shish';
+    renderBase();
+  }
+  for (const b of $('baseSeg').children) b.onclick = () => setBase(b.dataset.v);
+  function statsFor(x){
+    const d = digits(x.phone);
+    const mine = S.items.filter(i => baseMode === 'd'
+      ? (i.driver_id === x.id || (!i.driver_id && ((d && digits(i.driver_phone) === d) || norm(i.driver) === norm(x.name))))
+      : (i.client_id === x.id || (!i.client_id && ((d && digits(i.client_phone) === d) || norm(i.client) === norm(x.name)))));
+    const last = mine.reduce((a, i) => (!a || i.sent_date > a.sent_date) ? i : a, null);
+    return { n: mine.length, wait: mine.filter(i => i.status === 'wait').length, last };
+  }
+  function renderBase(){
+    const src = baseMode === 'd' ? S.drivers : S.clients, q = $('qBase').value;
+    const shown = src.filter(x => matches(q, [x.name, x.car], [x.phone]));
+    $('cntBase').textContent = src.length;
+    const list = $('listBase'); list.replaceChildren();
+    if (!shown.length) { list.append(el('div', 'empty', src.length ? 'Topilmadi.' : (baseMode === 'd' ? 'Shofyorlar hali yo\'q. Pochta qo\'shganda o\'zi yoziladi yoki pastda qo\'shing.' : 'Mijozlar hali yo\'q. Pochta qo\'shganda o\'zi yoziladi yoki pastda qo\'shing.'))); return; }
+    for (const x of shown) {
+      const key = baseMode + x.id, st = statsFor(x);
+      const row = el('div', 'row' + (openKey === key ? ' open' : ''));
+      const head = el('button', 'att'); head.type = 'button';
+      head.onclick = () => { openKey = openKey === key ? null : key; confirmKey = null; renderBase(); };
+      head.append(el('span', 'bar4 ' + (st.wait ? 'warn' : '')));
+      const gr = el('span', 'gr'); const t1 = el('div', 't1', x.name); if (x.car) t1.append(el('span', 'car', ' · ' + x.car));
+      gr.append(t1, el('div', 't2', x.phone || 'telefon yozilmagan'));
+      const rt = el('span', 'rt'); rt.append(el('div', 'sum', st.n + ' ta'), el('div', 'age ' + (st.wait ? 'warn' : ''), st.wait ? st.wait + ' tasi kutilmoqda' : st.last ? 'oxirgi ' + fmtShort(st.last.sent_date) : 'pochta yo\'q'));
+      head.append(gr, rt); row.append(head);
+      if (openKey === key) {
+        const det = el('div', 'det'), kv = el('dl', 'kv');
+        if (x.phone) { kv.append(el('dt', null, 'Telefon')); const dd = el('dd'); dd.append(telLink(x.phone)); kv.append(dd); }
+        if (st.last) { kv.append(el('dt', null, 'Oxirgi pochta'), el('dd', null, fmtDate(st.last.sent_date) + ', ' + (baseMode === 'd' ? st.last.client : st.last.driver) + ', ' + shortRegion(st.last.region))); }
+        det.append(kv);
+        const acts = el('div', 'acts');
+        if (confirmKey === key) {
+          acts.append(el('div', 'msg wide', 'Bazadan o\'chirilsinmi? Eski pochtalar o\'chmaydi.'));
+          acts.append(btn('danger', 'Ha, o\'chirish', async () => { try { take(await api(baseMode === 'd' ? '/driver' : '/client', { id: x.id, del: true })); openKey = confirmKey = null; renderBase(); } catch (e) { toast(e.message); } }), btn('ghost', 'Yo\'q', () => { confirmKey = null; renderBase(); }));
+        } else {
+          acts.append(btn('wide', 'Pochta yuborish', () => { resetForm(); if (baseMode === 'd') pickDriver({ driver: x.name, car: x.car || '', phone: x.phone || '' }); else pickClient(x); show('new'); (baseMode === 'd' ? $('fClient') : $('fDriver')).focus(); }),
+            btn('ghost', 'Tahrirlash', () => { editBaseId = x.id; $('bName').value = x.name; $('bCar').value = x.car || ''; $('bPhone').value = x.phone || ''; $('bSubmit').textContent = 'Saqlash'; $('addLbl').textContent = 'Tahrirlash: ' + x.name; $('bName').focus(); }),
+            btn('danger', 'O\'chirish', () => { confirmKey = key; renderBase(); }));
+        }
+        det.append(acts); row.append(det);
+      }
+      list.append(row);
+    }
+  }
+  $('bf').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const m = $('bMsg'), name = $('bName').value.trim();
+    if (!name) { m.textContent = 'Ismini yozing.'; m.className = 'msg bad'; return; }
+    $('bSubmit').disabled = true;
+    try {
+      take(await api(baseMode === 'd' ? '/driver' : '/client', { id: editBaseId || undefined, name, car: $('bCar').value, phone: $('bPhone').value }));
+      const was = editBaseId; setBase(baseMode); m.textContent = (was ? 'Saqlandi: ' : 'Bazaga qo\'shildi: ') + name; m.className = 'msg good';
+    } catch (e) { m.textContent = e.message; m.className = 'msg bad'; }
+    finally { $('bSubmit').disabled = false; }
+  });
+
+  /* ---------- pochta formasi ---------- */
+  function txtToIso(t){
+    const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(String(t).trim()); if (!m) return '';
+    const iso = m[3] + '-' + m[2] + '-' + m[1], d = new Date(iso + 'T00:00:00');
+    return (!isNaN(d) && d.getDate() === +m[1] && d.getMonth() + 1 === +m[2]) ? iso : '';
+  }
+  function setDate(iso){ $('fDate').value = iso; $('fDateTxt').value = fmtDate(iso); }
+  $('fDateTxt').addEventListener('input', e => {
+    const d = e.target.value.replace(/\D/g, '').slice(0, 8);
+    let v = d.slice(0, 2); if (d.length > 2) v += '.' + d.slice(2, 4); if (d.length > 4) v += '.' + d.slice(4);
+    e.target.value = v; const iso = txtToIso(v); if (iso) $('fDate').value = iso;
+  });
+  $('fDate').addEventListener('change', e => { if (e.target.value) $('fDateTxt').value = fmtDate(e.target.value); });
+  function groupNum(v){ const s = String(v).replace(/[^\d.]/g, ''); const [a, b] = s.split('.'); return (a || '').replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + (b != null ? '.' + b.slice(0, 2) : ''); }
+  $('fAmount').addEventListener('input', e => { e.target.value = groupNum(e.target.value); });
+  let cur = 'som';
+  function setCur(c){ cur = c; for (const b of $('fCur').children) b.setAttribute('aria-pressed', b.dataset.v === c ? 'true' : 'false'); }
+  for (const b of $('fCur').children) b.onclick = () => setCur(b.dataset.v);
+
+  function msg(t, k){ const m = $('fMsg'); m.textContent = t; m.className = 'msg' + (k ? ' ' + k : ''); }
+  function resetForm(){
+    editingId = null; $('f').reset(); setDate(S.today || new Date().toISOString().slice(0, 10)); setCur('som'); msg('');
+    $('formTitleWrap').hidden = true; $('fSubmit').textContent = 'Ro\'yxatga qo\'shish'; $('fCancel').hidden = true;
+  }
+  function startEdit(i){
+    resetForm(); editingId = i.id;
+    $('fDriver').value = i.driver; $('fCar').value = i.car || ''; $('fPhone').value = i.driver_phone || '';
+    $('fClient').value = i.client; $('fClientPhone').value = i.client_phone || ''; $('fRegion').value = i.region;
+    $('fNote').value = i.note || ''; setDate(i.sent_date); $('fAmount').value = i.amount != null ? groupNum(String(i.amount)) : ''; setCur(i.currency || 'som');
+    $('formTitleWrap').hidden = false; $('fSubmit').textContent = 'Saqlash'; $('fCancel').hidden = false;
+    show('new');
+  }
+  $('fCancel').onclick = () => { resetForm(); show('wait'); };
+  $('f').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const d = { id: editingId || undefined, driver: $('fDriver').value.trim(), car: $('fCar').value.trim(), driver_phone: $('fPhone').value.trim(),
+      client: $('fClient').value.trim(), client_phone: $('fClientPhone').value.trim(), region: $('fRegion').value,
+      note: $('fNote').value.trim(), sent_date: txtToIso($('fDateTxt').value), amount: $('fAmount').value.replace(/\s/g, ''), currency: cur };
+    if (!d.driver || !d.driver_phone) { msg('Shofyor ismi va telefonini yozing.', 'bad'); (d.driver ? $('fPhone') : $('fDriver')).focus(); return; }
+    if (!d.client) { msg('Mijoz ismini yozing: pochta kimga ketyapti?', 'bad'); $('fClient').focus(); return; }
+    if (!d.region) { msg('Viloyatni tanlang.', 'bad'); $('fRegion').focus(); return; }
+    if (!d.sent_date) { msg('Kunni kk.oo.yyyy ko\'rinishida yozing, masalan 23.10.2026.', 'bad'); $('fDateTxt').focus(); return; }
+    $('fSubmit').disabled = true;
+    try {
+      take(await api('/item', d)); haptic('success');
+      toast((editingId ? 'Saqlandi: ' : 'Qo\'shildi: ') + d.driver + ' → ' + d.client + ', ' + shortRegion(d.region));
+      resetForm(); show('wait');
+    } catch (e) { msg(e.message, 'bad'); }
+    finally { $('fSubmit').disabled = false; }
+  });
+
+  /* ---------- takliflar: yozayotganda ism, mashina yoki telefon bo'yicha ---------- */
+  function driversList(){
+    const seen = new Set(), out = [];
+    const push = (name, car, phone) => { const k = norm(name) + '|' + norm(car) + '|' + digits(phone); if (!name || seen.has(k)) return; seen.add(k); out.push({ driver: name, car: car || '', phone: phone || '' }); };
+    for (const x of S.drivers) push(x.name, x.car, x.phone);
+    for (const i of S.items) push(i.driver, i.car, i.driver_phone);
+    return out;
+  }
+  function attachSuggest(input, find, pick){
+    const wrap = el('span', 'sw'); input.parentNode.insertBefore(wrap, input); wrap.append(input);
+    const box = el('div', 'sugg'); box.hidden = true; wrap.append(box);
+    let items = [], active = -1;
+    function open(){
+      items = find(input.value).slice(0, 8); box.replaceChildren(); active = -1;
+      if (!items.length) { box.hidden = true; return; }
+      items.forEach((it, n) => {
+        const b = el('button', 'sopt'); b.type = 'button'; b.tabIndex = -1;
+        b.append(el('b', null, it.title)); if (it.sub) b.append(el('span', null, it.sub));
+        b.addEventListener('mousedown', e => e.preventDefault());
+        b.addEventListener('click', () => choose(n));
+        box.append(b);
+      });
+      box.hidden = false;
+    }
+    function choose(n){ if (!items[n]) return; pick(items[n].data); box.hidden = true; }
+    input.setAttribute('autocomplete', 'off');
+    input.addEventListener('input', open); input.addEventListener('focus', open);
+    input.addEventListener('blur', () => setTimeout(() => box.hidden = true, 120));
+    input.addEventListener('keydown', e => {
+      if (box.hidden) return;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); active = Math.max(0, Math.min(items.length - 1, active + (e.key === 'ArrowDown' ? 1 : -1))); [...box.children].forEach((c, n) => c.classList.toggle('on', n === active)); }
+      else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); choose(active); }
+      else if (e.key === 'Escape') box.hidden = true;
+    });
+  }
+  const findDrivers = q => driversList().filter(d => matches(q, [d.driver, d.car], [d.phone])).map(d => ({ title: d.driver, sub: [d.car, d.phone].filter(Boolean).join(' · '), data: d }));
+  function pickDriver(d){ $('fDriver').value = d.driver; $('fCar').value = d.car; $('fPhone').value = d.phone; }
+  const findClients = q => S.clients.filter(c => matches(q, [c.name], [c.phone])).map(c => ({ title: c.name, sub: c.phone, data: c }));
+  function pickClient(c){ $('fClient').value = c.name; $('fClientPhone').value = c.phone || ''; }
+  ['fDriver', 'fCar', 'fPhone'].forEach(id => attachSuggest($(id), findDrivers, pickDriver));
+  ['fClient', 'fClientPhone'].forEach(id => attachSuggest($(id), findClients, pickClient));
+
+  $('qWait').addEventListener('input', renderWait);
+  $('qDone').addEventListener('input', renderDone);
+  $('qBase').addEventListener('input', renderBase);
+
+  /* ---------- sozlama (admin) ---------- */
+  for (let h = 0; h < 24; h++) { const o = el('option', null, String(h).padStart(2, '0') + ':00'); o.value = h; $('sHour').append(o); }
+  async function loadAdmin(){ try { adm = await api('/admin'); renderAdmin(); } catch (e) { $('sMsg').textContent = e.message; $('sMsg').className = 'msg bad'; } }
+  function renderAdmin(){
+    if (!adm) return;
+    const s = adm.settings;
+    $('sOn').checked = !!s.remind_on; $('sHour').value = s.remind_hour; $('sEvery').value = s.remind_every;
+    if (![...$('sEvery').options].some(o => +o.value === s.remind_every)) $('sEvery').append(Object.assign(el('option', null, s.remind_every + ' kunda bir'), { value: s.remind_every }));
+    $('sEvery').value = s.remind_every; $('sAfter').value = s.remind_after;
+    const list = $('listUsers'); list.replaceChildren();
+    if (!adm.users.length) { list.append(el('div', 'empty', 'Hali hech kim yo\'q.')); return; }
+    for (const u of adm.users) {
+      const row = el('div', 'row'); const box = el('div', 'att'); box.style.cursor = 'default';
+      box.append(el('span', 'bar4 ' + (u.can_use ? 'ok' : '')));
+      const gr = el('span', 'gr'); const t1 = el('div', 't1', u.name || ('ID ' + u.tg_id)); if (u.admin) { t1.append(' '); t1.append(el('span', 'tag ok', 'admin')); }
+      gr.append(t1, el('div', 't2', (u.username ? '@' + u.username + ' · ' : '') + 'ID ' + u.tg_id + (u.last_seen ? ' · oxirgi ' + fmtShort(u.last_seen.slice(0, 10)) : ' · hali ochmagan')));
+      const rt = el('span', 'rt'); rt.style.display = 'grid'; rt.style.gap = '2px';
+      const mk = (lbl, field, dis) => { const l = el('label', 'chk'); l.style.minHeight = '30px'; l.style.fontSize = '13px'; const c = el('input'); c.type = 'checkbox'; c.checked = !!u[field]; c.disabled = !!dis;
+        c.onchange = async () => { c.disabled = true; try { adm = await api('/admin/user', { tg_id: u.tg_id, name: u.name, [field]: c.checked }); renderAdmin(); toast(field === 'can_use' ? (c.checked ? u.name + ': ishlaydi, botdan tugma yuborildi.' : u.name + ': o\'chirildi.') : (c.checked ? u.name + ' eslatma oladi.' : u.name + ' eslatma olmaydi.')); } catch (e) { toast(e.message); renderAdmin(); } };
+        l.append(c, lbl); return l; };
+      rt.append(mk('Ishlaydi', 'can_use', u.admin), mk('Eslatma', 'remind'));
+      box.append(gr, rt); row.append(box); list.append(row);
+    }
+  }
+  $('sSave').onclick = async () => {
+    const m = $('sMsg');
+    try { adm = await api('/admin/settings', { remind_on: $('sOn').checked ? 1 : 0, remind_hour: +$('sHour').value, remind_every: +$('sEvery').value, remind_after: +$('sAfter').value });
+      renderAdmin(); S.settings = adm.settings; render(); m.textContent = 'Saqlandi. Eslatma ' + ($('sOn').checked ? 'har ' + ($('sEvery').value === '1' ? 'kuni' : $('sEvery').value + ' kunda') + ' soat ' + String($('sHour').value).padStart(2, '0') + ':00 da keladi.' : 'o\'chirildi.'); m.className = 'msg good'; }
+    catch (e) { m.textContent = e.message; m.className = 'msg bad'; }
+  };
+  $('sTest').onclick = async ev => {
+    const m = $('sMsg'); ev.target.disabled = true;
+    try { await api('/admin/test', {}); m.textContent = 'Telegramga yuborildi, botni tekshiring.'; m.className = 'msg good'; }
+    catch (e) { m.textContent = e.message; m.className = 'msg bad'; }
+    finally { ev.target.disabled = false; }
+  };
+  $('uf').addEventListener('submit', async ev => {
+    ev.preventDefault(); const m = $('uMsg'); const id = digits($('uId').value), name = $('uName').value.trim();
+    if (!id) { m.textContent = 'Telegram ID ni yozing (faqat raqam).'; m.className = 'msg bad'; return; }
+    try { adm = await api('/admin/user', { tg_id: Number(id), name, can_use: true, create: true }); renderAdmin(); $('uf').reset(); m.textContent = 'Qo\'shildi va botdan tugma yuborildi.'; m.className = 'msg good'; }
+    catch (e) { m.textContent = e.message; m.className = 'msg bad'; }
+  });
+
+  start();
+})();
+</script>
+</body>
+</html>

@@ -253,6 +253,7 @@ body.pen .penbar .tools{display:flex}
 .obsh{display:flex;justify-content:space-between;gap:12px;padding:14px 20px;border-top:2px solid var(--line-2);font-weight:600;font-size:17px}
 @media (min-width:960px){.obsh{padding-left:28px;padding-right:28px}}
 .btn.in{background:var(--accent);color:var(--accent-ink)}.btn.in.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.lnk{all:unset;cursor:pointer;color:var(--accent);font-weight:500}
 </style>
 </head>
 <body>
@@ -474,6 +475,7 @@ function applyOp(o){const d=o.data||{};switch(o.kind){
   case 'kas':{const day=S.kas.days[o.key];if(!day||day.ent.find(x=>x.id===d.id))break;day.ent.unshift({...d,by:d.by||o.by});if(d.who&&!S.kas.who.includes(d.who)){S.kas.who.unshift(d.who);S.kas.who=S.kas.who.slice(0,40)}break}
   case 'kasset':{const i=o.key.indexOf(':');const day=S.kas.days[o.key.slice(0,i)];const e=day&&day.ent.find(x=>x.id===o.key.slice(i+1));if(e)Object.assign(e,d);break}
   case 'kasclose':{const day=S.kas.days[o.key];if(day)day.closed=d;break}
+  case 'kasopen':{const day=S.kas.days[o.key];if(day){(day.fix=day.fix||[]).push({...d,by:o.by});day.open=d.open}break}
   case 'kasreopen':{const day=S.kas.days[o.key];if(day){(day.log=day.log||[]).push(d);day.closed=null}break}
 }}
 function saveCache(){try{localStorage.setItem(CACHE,JSON.stringify({seq:SYNC.seq,pending:SYNC.pending,S:{ev:S.ev,cust:S.cust,meta:S.meta,rate:S.rate,kas:S.kas,bkAt:S.bkAt,bkN:S.bkN}}))}catch(e){}updBk()}
@@ -783,6 +785,9 @@ let kdir='in',kcat='Savdo',kform=false,kclose=0,kstep=1,kday=null,KC={cU:'',cS:'
 const DAYS=()=>S.kas.days;
 function dayOf(d){return DAYS()[d]||null}
 function openDay(){const d=dayOf(TODAY);return d&&!d.closed?d:null}
+function staleDay(){const ks=Object.keys(DAYS()).filter(k=>k<TODAY&&!DAYS()[k].closed).sort();return ks.length?DAYS()[ks[0]]:null}
+let kcloseKey=null;
+function closingDay(){if(kcloseKey){const x=dayOf(kcloseKey);if(x&&!x.closed)return x;kcloseKey=null}return openDay()}
 function lastClosed(){const ks=Object.keys(DAYS()).filter(k=>DAYS()[k].closed).sort();return ks.length?DAYS()[ks[ks.length-1]]:null}
 function findKas(id){for(const d of Object.values(DAYS())){const e=(d.ent||[]).find(x=>x.id===id);if(e)return{day:d,e}}return null}
 function kasAdd(o){const d=openDay();if(!d)return null;const e={id:newId('k'),tm:nowHM(),by:S.user,...o};emit('kas',TODAY,e);return e}
@@ -800,18 +805,30 @@ function kasMenu(id){const r=findKas(id);if(!r||r.day.closed)return;const k=r.e;
   <div class="menu2">${k.void?'<span class="hint">Bekor qilingan</span>':`<button onclick="kasVoid('${k.id}')">Bekor qilish (chizilgan holda qoladi)</button>`}${k.cid?`<button onclick="closeM();openCust('${k.cid}')">Mijoz daftarini ochish</button>`:''}<button onclick="closeM()">Yopish</button></div>`)}
 function kasVoid(id){const r=findKas(id);if(!r||r.day.closed)return;if(!confirm('Bekor qilinsinmi?'))return;for(const e of (r.e.g?r.day.ent.filter(x=>x.g===r.e.g):[r.e]))emit('kasset',r.day.d+':'+e.id,{void:1,voidBy:S.user});
   if(r.e.cid&&r.e.evId)emit('evset',r.e.cid+':'+r.e.evId,{void:1,voidBy:S.user});closeM();render()}
+function vStale(st){const c=dayCalc(st);
+  return `<div class="closewrap"><div class="status"><span class="dot" style="background:var(--no)"></span><div><b>${fd(st.d)} kuni yopilmagan</b><small>Bugungi kassani ochishdan oldin shu kunni yopish kerak: pul sanaladi, kun qulflanadi va uning qoldig'i bugungi ochilishga o'tadi.</small></div></div>
+  <div class="kpi"><div><b class="c-acc">+${fmt0(c.inU)}</b><span>kirim, $${c.inS?' \u00b7 +'+fmt0(c.inS)+" so'm":''}</span></div><div><b class="c-no">\u2212${fmt0(c.outU)}</b><span>chiqim, $${c.outS?' \u00b7 \u2212'+fmt0(c.outS)+" so'm":''}</span></div><div><b>${fmt0(c.needU)}</b><span>bo'lishi kerak, $${c.needS?' \u00b7 '+fmt0(c.needS)+" so'm":''}</span></div></div>
+  <div class="abar"><button class="btn" style="flex:1" onclick="kcloseKey='${st.d}';kclose=1;kstep=1;KC={cU:'',cS:'',cB:'',why:''};render();window.scrollTo(0,0)">${fds(st.d)} kunini yopish</button></div>
+  <div class="lbl2"><span class="grow">${fd(st.d)} yozuvlari</span><span class="mono">${c.n}</span></div>${kasGroups(st.ent||[]).map(k=>kasRow(k,false)).join('')||'<div class="empty">Yozuv yo\u2019q</div>'}${obsh(c)}</div>`}
 function vOpenDay(){const lc=lastClosed();const pu=lc?lc.closed.cntU:0,ps=lc?lc.closed.cntS:0;
   return `<div class="closewrap"><div class="status"><span class="dot" style="background:var(--warn-bar)"></span><div><b>Bugun kun ochilmagan · ${fd(TODAY)}</b><small>${lc?'oxirgi yopilgan kun '+fd(lc.d)+' · qoldiq '+money(pu,ps):'Birinchi kun. Kassadagi hozirgi pulni yozing, shundan hisob boshlanadi.'}</small></div></div>
   <div class="form"><div class="row2"><label class="fld"><span class="l">Kassada hozir, dollar</span><input id="oU" inputmode="decimal" value="${pu||''}" placeholder="0"></label><label class="fld"><span class="l">Kassada hozir, so'm</span><input id="oS" inputmode="numeric" value="${ps||''}" placeholder="0"></label></div>
   <label class="fld"><span class="l">Kassir</span><input id="oW" value="${esc(S.user)}"></label>
   <button class="btn wide" onclick="openToday()">Kunni ochish</button></div>
   <div class="lbl2">Qoida</div><div class="pad small">Kun ochilgach har kirim-chiqim shu yerga yoziladi: kimdan/kimga, nima uchun, summa. Kun oxirida pul sanaladi, Bito'dagi savdo bilan solishtiriladi va kun yopiladi — yopilgan kunni o'zgartirib bo'lmaydi.</div></div>`}
+function mOpenFix(){const d=openDay();if(!d)return;modal(`<h3>Ochilish summasini tuzatish \u00b7 ${fd(TODAY)}</h3><p class="hint" style="margin:0 0 10px">Hozir: ${money(d.open.usd,d.open.uzs)}. Tuzatish sababi bilan jurnalga yoziladi, rahbar ko'radi.</p>
+  <div class="row"><div><label>Dollar</label><input id="of_u" inputmode="decimal" value="${d.open.usd||''}"></div><div><label>So'm</label><input id="of_s" inputmode="numeric" value="${d.open.uzs||''}"></div></div>
+  <div class="row"><div><label>Sabab (majburiy)</label><input id="of_w" placeholder="masalan: kechagi qoldiq noto'g'ri yozilgan"></div></div>
+  <div class="ft"><span></span><span><button onclick="closeM()">Bekor</button> <button class="pri" onclick="saveOpenFix()">Saqlash</button></span></div>`);$('of_u').focus()}
+function saveOpenFix(){const d=openDay();if(!d)return;const u=+String($('of_u').value).replace(/\s/g,'').replace(',','.')||0,s=+String($('of_s').value).replace(/\D/g,'')||0,why=$('of_w').value.trim();
+  if(!why){$('of_w').focus();toast('Sababini yozing');return}if(u===(d.open.usd||0)&&s===(d.open.uzs||0)){closeM();return}
+  emit('kasopen',TODAY,{open:{usd:u,uzs:s},was:{usd:d.open.usd||0,uzs:d.open.uzs||0},why,at:stamp()});closeM();render();toast('Ochilish summasi tuzatildi')}
 function openToday(){const d={d:TODAY,open:{usd:+String($('oU').value).replace(/\s/g,'').replace(',','.')||0,uzs:+String($('oS').value).replace(/\s/g,'')||0},by:$('oW').value.trim()||S.user,at:nowHM(),ent:[],closed:null};emit('kasday',TODAY,{open:d.open,by:d.by,at:d.at});kform=true;render();toast('Kun ochildi')}
-function vKassa(){const d=openDay();const tdy=dayOf(TODAY);
+function vKassa(){const st=staleDay();if(st)return vStale(st);const d=openDay();const tdy=dayOf(TODAY);
   if(!d){if(tdy&&tdy.closed){kday=TODAY;return vDay(TODAY,true)}return vOpenDay()}
   const c=dayCalc(d);const dsk=isDesk();if(dsk)kform=true;
   const whoList=[...new Set([...(kdir==='in'?['Savdo']:[]),...S.kas.who])];
-  return `<div class="k3" id="k3" style="${k3cols()}"><div><div class="status"><span class="dot" style="background:var(--ok)"></span><div><b>Kun ochiq · ${c.n} ta yozuv</b><small>${fd(TODAY)} · kassir ${esc(d.by)} · ochilishda ${money(d.open.usd,d.open.uzs)}</small></div></div>
+  return `<div class="k3" id="k3" style="${k3cols()}"><div><div class="status"><span class="dot" style="background:var(--ok)"></span><div><b>Kun ochiq · ${c.n} ta yozuv</b><small>${fd(TODAY)} · kassir ${esc(d.by)} · ochilishda ${money(d.open.usd,d.open.uzs)} <button class="lnk nop" onclick="mOpenFix()">✎ tuzatish</button>${(d.fix||[]).length?' · <span class="c-warn">'+d.fix.length+' marta tuzatilgan</span>':''}</small></div></div>
   <div class="kpi"><div><b class="c-acc">+${fmt0(c.inU)}</b><span>kirim, $${c.inS?' · +'+fmt0(c.inS)+" so'm":''}</span></div><div><b class="c-no">−${fmt0(c.outU)}</b><span>chiqim, $${c.outS?' · −'+fmt0(c.outS)+" so'm":''}</span></div><div><b>${fmt0(c.needU)}</b><span>kassada bo'lishi kerak, $${c.needS?' · '+fmt0(c.needS)+" so'm":''}</span></div></div>
   <div class="abar"><button class="btn in ${kdir==='in'?'':'ghost'}" onclick="openForm('in')">+ Kirim</button><button class="btn out ${kdir==='out'?'':'ghost'}" onclick="openForm('out')">− Chiqim</button></div>
   ${kform?`<div class="form">
@@ -858,11 +875,11 @@ function wireKassa(){const d=openDay();if(!d)return;wireResize();
     else{if(a)kasAdd(mk(a,'$'));if(s)kasAdd(mk(s,"so'm"))}
     kform=!isDesk()?false:true;render();toast('Yozildi');if(isDesk()){const A=$('kA');if(A)A.focus()}}}
 /* ---- day close ---- */
-function vClose(){const d=openDay();if(!d){kclose=0;return vKassa()}const c=dayCalc(d);
+function vClose(){const d=closingDay();if(!d){kclose=0;return vKassa()}const c=dayCalc(d);
   const num=v=>+String(v).replace(/\s/g,'').replace(',','.')||0;const cntU=num(KC.cU),cntS=num(KC.cS),bito=num(KC.cB);const dU=cntU-c.needU,dS=cntS-c.needS,dB=c.saleU-bito;const bad=Math.abs(dU)>0.5||Math.abs(dS)>500;
   const steps=['Pulni sanash','Bito bilan solishtirish','Tasdiqlash'];
-  const head=`<button class="backb" onclick="kclose=0;kstep=1;render()">‹ Bugun</button>
-  <div class="status"><span class="dot" style="background:var(--warn-bar)"></span><div><b>Kunni yopish · ${fd(TODAY)}</b><small>kassir ${esc(d.by)} · ${c.n} ta yozuv · yopilgandan keyin o'zgartirib bo'lmaydi</small></div></div>
+  const head=`<button class="backb" onclick="kclose=0;kstep=1;kcloseKey=null;render()">‹ Bugun</button>
+  <div class="status"><span class="dot" style="background:var(--warn-bar)"></span><div><b>Kunni yopish · ${fd(d.d)}</b><small>kassir ${esc(d.by)} · ${c.n} ta yozuv · yopilgandan keyin o'zgartirib bo'lmaydi</small></div></div>
   <div class="seg">${steps.map((t,i)=>`<button class="${kstep===i+1?'on':''}" onclick="kstep=${i+1};render()">${i+1}. ${t}</button>`).join('')}</div>`;
   let body='';
   if(kstep===1)body=`<div class="lbl2">Dastur hisobi bo'yicha kassada bo'lishi kerak</div>
@@ -882,7 +899,7 @@ function vClose(){const d=openDay();if(!d){kclose=0;return vKassa()}const c=dayC
   <div class="ln2 f0" style="font-weight:600"><span id="dBL">${dB>=0?"Bito'ga kiritilmagan savdo":"Bito'da bor, kassaga tushmagan"}</span><span class="r c-warn" id="dB">${fmt(Math.abs(dB))} $</span></div>
   <div class="c-mut" style="font-size:13px">Bu raqam hisobotda «Bito'ga kiritilmagan» ustuniga tushadi; hafta va oy bo'yicha yig'iladi.</div>
   <button class="btn wide" onclick="closeNext(3)">Keyingi: tasdiqlash</button></div>`;
-  else body=`<div class="lbl2">Kun yakuni · ${fd(TODAY)}</div>
+  else body=`<div class="lbl2">Kun yakuni · ${fd(d.d)}</div>
   <div class="ln2"><span>Ochilishda</span><span class="r">${money(d.open.usd,d.open.uzs)}</span></div>
   <div class="ln2"><span>Kirim (${(d.ent||[]).filter(k=>!k.void&&k.dir==='in').length} ta)</span><span class="r c-ok">+${money(c.inU,c.inS)}</span></div>
   <div class="ln2"><span>Chiqim (${(d.ent||[]).filter(k=>!k.void&&k.dir==='out').length} ta)</span><span class="r c-no">−${money(c.outU,c.outS)}</span></div>
@@ -896,18 +913,18 @@ function vClose(){const d=openDay();if(!d){kclose=0;return vKassa()}const c=dayC
   <div class="c-mut" style="font-size:13px">Tasdiqlangach: kun qulflanadi, PDF chiqarish mumkin, «Kunlar» ro'yxatiga tushadi. Ochish faqat sabab yozib.</div>
   <div class="row2"><button class="btn ghost" onclick="kstep=1;render()">Orqaga</button><button class="btn" onclick="closeDay()">Kunni yopish</button></div></div>`;
   return `<div class="closewrap">${head}${body}</div>`}
-function wireClose(){const num=v=>+String(v).replace(/\s/g,'').replace(',','.')||0;const d=openDay();if(!d)return;const c=dayCalc(d);
+function wireClose(){const num=v=>+String(v).replace(/\s/g,'').replace(',','.')||0;const d=closingDay();if(!d)return;const c=dayCalc(d);
   const u=$('cU'),s=$('cS'),b=$('cB'),w=$('cWhy');
   const upd=()=>{if(u){KC.cU=u.value;KC.cS=s.value;const dU=num(KC.cU)-c.needU,dS=num(KC.cS)-c.needS;$('dU').textContent=(dU>0?'+':'')+fmt(dU);$('dU').className='r '+(Math.abs(dU)>0.5?'c-no':'c-ok');$('dS').textContent=(dS>0?'+':'')+fmt0(dS);$('dS').className='r '+(Math.abs(dS)>500?'c-no':'c-ok');const bad=Math.abs(dU)>0.5||Math.abs(dS)>500;$('whyW').hidden=!bad;$('okW').hidden=bad}
     if(b){KC.cB=b.value;const dB=c.saleU-num(KC.cB);$('dB').textContent=fmt(Math.abs(dB))+' $';$('dBL').textContent=dB>=0?"Bito'ga kiritilmagan savdo":"Bito'da bor, kassaga tushmagan"}if(w)KC.why=w.value};
   if(u){u.oninput=s.oninput=upd}if(b)b.oninput=upd;if(w)w.oninput=upd}
-function closeNext(n){const num=v=>+String(v).replace(/\s/g,'').replace(',','.')||0;const d=openDay();const c=dayCalc(d);
+function closeNext(n){const num=v=>+String(v).replace(/\s/g,'').replace(',','.')||0;const d=closingDay();const c=dayCalc(d);
   if(n===2){if(KC.cU===''&&KC.cS===''){toast('Sanalgan pulni yozing');$('cU').focus();return}const bad=Math.abs(num(KC.cU)-c.needU)>0.5||Math.abs(num(KC.cS)-c.needS)>500;if(bad&&!KC.why.trim()){toast('Farq sababini yozing');$('cWhy').focus();return}}
   if(n===3&&KC.cB===''){toast("Bito'dagi savdoni yozing (0 bo'lsa 0)");$('cB').focus();return}
   kstep=n;render();window.scrollTo(0,0)}
-function closeDay(){const num=v=>+String(v).replace(/\s/g,'').replace(',','.')||0;const d=openDay();if(!d)return;const c=dayCalc(d);
-  emit('kasclose',TODAY,{at:stamp(),by:$('cBy').value.trim()||S.user,cntU:num(KC.cU),cntS:num(KC.cS),bito:num(KC.cB),why:KC.why.trim(),dU:Math.round((num(KC.cU)-c.needU)*100)/100,dS:Math.round(num(KC.cS)-c.needS),dB:Math.round((c.saleU-num(KC.cB))*100)/100,...c});
-  KC={cU:'',cS:'',cB:'',why:''};kclose=0;kstep=1;toast('Kun yopildi va qulflandi');kday=TODAY;go('kunlar')}
+function closeDay(){const num=v=>+String(v).replace(/\s/g,'').replace(',','.')||0;const d=closingDay();if(!d)return;const c=dayCalc(d);
+  emit('kasclose',d.d,{at:stamp(),by:$('cBy').value.trim()||S.user,cntU:num(KC.cU),cntS:num(KC.cS),bito:num(KC.cB),why:KC.why.trim(),dU:Math.round((num(KC.cU)-c.needU)*100)/100,dS:Math.round(num(KC.cS)-c.needS),dB:Math.round((c.saleU-num(KC.cB))*100)/100,...c});
+  KC={cU:'',cS:'',cB:'',why:''};kclose=0;kstep=1;const wasStale=d.d<TODAY;kcloseKey=null;toast(fd(d.d)+' kuni yopildi va qulflandi');if(wasStale){render();window.scrollTo(0,0)}else{kday=d.d;go('kunlar')}}
 function reopenDay(dt){const d=dayOf(dt);if(!d||!d.closed)return;if(!isBoss()){toast('Yopilgan kunni faqat rahbar ochadi');return}modal(`<h3>Kunni ochish · ${fd(dt)}</h3><p class="hint" style="margin:0 0 10px">Faqat xato topilganda. Sabab jurnalda qoladi, kun qayta yopiladi.</p><div class="row"><div><label>Sabab (majburiy)</label><input id="roWhy"></div><div><label>Kim</label><input id="roBy" value="${esc(S.user)}"></div></div><div class="ft"><span></span><span><button onclick="closeM()">Bekor</button> <button class="pri" onclick="doReopen('${dt}')">Ochish</button></span></div>`);$('roWhy').focus()}
 function doReopen(dt){const d=dayOf(dt);const why=$('roWhy').value.trim();if(!why){$('roWhy').focus();return}emit('kasreopen',dt,{at:stamp(),by:$('roBy').value.trim()||S.user,why});closeM();
   if(dt===TODAY)go('kassa');else{toast('Kun ochildi — faqat bugungi kun yozuv oladi; eski kunni to’g’rilash uchun rahbar bilan');render()}}
@@ -928,6 +945,7 @@ function vDay(k,standalone){const d=DAYS()[k];const c=d.closed||dayCalc(d);const
   <div class="status"><span class="dot" style="background:${z?'var(--ok)':'var(--warn-bar)'}"></span><div><b>${fd(k)} · ${z?'🔒 yopilgan':'ochiq'}</b><small>kassir ${esc(d.by)} · ochilishda ${money(d.open.usd,d.open.uzs)}${z?' · yopdi '+esc(z.by)+' '+z.at:''}</small></div></div>
   <div class="kpi"><div><b class="c-acc">+${fmt0(c.inU)}</b><span>kirim, $${c.inS?' · '+fmt0(c.inS)+" so'm":''}</span></div><div><b class="c-no">−${fmt0(c.outU)}</b><span>chiqim, $${c.outS?' · '+fmt0(c.outS)+" so'm":''}</span></div><div><b>${fmt0(z?z.cntU:c.needU)}</b><span>${z?'sanalgan, $':'bo’lishi kerak, $'}${z&&z.dU?' · farq '+(z.dU>0?'+':'')+fmt(z.dU):''}</span></div></div>
   ${z?`<div class="ln2"><span>Savdodan tushgan / Bito'da</span><span class="r">${fmt(z.saleU)} / ${fmt(z.bito)} $</span></div><div class="ln2"><span>${z.dB>=0?"Bito'ga kiritilmagan savdo":"Bito'da bor, kassaga tushmagan"}</span><span class="r c-warn">${fmt(Math.abs(z.dB))} $</span></div>${z.why?`<div class="ln2"><span>Farq sababi</span><span class="r" style="font-family:inherit;white-space:normal;text-align:right">${esc(z.why)}</span></div>`:''}`:''}
+  ${(d.fix||[]).map(f=>`<div class="ln2 c-warn"><span>Ochilish tuzatildi ${esc(f.at||'')} · ${esc(f.by||'')}</span><span class="r" style="font-family:inherit;white-space:normal;text-align:right">${money(f.was.usd,f.was.uzs)} → ${money(f.open.usd,f.open.uzs)} · ${esc(f.why)}</span></div>`).join('')}
   ${(d.log||[]).map(l=>`<div class="ln2 c-warn"><span>Ochildi ${l.at} · ${esc(l.by)}</span><span class="r" style="font-family:inherit;white-space:normal;text-align:right">${esc(l.why)}</span></div>`).join('')}
   <div class="abar nop">${z?`<button class="btn" onclick="printDay('${k}')">PDF · imzo uchun</button><button class="btn ghost" onclick="reopenDay('${k}')">Ochish (sabab bilan)</button>`:`<button class="btn" onclick="go('kassa')">Bugungi kassaga</button>`}</div>
   <div class="lbl2"><span class="grow">Yozuvlar</span><span class="mono">${(d.ent||[]).length}</span></div>${kasGroups(d.ent||[]).map(x=>kasRow(x,!!z)).join('')||'<div class="empty">Yozuv yo’q</div>'}${obsh(c)}`}
@@ -937,6 +955,7 @@ function printDay(k){const d=DAYS()[k];if(!d)return;const c=d.closed||dayCalc(d)
   <h1>Mercedes Center · Kassa · ${fd(k)}</h1><small>kassir ${esc(d.by)} · ochildi ${d.at||''}${z?' · yopildi '+z.at+' · '+esc(z.by):' · KUN HALI YOPILMAGAN'}</small>
   <table><tr><td>Ochilishda</td><td class="r">${money(d.open.usd,d.open.uzs)}</td></tr><tr><td>Kirim</td><td class="r">+${money(c.inU,c.inS)}</td></tr><tr><td>Chiqim</td><td class="r">−${money(c.outU,c.outS)}</td></tr><tr><td>Hisob bo'yicha bo'lishi kerak</td><td class="r">${money(c.needU,c.needS)}</td></tr>${z?`<tr><td>Sanalgan</td><td class="r">${money(z.cntU,z.cntS)}</td></tr><tr><td>Sanashdagi farq</td><td class="r">${z.dU>0?'+':''}${fmt(z.dU)} $${z.dS?' · '+fmt0(z.dS)+" so'm":''}${z.why?' — '+esc(z.why):''}</td></tr><tr><td>Savdodan tushgan / Bito'da savdo</td><td class="r">${fmt(z.saleU)} / ${fmt(z.bito)} $</td></tr><tr><td><b>${z.dB>=0?"Bito'ga kiritilmagan savdo":"Bito'da bor, kassaga tushmagan"}</b></td><td class="r"><b>${fmt(Math.abs(z.dB))} $</b></td></tr>`:''}</table>
   <table><tr><th>Vaqt</th><th>Tur</th><th>Kim</th><th>Nima uchun</th><th class="r">Summa</th><th>Yozdi</th></tr>${(d.ent||[]).slice().reverse().map(x=>`<tr class="${x.void?'void':''}"><td>${x.tm}</td><td>${x.dir==='in'?'Kirim':'Chiqim'} · ${esc(x.cat)}</td><td>${esc(x.who)}</td><td>${esc(x.why||'')}</td><td class="r">${x.dir==='in'?'+':'−'}${r(x)}</td><td>${esc(x.by||'')}</td></tr>`).join('')}</table>
+  ${(d.fix||[]).map(f=>`<p><b>Ochilish summasi tuzatilgan:</b> ${esc(f.at||'')} · ${esc(f.by||'')} · ${money(f.was.usd,f.was.uzs)} → ${money(f.open.usd,f.open.uzs)} · ${esc(f.why)}</p>`).join('')}
   ${(d.log||[]).map(l=>`<p><b>Kun qayta ochilgan:</b> ${l.at} · ${esc(l.by)} · ${esc(l.why)}</p>`).join('')}
   <div class="sig"><div>Kassir: ${esc(z?z.by:d.by)}</div><div>Rahbar</div></div><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);w.document.close()}
 /* ---- kassa report ---- */
@@ -1018,6 +1037,7 @@ function opText(o){const d=o.data||{};const cn=id=>{const c=CID.get(id);return c
     case 'kas':return ['Kassa '+(d.dir==='in'?'kirim':'chiqim')+' · '+(d.cat||''),(d.who||'')+' · '+(d.cur==='$'?fmt(d.a)+' $':fmt0(d.a)+" so'm")+(d.why?' · '+d.why:'')];
     case 'kasset':return ['Kassa yozuvi bekor · '+fds(o.key.split(':')[0]),''];
     case 'kasclose':return ['Kun yopildi · '+fds(o.key),'sanaldi '+money(d.cntU,d.cntS)+(d.dU?' · farq '+fmt(d.dU):'')+(d.dB?" · Bito'ga kiritilmagan "+fmt(d.dB)+' $':'')];
+    case 'kasopen':return ['Ochilish summasi tuzatildi · '+fds(o.key),money((d.was||{}).usd,(d.was||{}).uzs)+' → '+money((d.open||{}).usd,(d.open||{}).uzs)+' · '+(d.why||'')];
     case 'kasreopen':return ['Kun qayta ochildi · '+fds(o.key),d.why||''];
   }return [o.kind,'']}
 function opDate(o){const m=/^(\d{2})\.(\d{2})\.(\d{4})/.exec(o.at||'');return m?m[3]+'-'+m[2]+'-'+m[1]:(o.at||'').slice(0,10)}

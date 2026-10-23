@@ -2,10 +2,10 @@
 <html lang="uz">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ZQdhK25HGK9VqgsW19mtfHMaUFpYHwg/Sexa1DpONJM=' 'sha256-KBUXlydNnrz9eBgbOFKhSOp/H+EcyXflH+KVn/uIscA='; style-src 'self' 'sha256-A467efwC+NGkeKDdBG8zBaed2gH/bnSiZOrDNZm+gok='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh https://mc-hr-kopriki.joraqoziyevolloyor.workers.dev; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eK3qXidHGQbz401y7hWqfG72glM0tBIgtnpix93DCSY=' 'sha256-AbuTGyFL4SLMnu4UitMPRaE1a9GMpCdawplkacn7K+4='; style-src 'self' 'sha256-A467efwC+NGkeKDdBG8zBaed2gH/bnSiZOrDNZm+gok='; font-src 'self'; img-src 'self' data:; connect-src https://ntfy.sh https://mc-hr-kopriki.joraqoziyevolloyor.workers.dev; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mening ishim</title>
-<script>window.__mcHash = String(location.hash || '');</script>
+<script>if (location.protocol === 'http:' && location.hostname !== 'localhost') location.replace('https://' + location.host + location.pathname + location.search + location.hash); window.__mcHash = String(location.hash || '');</script>
 <!-- Telegram WebApp skriptining shu papkadagi qotirilgan nusxasi (telegram-web-app.js, sha256 TELEGRAM-WEB-APP.md da) -->
 <script src="telegram-web-app.js"></script>
 <link rel="stylesheet" href="sanoat-hr.css">
@@ -277,6 +277,7 @@
   applyTheme(themePref());
   try { if (inTg) tg.onEvent('themeChanged', function () { if (themePref() === 'auto') applyTheme('auto'); }); } catch (e) {}
   // Sarlavhadagi kichik belgi: oy (qoraga o'tish) / quyosh (oqqa o'tish)
+  // rebuild 25: http'da ochilsa (eski github.io manzili endi http://mercedescenter.uz ga yo'naltiradi) o'zini https'ga o'tkazadi — http'da shifrlash (crypto.subtle) yo'q
   // rebuild 23: to'liq ekran (Telegram 8.0+). Tanlov telefonda saqlanadi: keyingi safar o'zi shu rejimda ochiladi.
   // Telegram ruxsat bermasa yoki eski bo'lsa - tugma chiqmaydi, hech narsa buzilmaydi.
   function fsPref() { try { return localStorage.getItem('mc-fs') !== '0'; } catch (e) { return true; } }  // rebuild 24: sukut bo'yicha to'liq ekran; faqat o'chirilgan bo'lsa yo'q

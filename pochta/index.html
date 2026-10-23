@@ -33,7 +33,13 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--f-body)
 .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 h1,h2{margin:0;font-weight:600;text-wrap:balance}
 
-.bar{padding:18px 20px 12px;border-bottom:1px solid var(--line-2)}
+/* to'liq ekranda Telegram tugmalari tepada turadi: sarlavha ularning ostidan boshlanadi */
+.bar{padding:calc(18px + var(--tg-safe-area-inset-top,0px) + var(--tg-content-safe-area-inset-top,0px)) 20px 12px;border-bottom:1px solid var(--line-2)}
+.bar .top{display:flex;align-items:center;gap:4px}
+.bar .top h1{flex:1;min-width:0}
+.ico{all:unset;box-sizing:border-box;width:40px;height:40px;display:grid;place-items:center;border-radius:8px;color:var(--ink);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ico:hover{background:var(--tile)}
+.ico:focus-visible{outline:2px solid var(--accent);outline-offset:0}
 .bar h1{font-size:22px;line-height:1.25}
 .bar .meta{margin-top:4px;color:var(--muted);font-size:13px;display:flex;flex-wrap:wrap;gap:4px 12px}
 .bar .meta .mono{color:var(--ink)}
@@ -136,7 +142,11 @@ select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),
 </head>
 <body>
 <header class="bar">
-  <h1 id="title">Pochta</h1>
+  <div class="top">
+    <h1 id="title">Pochta</h1>
+    <button class="ico" id="bFull" type="button" title="To'liq ekran" aria-label="To'liq ekran" hidden><svg id="icFull" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button>
+    <button class="ico" id="bTheme" type="button" title="Tun rejimi" aria-label="Tun yoki kun rejimi"><svg id="icTheme" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button>
+  </div>
   <div class="meta"><span id="who">…</span><span id="today"></span><span>yangilangan <span class="mono" id="upd">—</span></span></div>
 </header>
 
@@ -273,7 +283,42 @@ select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),
   const API = (qs.get('api') || 'https://mc-api.joraqoziyevolloyor.workers.dev') + '/api/pochta';
   const TG = window.Telegram && window.Telegram.WebApp;
   const INIT = (TG && TG.initData) || qs.get('init') || '';   // ?init= faqat mahalliy sinov uchun (imzo baribir tekshiriladi)
-  if (TG) { try { TG.ready(); TG.expand(); if (TG.colorScheme) document.documentElement.dataset.theme = TG.colorScheme; } catch (e) {} }
+  if (TG) { try { TG.ready(); TG.expand(); } catch (e) {} }
+
+  /* ---------- tun / kun rejimi: tanlov shu telefonda eslab qolinadi, tanlanmagan bo'lsa Telegram mavzusi ---------- */
+  const MOON = '<path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/>';
+  const SUN = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+  function savedTheme(){ try { return localStorage.getItem('pochta-theme'); } catch (e) { return null; } }
+  function currentTheme(){ return savedTheme() || (TG && TG.colorScheme) || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); }
+  function applyTheme(){
+    const t = currentTheme();
+    document.documentElement.dataset.theme = t;
+    $('icTheme').innerHTML = t === 'dark' ? SUN : MOON;
+    $('bTheme').title = t === 'dark' ? 'Kun rejimi' : 'Tun rejimi';
+    const bg = t === 'dark' ? '#0e1013' : '#ffffff';
+    try { if (TG && TG.isVersionAtLeast && TG.isVersionAtLeast('6.1')) { TG.setHeaderColor(bg); TG.setBackgroundColor(bg); } if (TG && TG.setBottomBarColor && TG.isVersionAtLeast('7.10')) TG.setBottomBarColor(bg); } catch (e) {}
+  }
+  $('bTheme').onclick = () => { const n = currentTheme() === 'dark' ? 'light' : 'dark'; try { localStorage.setItem('pochta-theme', n); } catch (e) {} applyTheme(); };
+  if (TG && TG.onEvent) TG.onEvent('themeChanged', () => { if (!savedTheme()) applyTheme(); });
+  applyTheme();
+
+  /* ---------- to'liq ekran: Telegram ichida (Bot API 8.0+), aks holda brauzerniki ---------- */
+  const EXPAND = '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>', SHRINK = '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>';
+  const tgFull = !!(TG && TG.requestFullscreen && TG.isVersionAtLeast && TG.isVersionAtLeast('8.0'));
+  const docFull = !(TG && TG.initData) && !!document.documentElement.requestFullscreen;
+  const isFull = () => tgFull ? !!TG.isFullscreen : !!document.fullscreenElement;
+  function fullIcon(){ $('icFull').innerHTML = isFull() ? SHRINK : EXPAND; $('bFull').title = isFull() ? 'Oddiy ekran' : "To'liq ekran"; }
+  if (tgFull || docFull) {
+    $('bFull').hidden = false; fullIcon();
+    $('bFull').onclick = () => {
+      try {
+        if (tgFull) { if (isFull()) TG.exitFullscreen(); else TG.requestFullscreen(); }
+        else if (isFull()) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {});
+      } catch (e) {}
+    };
+    if (tgFull) { TG.onEvent('fullscreenChanged', fullIcon); TG.onEvent('fullscreenFailed', () => toast("To'liq ekran ochilmadi. Telegramni yangilang.")); }
+    document.addEventListener('fullscreenchange', fullIcon);
+  }
 
   let S = { me:null, items:[], drivers:[], clients:[], settings:{}, today:'' };
   let view = 'wait', openKey = null, confirmKey = null, payKey = null, editingId = null, baseMode = 'd', editBaseId = null, adm = null;

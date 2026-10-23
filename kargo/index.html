@@ -707,6 +707,17 @@ function overlaps(a, b) { return a.x < b.x + b.L && b.x < a.x + a.L && a.y < b.y
 const CELL = 100; // joylashganlarni uzunlik bo'ylab 1 m li kataklarda saqlaymiz — tekshiruv tez bo'ladi
 function cellsOf(b) { const r = []; for (let i = Math.floor(b.x / CELL), e = Math.floor((b.x + b.L - 0.01) / CELL); i <= e; i++) r.push(i); return r; }
 function near(grid, b) { const out = new Set(); for (const i of cellsOf(b)) if (grid[i]) for (const p of grid[i]) out.add(p); return out; }
+// Yangi quti biror og'ir yukning TAGIDAGI bo'shliqqa suqilmasin: tepasida uni ezadigan yuk bo'lsa (yoki quti
+// ustiga-qo'yilmas bo'lsa-yu, tepasida biror narsa tursa) — joylash mumkin emas.
+function aboveOK(box, cand, kg, stack = true) {
+  const top = box.z + box.H;
+  for (const p of cand) {
+    if (Math.abs(p.z - top) > 0.5) continue;
+    if (Math.min(box.x + box.L, p.x + p.L) <= Math.max(box.x, p.x) || Math.min(box.y + box.W, p.y + p.W) <= Math.max(box.y, p.y)) continue;
+    if (!stack || p.kg > kg * 2 + 30) return false;
+  }
+  return true;
+}
 // Tayanch ulushi (0..1). Og'ir quti yengil quti ustiga qo'yilmaydi: ustidagi og'irlik
 // tagidagi har bir qutining og'irligidan 2 baravar (+30 kg) oshsa — tayanch 0.
 function supportRatio(box, cand, kg = null) {
@@ -751,7 +762,7 @@ function packBoxes(truck, boxes, seed = [], cap = 600) {
         if (box.x + L > truck.L + 0.01 || box.y + W > truck.W + 0.01 || box.z + Hh > truck.H + 0.01) continue;
         const cand = near(grid, box); let bad = false;
         for (const p of cand) if (overlaps(box, p)) { bad = true; break; }
-        if (bad || supportRatio(box, cand, it.kg) < 0.7) continue;
+        if (bad || supportRatio(box, cand, it.kg) < 0.7 || !aboveOK(box, cand, it.kg, it.stack)) continue;
         const score = box.z * 1e6 + box.x * 1e3 + box.y + (L !== it.L ? 0.5 : 0) + (Hh !== it.H ? 0.7 : 0);
         if (!best || score < best.score) best = { ...box, score, ep };
       }
@@ -872,7 +883,132 @@ function packWalls(truck, towers, rng = null) {
   }
   return { placed, left: rest, kg };
 }
+// ---------- Maximal Spaces (Parreño va boshq., 2008) ----------
+// Furadagi bo'sh joy — bir-birini qoplashi mumkin bo'lgan MAKSIMAL bo'sh kuboidlar ro'yxati. Har qadamda furaning
+// old-pastki burchagiga eng yaqin bo'shliq olinadi va unga eng mos BLOK (bir xil yukdan nx×ny×nz) qo'yiladi.
+// Shu bilan ship ostidagi va qutilar orasidagi bo'shliqlar ham mos yuk bilan to'ladi.
+// w — og'irlik vazni: blok qiymati = hajm ulushi + w × og'irlik ulushi (+ "Shart" ustunligi).
+function packMS(truck, items, w = 0, rng = null) {
+  const T = { L: truck.L, W: truck.W, H: truck.H };
+  // turlar: bir xil o'lcham/og'irlik/xususiyat — bloklash uchun
+  const typeMap = new Map();
+  for (const it of items) {
+    const k = [it.ci, it.L, it.W, it.H, it.pin ?? "", it.pri, it.stack].join("|");
+    let t = typeMap.get(k);
+    if (!t) { t = { proto: it, list: [], ors: null }; typeMap.set(k, t); }
+    t.list.push(it);
+  }
+  const types = [...typeMap.values()];
+  for (const t of types) {
+    const p = t.proto;
+    const all = p.tipOK ? [[p.L, p.W, p.H], [p.W, p.L, p.H], [p.L, p.H, p.W], [p.H, p.L, p.W], [p.W, p.H, p.L], [p.H, p.W, p.L]] : [[p.L, p.W, p.H], [p.W, p.L, p.H]];
+    t.ors = all.filter((o, i, a) => a.findIndex(q => q[0] === o[0] && q[1] === o[1] && q[2] === o[2]) === i);
+    t.minDim = Math.min(p.L, p.W, p.H);
+  }
+  const tVol = T.L * T.W * T.H;
+  let minDim = Math.min(...types.map(t => t.minDim));
+  let spaces = [{ x: 0, y: 0, z: 0, L: T.L, W: T.W, H: T.H }];
+  const placed = [], grid = {}; let kg = 0;
+  const inter = (a, b) => a.x < b.x + b.L && b.x < a.x + a.L && a.y < b.y + b.W && b.y < a.y + a.W && a.z < b.z + b.H && b.z < a.z + a.H;
+  const contains = (a, b) => b.x >= a.x - 0.01 && b.y >= a.y - 0.01 && b.z >= a.z - 0.01 && b.x + b.L <= a.x + a.L + 0.01 && b.y + b.W <= a.y + a.W + 0.01 && b.z + b.H <= a.z + a.H + 0.01;
+  const ok = s => s.L >= minDim - 0.01 && s.W >= minDim - 0.01 && s.H >= minDim - 0.01;
+  function cut(b) {
+    const keep = [], fresh = [];
+    for (const s of spaces) {
+      if (!inter(s, b)) { keep.push(s); continue; }
+      if (b.x > s.x) fresh.push({ ...s, L: b.x - s.x });
+      if (b.x + b.L < s.x + s.L) fresh.push({ ...s, x: b.x + b.L, L: s.x + s.L - b.x - b.L });
+      if (b.y > s.y) fresh.push({ ...s, W: b.y - s.y });
+      if (b.y + b.W < s.y + s.W) fresh.push({ ...s, y: b.y + b.W, W: s.y + s.W - b.y - b.W });
+      if (b.z > s.z) fresh.push({ ...s, H: b.z - s.z });
+      if (b.z + b.H < s.z + s.H) fresh.push({ ...s, z: b.z + b.H, H: s.z + s.H - b.z - b.H });
+    }
+    const nf = fresh.filter(ok);
+    // maksimal bo'lmaganlarini o'chiramiz (yangi ↔ hammasi)
+    const all = keep.concat(nf), out = [];
+    for (let i = 0; i < all.length; i++) {
+      const s = all[i]; let inside = false;
+      if (i >= keep.length) { for (let j = 0; j < all.length && !inside; j++) if (j !== i && contains(all[j], s) && !(contains(s, all[j]) && j > i)) inside = true; }
+      else { for (let j = keep.length; j < all.length && !inside; j++) if (contains(all[j], s) && !contains(s, all[j])) inside = true; }
+      if (!inside) out.push(s);
+    }
+    spaces = out;
+  }
+  // bo'shliq tartibi: oldinroq (x), pastroq (z), chaproq (y)
+  const spaceKey = s => s.x * 1e6 + s.z * 1e3 + s.y;
+  // Bosqichlar: 1) og'ir (≥150 kg), "Shart" va qo'lda biriktirilgan yuklar; 2) qolganlari.
+  // 1-bosqichda mos yuk topilmagan bo'shliq o'chirilmaydi — 2-bosqichga qoladi.
+  const heavyT = t => t.proto.kg >= 150 || t.proto.pri === 1 || t.proto.pin != null;
+  for (const phase of [1, 2]) {
+  const active = types.filter(t => phase === 1 ? heavyT(t) : !heavyT(t) || t.list.length);
+  if (!active.length) continue;
+  const skip = new Set();
+  let guard = 0;
+  while (spaces.length && guard++ < 5000) {
+    let si = -1; for (let i = 0; i < spaces.length; i++) if (!skip.has(spaces[i]) && (si < 0 || spaceKey(spaces[i]) < spaceKey(spaces[si]))) si = i;
+    if (si < 0) break;
+    const s = spaces[si];
+    // shu bo'shliq uchun nomzod bloklar
+    const cands = [];
+    for (const t of active) {
+      const n = t.list.length; if (!n) continue;
+      const p = t.proto, room = truck.kg - kg; if (p.kg > room) continue;
+      for (const [L, W, H] of t.ors) {
+        if (L > s.L + 0.01 || W > s.W + 0.01 || H > s.H + 0.01) continue;
+        let nz = p.stack ? Math.floor((s.H + 0.01) / H) : 1, ny = Math.floor((s.W + 0.01) / W), nx = Math.floor((s.L + 0.01) / L);
+        // dona soni va og'irlik bo'yicha cheklash: avval ustun (nz), keyin en (ny), keyin uzunlik (nx)
+        const maxN = Math.min(n, Math.floor(room / Math.max(p.kg, 1e-6)));
+        nz = Math.min(nz, maxN); ny = Math.min(ny, Math.max(1, Math.floor(maxN / nz))); nx = Math.min(nx, Math.max(1, Math.floor(maxN / (nz * ny))));
+        const cnt = nx * ny * nz; if (cnt < 1) continue;
+        const box = { x: s.x, y: s.y, z: s.z, L: nx * L, W: ny * W, H: nz * H };
+        const vol = box.L * box.W * box.H;
+        const val = vol / tVol + w * cnt * p.kg / truck.kg + (p.pri === 1 ? 10 : 0) + (p.pin != null ? 20 : 0);
+        cands.push({ t, L, W, H, nx, ny, nz, box, val, cnt });
+      }
+    }
+    cands.sort((a, b) => b.val - a.val);
+    let chosen = null;
+    const tryN = rng ? Math.min(3, cands.length) : cands.length;
+    const order = cands.slice();
+    if (rng && order.length > 1) { const j = Math.floor(rng() * tryN); const tmp = order[0]; order[0] = order[j]; order[j] = tmp; }
+    // tayanch: blokning pastki qatlamidagi HAR BIR quti alohida ≥70% tayanchga ega bo'lishi va og'ir-yengil qoidasi
+    const unitsOK = c => {
+      const cand = near(grid, c.box);
+      if (!aboveOK(c.box, cand, c.t.proto.kg, c.t.proto.stack)) return false;
+      if (c.box.z <= 0.5) return true;
+      for (let i = 0; i < c.nx; i++) for (let j = 0; j < c.ny; j++) {
+        const u = { x: c.box.x + i * c.L, y: c.box.y + j * c.W, z: c.box.z, L: c.L, W: c.W, H: c.H };
+        if (supportRatio(u, cand, c.t.proto.kg) < 0.7) return false;
+      }
+      return true;
+    };
+    for (const c of order) {
+      if (unitsOK(c)) { chosen = c; break; }
+      // butun blok bo'lmasa — bitta ustun (1×1×nz) burchakda
+      if (c.nx * c.ny > 1) { const c1 = { ...c, nx: 1, ny: 1, cnt: c.nz, box: { ...c.box, L: c.L, W: c.W } }; if (unitsOK(c1)) { chosen = c1; break; } }
+    }
+    if (!chosen) { if (phase === 1) skip.add(s); else spaces.splice(si, 1); continue; }
+    // blokni joylaymiz
+    const { t, L, W, H, nx, ny, nz, box } = chosen, p = t.proto;
+    for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) for (let k = 0; k < nz; k++) {
+      const it = t.list.pop();
+      const pb = { ...it, x: box.x + i * L, y: box.y + j * W, z: box.z + k * H, L, W, H, rot: L !== it.L, tipped: it.tipped || H !== it.H };
+      placed.push(pb); for (const c of cellsOf(pb)) (grid[c] = grid[c] || []).push(pb); kg += it.kg;
+    }
+    cut(box);
+    // ustiga qo'yib bo'lmaydigan blok ustidagi bo'shliqni yopamiz
+    if (!p.stack) cut({ x: box.x, y: box.y, z: box.z + box.H, L: box.L, W: box.W, H: T.H - box.z - box.H });
+    if (!t.list.length) { const rem = types.filter(x => x.list.length); minDim = rem.length ? Math.min(...rem.map(x => x.minDim)) : Infinity; spaces = spaces.filter(ok); }
+  }
+  }
+  const left = types.flatMap(t => t.list);
+  return { placed, left, kg };
+}
 function packTruck(truck, items, order, strategy = "ep", mix = false, rng = null) {
+  if (strategy === "ms") {           // mix — og'irlik vazni (0 / 1 / 3)
+    const r = packMS(truck, items, typeof mix === "number" ? mix : 0, rng);
+    return truckStats(truck, r.placed, r.left);
+  }
   // qo'lda biriktirilganlar, keyin "Shart" yuklar, keyin qolganlar
   const towers = makeTowers(truck, items, mix).sort((a, b) => (b.pinned - a.pinned) || (a.pri - b.pri) || order(a, b));
   if (rng) for (let i = 0; i < towers.length - 1; i++) { // GRASP: tartibni ozgina aralashtiramiz (faqat bir xil muhimlikdagilar orasida)
@@ -949,7 +1085,6 @@ function swapImprove(plan, kgAllow, deadline) {
     tried.add(cand.a.id);
     const tr = plan.trucks[cand.k];
     const base = tr.placed.filter(p => p !== cand.a), pool = plan.left.concat([cand.a]);
-    if (kgAllow != null && lk(plan.left) + cand.a.kg - 0 > kgAllow + 1e6) continue;
     const mine = pool.filter(p => p.id !== cand.a.id && (p.pin == null || p.pin === cand.k)).map(p => ({ ...p, pinned: p.pin != null }))
       .sort((a, b) => (b.pinned - a.pinned) || (a.pri - b.pri) || (a.kg / (a.L * a.W * a.H)) - (b.kg / (b.L * b.W * b.H)));   // yengil-hajmdorlar birinchi
     const r = packBoxes(tr.truck, mine, base, 3000);
@@ -1005,11 +1140,24 @@ function buildPlan(BUDGET = 3000, MAX_GRASP = 40, onImprove = null) {
   const heavySet = spread => { const s = new Set(); if (allTrucks.length < 2) return s;
     cargo.forEach((c, ci) => { if (!(pins[ci] && Object.keys(pins[ci]).length) && c.pri !== 3 && (c.kg * c.qty > 0.25 * maxKg || (spread && c.qty >= 2))) s.add(ci); }); return s; };
   const heavyBy = { false: heavySet(false), true: heavySet(true) };
+  // Reja bahosi (kam — yaxshi). "Shart" yuk qolsa — eng yomon; furalar og'irligi teng bo'lsa — biroz afzal.
+  // "Qolishi mumkin bo'lgan og'irlik" (KG_ALLOW) berilgan bo'lsa: asosiy maqsad — qolgan HAJM minimal,
+  // og'irlik faqat shu chegaradan oshsa jarima. Aks holda hajm va og'irlik teng.
+  const scoreOf = (trucks, rest) => {
+    const capAll = allTrucks.reduce((s, x) => s + x.kg, 0) || 1, loadAll = trucks.reduce((s, r) => s + r.kg, 0);
+    const imbalance = trucks.reduce((s, r) => s + Math.abs(r.kg - loadAll * r.truck.kg / capAll), 0) / (totK || 1);
+    const leftKg = rest.reduce((s, p) => s + p.kg, 0), leftV = rest.reduce((s, p) => s + p.L * p.W * p.H, 0);
+    const kgAllow = typeof KG_ALLOW === "number" && KG_ALLOW > 0 ? KG_ALLOW : null;
+    return rest.reduce((s, p) => s + (p.pri === 1 ? 1000 : 0), 0) + 0.02 * imbalance +
+      (kgAllow == null ? leftV / totV + leftKg / totK : leftV / totV + 5 * Math.max(0, leftKg - kgAllow) / totK);
+  };
   let bestPlan = null;
   const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now()), t0 = now();
   // Strategiyalar: devor qurish / ekstremal nuqtalar × oddiy / aralash ustunlar × tartiblar; vaqt chegarasida eng yaxshisi qoladi.
   // Deterministik kombinatsiyalardan so'ng, vaqt qolsa, eng yaxshi kombinatsiyaning tasodifiy variantlari (GRASP) sinaladi.
   const combos = [];
+  // Maximal Spaces: og'irlik vazni 0 / 1 / 3 × bo'lish yo'q / bor
+  if (typeof USE_MS === "undefined" || USE_MS) for (const w of [1, 0.5, 2]) for (const spread of [true, false]) combos.push({ strategy: "ms", mix: w, ord: orders[0], spread });
   for (const mix of [false, true]) for (const spread of [false, true]) for (const ord of orders.slice(0, 4)) combos.push({ strategy: "wall", mix, ord, spread });
   for (const ord of orders.slice(0, 2)) combos.push({ strategy: "ep", mix: true, ord, spread: false });
   let seed = 1, graspRuns = 0; const top = []; // eng yaxshi 3 kombinatsiya — GRASP ular atrofida qidiradi
@@ -1034,24 +1182,25 @@ function buildPlan(BUDGET = 3000, MAX_GRASP = 40, onImprove = null) {
     // ulush tufayli kechiktirilgan og'ir yuklar oxirgi furada ham sig'masa — "sig'madi"
     // Mezon: qolgan hajm ulushi + qolgan og'irlik ulushi (ikkalasi ham kam bo'lsin); "Shart" yuk qolsa — eng yomon
     // + kichik jarima: furalar og'irligi bir-biridan farq qilsa (teng ulushga nisbatan) — teng yuklangan reja afzal
-    const capAll = allTrucks.reduce((s, x) => s + x.kg, 0) || 1, loadAll = trucks.reduce((s, r) => s + r.kg, 0);
-    const imbalance = trucks.reduce((s, r) => s + Math.abs(r.kg - loadAll * r.truck.kg / capAll), 0) / (totK || 1);
-    // Agar "qolishi mumkin bo'lgan og'irlik" (kgAllow) berilgan bo'lsa: asosiy maqsad — qolgan HAJM minimal,
-    // og'irlik faqat shu chegaradan oshsa jarima. Aks holda hajm va og'irlik teng.
-    const leftKg = rest.reduce((s, p) => s + p.kg, 0), leftV = rest.reduce((s, p) => s + p.L * p.W * p.H, 0);
-    const kgAllow = typeof KG_ALLOW === "number" && KG_ALLOW > 0 ? KG_ALLOW : null;
-    const leftVol = rest.reduce((s, p) => s + (p.pri === 1 ? 1000 : 0), 0) + 0.02 * imbalance +
-      (kgAllow == null ? leftV / totV + leftKg / totK : leftV / totV + 5 * Math.max(0, leftKg - kgAllow) / totK);
+    const leftVol = scoreOf(trucks, rest);
     const cand = { trucks, left: rest, leftVol, skipped, combo: { strategy, mix, ord, spread } };
     if (!rng) { top.push(cand); top.sort((a, b) => a.leftVol - b.leftVol); if (top.length > 3) top.length = 3; }
     if (!bestPlan || leftVol < bestPlan.leftVol) {
-      bestPlan = cand; if (rng) top[0] = cand;
+      bestPlan = cand;
       if (onImprove) onImprove({ ms: Math.round(now() - t0), runs: ci + 1, grasp: graspRuns, left: rest.length, leftM3: rest.reduce((s, p) => s + p.L * p.W * p.H, 0) / 1e6, plan: bestPlan });
     }
     if (!rest.length) break;
   }
-  fillGaps(bestPlan);
-  if (typeof KG_ALLOW === "number" && KG_ALLOW > 0) swapImprove(bestPlan, KG_ALLOW, now() + Math.min(Math.max(1500, BUDGET * 0.3), 15000));
+  // Yakuniy: eng yaxshi bir necha variantni bo'shliq to'ldirishdan KEYIN solishtiramiz (to'ldirish natijani o'zgartiradi)
+  // har biriga og'ir-yengil almashtirish ham qo'llanadi (vaqt teng bo'linadi) — keyin eng yaxshisi olinadi
+  const finals = [bestPlan, ...top.filter(p => p !== bestPlan)].slice(0, 4);
+  const swapMs = Math.min(Math.max(1500, BUDGET * 0.3), 15000) / finals.length;
+  for (const p of finals) {
+    fillGaps(p);
+    if (typeof KG_ALLOW === "number" && KG_ALLOW > 0) swapImprove(p, KG_ALLOW, now() + swapMs);
+    p.leftVol = scoreOf(p.trucks, p.left);
+  }
+  bestPlan = finals.reduce((a, b) => (b.leftVol < a.leftVol ? b : a));
   bestPlan.ms = Math.round(now() - t0); bestPlan.graspRuns = graspRuns; bestPlan.runs = combos.length + graspRuns;
   return bestPlan;
 }

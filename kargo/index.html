@@ -283,11 +283,17 @@ details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
 <script>
 // ---------- Ma'lumotlar ----------
 // Ichki o'lchamlar sm da. Kub va tonna — kargo aytadigan raqamlar.
+// Ichki o'lchamlar sm da — manbalar: bestdeals.ru (gabarityi-evrofuryi-tenta), anvay.ru/size_truck, datrans.ru (сцепка 120).
+// Standart еврофура: 13,6 × 2,45 m, faqat balandligi farq qiladi. Сцепка — ikki alohida kuzov (parts).
 const PRESETS = [
-  { name: "Fura 115 m³ / 26.5 t", L: 1650, W: 245, H: 285, kg: 26500 },
-  { name: "Fura 80 m³ / 28.5 t", L: 1360, W: 245, H: 240, kg: 28500 },
-  { name: "Tent fura 13.6 m (90 m³ / 22 t)", L: 1360, W: 245, H: 270, kg: 22000 },
-  { name: "Mega fura (100 m³ / 24 t)", L: 1360, W: 245, H: 300, kg: 24000 },
+  { name: "Сцепка 115 m³ / 26.5 t (2 kuzov)", parts: [{ name: "Сцепка 115 — mashina kuzovi", L: 780, W: 245, H: 300, kg: 13250 }, { name: "Сцепка 115 — tirkama", L: 780, W: 245, H: 300, kg: 13250 }] },
+  { name: "Fura 80 m³ / 28.5 t (tent 82: 13,6×2,45×2,45)", L: 1360, W: 245, H: 245, kg: 28500 },
+  { name: "Tent 86 m³ (13,6×2,45×2,60)", L: 1360, W: 245, H: 260, kg: 22000 },
+  { name: "Tent 90 m³ (13,6×2,45×2,70)", L: 1360, W: 245, H: 270, kg: 22000 },
+  { name: "Tent 92 m³ (13,6×2,45×2,80)", L: 1360, W: 245, H: 280, kg: 22000 },
+  { name: "Mega 100 m³ (13,6×2,45×3,00)", L: 1360, W: 245, H: 300, kg: 24000 },
+  { name: "Сцепка 110 m³ (7,1 + 8,0 m, 2 kuzov)", parts: [{ name: "Сцепка 110 — mashina 7,1 m", L: 710, W: 245, H: 295, kg: 11000 }, { name: "Сцепка 110 — tirkama 8,0 m", L: 800, W: 245, H: 300, kg: 12000 }] },
+  { name: "Сцепка 120 m³ (8,0 + 8,0 m, 2 kuzov)", parts: [{ name: "Сцепка 120 — mashina 8,0 m", L: 800, W: 245, H: 295, kg: 11000 }, { name: "Сцепка 120 — tirkama 8,0 m", L: 800, W: 245, H: 300, kg: 12000 }] },
   { name: "Konteyner 40' HC (76 m³ / 26.5 t)", L: 1203, W: 235, H: 269, kg: 26500 },
   { name: "Konteyner 40' (67 m³ / 26.5 t)", L: 1203, W: 235, H: 239, kg: 26500 },
   { name: "Konteyner 20' (33 m³ / 21.7 t)", L: 590, W: 235, H: 239, kg: 21700 },
@@ -320,7 +326,10 @@ function saveState() {
   try { localStorage.setItem(STORE, JSON.stringify({ cargo: cargo.map(({ img, imgs, ...c }) => c), fleet, pins, t: Date.now() })); } catch (e) { /* xotira yo'q yoki bloklangan */ }
 }
 function loadState() {
-  try { const s = JSON.parse(localStorage.getItem(STORE) || "null"); if (!s || !Array.isArray(s.cargo) || !Array.isArray(s.fleet)) return false; cargo = s.cargo; fleet = s.fleet; pins = s.pins || {}; return cargo.length > 0 || fleet.length > 0; } catch (e) { return false; }
+  try { const s = JSON.parse(localStorage.getItem(STORE) || "null"); if (!s || !Array.isArray(s.cargo) || !Array.isArray(s.fleet)) return false; cargo = s.cargo; fleet = s.fleet; pins = s.pins || {};
+    // eski taxminiy o'lchamlar: "Fura 80" 2,40 m edi — standart tent 82 da 2,45 m
+    fleet.forEach(t => { if (/^Fura 80 m³/.test(t.name) && t.H === 240 && t.L === 1360) { t.H = 245; t.name = PRESETS[1].name; } });
+    return cargo.length > 0 || fleet.length > 0; } catch (e) { return false; }
 }
 const cargoVol = () => cargo.reduce((s, c) => s + c.L * c.W * c.H * c.qty, 0) / 1e6;
 const cargoKg = () => cargo.reduce((s, c) => s + c.kg * c.qty, 0);
@@ -688,7 +697,7 @@ function renderFleet() {
   });
   renderSums();
 }
-$("#addTruck").onclick = () => { fleet.push({ ...PRESETS[$("#truckPreset").value], count: 1 }); pins = {}; renderFleet(); scheduleRun(); };
+$("#addTruck").onclick = () => { const p = PRESETS[$("#truckPreset").value]; if (p.parts) p.parts.forEach(x => fleet.push({ ...x, count: 1 })); else fleet.push({ ...p, count: 1 }); pins = {}; renderFleet(); scheduleRun(); };
 
 // ---------- Joylashtirish algoritmi ----------
 // 1) Bir xil yuklar fura balandligigacha ustun (stopka) qilinadi.

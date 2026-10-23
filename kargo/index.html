@@ -166,6 +166,27 @@ details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
       <div id="extraList" style="margin-top:10px"></div>
     </section>
 
+    <section class="panel" id="aiPanel" hidden>
+      <h2><span class="n">AI</span> AI yordamchi <span class="chip warn" style="font-family:var(--body);letter-spacing:0">sinov</span></h2>
+      <div class="tabs" style="margin-bottom:8px">
+        <button class="active" id="aiTabRead">Matn / rasmdan yuk</button>
+        <button id="aiTabCmd">Buyruq</button>
+      </div>
+      <div id="aiReadBox">
+        <p class="hint" style="margin:0 0 6px">Telegram xabari, Excel'dan nusxa yoki qog'oz rasmini bering — AI yuk ro'yxatini ajratadi, siz tekshirib qo'shasiz.</p>
+        <textarea id="aiText" rows="5" style="width:100%;font:inherit;color:var(--fg);background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:8px" placeholder="masalan:&#10;радиатор чегарада 28 куб 1712 кг&#10;рессор чегарада 14.5 куб 27492 кг&#10;1) фура 80 куб 28.5 т"></textarea>
+        <div class="row" id="aiImgWrap" hidden style="margin-top:6px"><label class="hint">Rasm (ixtiyoriy): <input type="file" id="aiImg" accept="image/*" multiple></label></div>
+        <div class="row" style="margin-top:8px"><button class="primary" id="aiRead" style="width:auto;font-size:16px;padding:6px 16px">AI bilan o'qish</button><button id="aiStop" hidden>To'xtatish</button></div>
+      </div>
+      <div id="aiCmdBox" hidden>
+        <p class="hint" style="margin:0 0 6px">Oddiy tilda yozing: "ressorni hammasini 2-furaga o't", "mebel paddonlarini qoldir", "3-fura qo'sh: 49 kub 10 tonna". AI o'zgartiradi va qayta hisoblaydi; yoqmasa "Bekor qilish".</p>
+        <textarea id="aiCmd" rows="3" style="width:100%;font:inherit;color:var(--fg);background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:8px" placeholder="masalan: og'ir yakka paddonlarni keyingi reysga qoldir"></textarea>
+        <div class="row" style="margin-top:8px"><button class="primary" id="aiDo" style="width:auto;font-size:16px;padding:6px 16px">Bajarish</button><button id="aiUndo" hidden>Bekor qilish</button></div>
+      </div>
+      <div id="aiOut" class="hint" style="margin-top:8px;white-space:pre-wrap"></div>
+      <div id="aiPreview"></div>
+    </section>
+
     <section class="panel">
       <h2><span class="n">2</span> Furalar</h2>
       <div class="row" style="margin-bottom:10px">
@@ -183,7 +204,7 @@ details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
         <button id="deep" style="flex:1">Chuqur qidiruv</button>
         <select id="deepSec" title="Qancha vaqt qidirsin"><option value="15">15 s</option><option value="30" selected>30 s</option><option value="60">60 s</option><option value="120">2 daqiqa</option></select>
       </div>
-      <p class="hint" style="margin:8px 0 0;text-align:center" id="deepHint">Oddiy hisob — 3 soniya, ~15 variant. Chuqur qidiruv — yuzlab variantni sinab, eng yaxshisini oladi; sahifa qotmaydi.</p>
+      <p class="hint" style="margin:8px 0 0;text-align:center" id="deepHint">Excel yuklanganda o'zi: avval 3 soniyalik reja, keyin fonda 20+ soniya yuzlab variant sinab, yaxshirog'ini qo'yadi. Qoidalar: og'ir yuk pastda (yengil ustiga qo'yilmaydi), og'ir turlar furalarga bo'linadi.</p>
     </section>
   </div>
 
@@ -564,7 +585,7 @@ function readSheet(file) {
       if (!items.length) throw new Error("Yuk qatorlari topilmadi");
       const keep = cargo.filter(c => c.extra); // qo'shimcha yuklar saqlanib qoladi
       cargo = []; pins = {}; items.forEach(it => addCargo(it)); keep.forEach(c => cargo.push(c)); ensureBorderCargo(); renderCargo();
-      toast(`${cargo.length} xil, ${fmt(cargoQty(), 0)} dona yuk o'qildi`); run();
+      toast(`${cargo.length} xil, ${fmt(cargoQty(), 0)} dona yuk o'qildi`); run(); autoDeep();
       // rasmlarni alohida, sekinroq yuklaymiz
       if (/\.xlsx$/i.test(file.name)) {
         try { const imgs = await extractImages(buf); let n = 0;
@@ -623,6 +644,7 @@ async function readPlanFiles(files) {
   if (have < nTrucks) { fleet = [{ ...PRESETS[1], count: nTrucks }]; renderFleet(); }
   renderCargo(); run();
   toast(`Kargo rejasi: ${groups.map(g => (g.kind === "skip" ? "qoladigan" : (g.kind + 1) + "-fura") + " " + g.items.reduce((s, c) => s + c.qty, 0) + " dona").join(", ")}`);
+  autoDeep();
 }
 const dropPlan = $("#dropPlan");
 $("#filePlan").onchange = e => e.target.files.length && readPlanFiles(e.target.files);
@@ -668,7 +690,9 @@ function overlaps(a, b) { return a.x < b.x + b.L && b.x < a.x + a.L && a.y < b.y
 const CELL = 100; // joylashganlarni uzunlik bo'ylab 1 m li kataklarda saqlaymiz — tekshiruv tez bo'ladi
 function cellsOf(b) { const r = []; for (let i = Math.floor(b.x / CELL), e = Math.floor((b.x + b.L - 0.01) / CELL); i <= e; i++) r.push(i); return r; }
 function near(grid, b) { const out = new Set(); for (const i of cellsOf(b)) if (grid[i]) for (const p of grid[i]) out.add(p); return out; }
-function supportRatio(box, cand) {
+// Tayanch ulushi (0..1). Og'ir quti yengil quti ustiga qo'yilmaydi: ustidagi og'irlik
+// tagidagi har bir qutining og'irligidan 2 baravar (+30 kg) oshsa — tayanch 0.
+function supportRatio(box, cand, kg = null) {
   if (box.z === 0) return 1;
   let area = 0;
   for (const p of cand) {
@@ -676,6 +700,7 @@ function supportRatio(box, cand) {
     const ox = Math.max(0, Math.min(box.x + box.L, p.x + p.L) - Math.max(box.x, p.x)), oy = Math.max(0, Math.min(box.y + box.W, p.y + p.W) - Math.max(box.y, p.y));
     if (ox * oy <= 0) continue;
     if (!p.stack) return 0;
+    if (kg != null && kg > (p.kg || 0) * 2 + 30) return 0;
     area += ox * oy;
   }
   return area / (box.L * box.W);
@@ -706,7 +731,7 @@ function packBoxes(truck, boxes, seed = []) {
         if (box.x + L > truck.L + 0.01 || box.y + W > truck.W + 0.01 || box.z + it.H > truck.H + 0.01) continue;
         const cand = near(grid, box); let bad = false;
         for (const p of cand) if (overlaps(box, p)) { bad = true; break; }
-        if (bad || supportRatio(box, cand) < 0.7) continue;
+        if (bad || supportRatio(box, cand, it.kg) < 0.7) continue;
         const score = box.z * 1e6 + box.x * 1e3 + box.y + (L !== it.L ? 0.5 : 0);
         if (!best || score < best.score) best = { ...box, score, ep };
       }
@@ -878,21 +903,24 @@ function buildPlan(BUDGET = 3000, MAX_GRASP = 40, onImprove = null) {
   // aks holda hammasi birinchi furaga tushib, u og'irlikdan to'lib, hajmi bo'sh qoladi.
   const allTrucks = fleet.flatMap(t => Array.from({ length: t.count }, () => t));
   const maxKg = Math.max(0, ...allTrucks.map(t => t.kg));
-  const heavy = new Set();
-  cargo.forEach((c, ci) => { if (!(pins[ci] && Object.keys(pins[ci]).length) && c.pri !== 3 && c.kg * c.qty > 0.25 * maxKg && allTrucks.length > 1) heavy.add(ci); });
+  // spread=false: faqat og'ir turlar bo'linadi; spread=true: 2+ donali hamma turlar furalar orasida bo'linadi (furalar bir xil yuklanadi)
+  const heavySet = spread => { const s = new Set(); if (allTrucks.length < 2) return s;
+    cargo.forEach((c, ci) => { if (!(pins[ci] && Object.keys(pins[ci]).length) && c.pri !== 3 && (c.kg * c.qty > 0.25 * maxKg || (spread && c.qty >= 2))) s.add(ci); }); return s; };
+  const heavyBy = { false: heavySet(false), true: heavySet(true) };
   let bestPlan = null;
   const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now()), t0 = now();
   // Strategiyalar: devor qurish / ekstremal nuqtalar × oddiy / aralash ustunlar × tartiblar; vaqt chegarasida eng yaxshisi qoladi.
   // Deterministik kombinatsiyalardan so'ng, vaqt qolsa, eng yaxshi kombinatsiyaning tasodifiy variantlari (GRASP) sinaladi.
   const combos = [];
-  for (const mix of [false, true]) for (const ord of orders.slice(0, 4)) combos.push({ strategy: "wall", mix, ord });
-  for (const ord of orders.slice(0, 2)) combos.push({ strategy: "ep", mix: true, ord });
+  for (const mix of [false, true]) for (const spread of [false, true]) for (const ord of orders.slice(0, 4)) combos.push({ strategy: "wall", mix, ord, spread });
+  for (const ord of orders.slice(0, 2)) combos.push({ strategy: "ep", mix: true, ord, spread: false });
   let seed = 1, graspRuns = 0; const top = []; // eng yaxshi 3 kombinatsiya — GRASP ular atrofida qidiradi
   for (let ci = 0; ; ci++) {
-    let strategy, mix, ord, rng = null;
-    if (ci < combos.length) ({ strategy, mix, ord } = combos[ci]);
-    else { if (!top.length || now() - t0 > BUDGET || graspRuns >= MAX_GRASP) break; rng = makeRng(seed++); ({ strategy, mix, ord } = top[Math.floor(rng() * Math.min(top.length, 1 + graspRuns % 3))].combo); graspRuns++; }
+    let strategy, mix, ord, spread, rng = null;
+    if (ci < combos.length) ({ strategy, mix, ord, spread } = combos[ci]);
+    else { if (!top.length || now() - t0 > BUDGET || graspRuns >= MAX_GRASP) break; rng = makeRng(seed++); ({ strategy, mix, ord, spread } = top[Math.floor(rng() * Math.min(top.length, 1 + graspRuns % 3))].combo); graspRuns++; }
     if (bestPlan && now() - t0 > BUDGET && !rng) break;
+    const heavy = heavyBy[!!spread];
     let rest = items.slice(); const trucks = []; let k = 0;
     for (const t of fleet) for (let i = 0; i < t.count; i++, k++) {
       // bu furaning og'ir yuk ulushi: qolgan dona × (bu fura sig'imi / qolgan furalar sig'imi)
@@ -901,14 +929,17 @@ function buildPlan(BUDGET = 3000, MAX_GRASP = 40, onImprove = null) {
       const mine = rest.filter(it => { if (it.pin === k) return true; if (it.pin != null) return false; if (heavy.has(it.ci)) { if (quota[it.ci] <= 0) return false; quota[it.ci]--; } return true; });
       const others = rest.filter(it => !mine.includes(it));
       const r = packTruck(t, mine, ord, strategy, mix, rng);
-      r.label = t.name.replace(/\s*\(.*\)$/, "") + (t.count > 1 ? " #" + (i + 1) : ""); r.strategy = strategy + (mix ? "+mix" : "") + (rng ? "+grasp" : ""); trucks.push(r);
+      r.label = t.name.replace(/\s*\(.*\)$/, "") + (t.count > 1 ? " #" + (i + 1) : ""); r.strategy = strategy + (mix ? "+mix" : "") + (spread ? "+bo'lish" : "") + (rng ? "+grasp" : ""); trucks.push(r);
       rest = r.left.concat(others);
     }
     // "Shart" yuk qolib ketsa — bu eng yomon natija
     // ulush tufayli kechiktirilgan og'ir yuklar oxirgi furada ham sig'masa — "sig'madi"
     // Mezon: qolgan hajm ulushi + qolgan og'irlik ulushi (ikkalasi ham kam bo'lsin); "Shart" yuk qolsa — eng yomon
-    const leftVol = rest.reduce((s, p) => s + p.L * p.W * p.H / totV + p.kg / totK + (p.pri === 1 ? 1000 : 0), 0);
-    const cand = { trucks, left: rest, leftVol, skipped, combo: { strategy, mix, ord } };
+    // + kichik jarima: furalar og'irligi bir-biridan farq qilsa (teng ulushga nisbatan) — teng yuklangan reja afzal
+    const capAll = allTrucks.reduce((s, x) => s + x.kg, 0) || 1, loadAll = trucks.reduce((s, r) => s + r.kg, 0);
+    const imbalance = trucks.reduce((s, r) => s + Math.abs(r.kg - loadAll * r.truck.kg / capAll), 0) / (totK || 1);
+    const leftVol = rest.reduce((s, p) => s + p.L * p.W * p.H / totV + p.kg / totK + (p.pri === 1 ? 1000 : 0), 0) + 0.02 * imbalance;
+    const cand = { trucks, left: rest, leftVol, skipped, combo: { strategy, mix, ord, spread } };
     if (!rng) { top.push(cand); top.sort((a, b) => a.leftVol - b.leftVol); if (top.length > 3) top.length = 3; }
     if (!bestPlan || leftVol < bestPlan.leftVol) {
       bestPlan = cand; if (rng) top[0] = cand;
@@ -1133,6 +1164,7 @@ function renderResult() {
 }
 function showPlan() { if (!plan || activeTruck >= (plan.trucks.length || 0)) activeTruck = -1; renderVerdict(); showTruck(); renderResult(); renderCargo(); }
 function run() {
+  stopDeep(); // ma'lumot o'zgardi — eski chuqur qidiruv natijasi endi to'g'ri emas
   saveState();
   if (!cargo.length) { plan = null; showPlan(); return; }
   if (!fleet.length) { plan = { trucks: [], left: [] }; showPlan(); return toast("Fura qo'shing"); }
@@ -1147,24 +1179,37 @@ function algoSource() {
   const s = [...document.scripts].map(x => x.textContent).find(t => t.includes("function buildPlan("));
   return s.slice(s.indexOf("function overlaps"), s.indexOf("// ---------- 3D"));
 }
-$("#deep").onclick = () => {
-  if (deepWorker) { deepWorker.terminate(); deepWorker = null; $("#deep").textContent = "Chuqur qidiruv"; toast("To'xtatildi"); return; }
+let deepTick = null;
+function stopDeep(msg) {
+  if (!deepWorker) return;
+  deepWorker.terminate(); deepWorker = null; clearInterval(deepTick);
+  $("#deep").textContent = "Chuqur qidiruv"; if (msg) { $("#deepHint").textContent = msg; toast(msg); }
+}
+$("#deep").onclick = () => deepWorker ? stopDeep("To'xtatildi") : startDeep(+$("#deepSec").value);
+// Yuk yuklanganda o'zi ishga tushadi: oddiy 3 s rejadan keyin fonda yuzlab variant sinab, yaxshirog'ini qo'yadi
+function autoDeep() { if (cargo.length && fleet.length) setTimeout(() => { if (!deepWorker) startDeep(Math.max(20, +$("#deepSec").value), true); }, 300); }
+function startDeep(sec, auto = false) {
+  if (deepWorker) return;
   if (!cargo.length || !fleet.length) return toast("Avval yuk va fura kiriting");
-  const sec = +$("#deepSec").value;
   const src = `let cargo=[],fleet=[],pins={};\n${algoSource()}\nonmessage=e=>{cargo=e.data.cargo;fleet=e.data.fleet;pins=e.data.pins;const strip=p=>({trucks:p.trucks.map(t=>({truck:t.truck,label:t.label,strategy:t.strategy,placed:t.placed,left:[],kg:t.kg,vol:t.vol,floor:t.floor,cx:t.cx,maxX:t.maxX})),left:p.left,skipped:p.skipped,leftVol:p.leftVol,ms:p.ms,graspRuns:p.graspRuns,runs:p.runs});const plan=buildPlan(e.data.budget,100000,i=>postMessage({progress:true,ms:i.ms,runs:i.runs,left:i.left,leftM3:i.leftM3,plan:strip(i.plan)}));postMessage({done:true,plan:strip(plan)});};`;
   const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
   try { deepWorker = new Worker(url); } catch (e) { return toast("Brauzer Worker'ni qo'llamadi: " + e.message); }
-  $("#deep").textContent = "To'xtatish"; const t0 = performance.now(); let lastShown = 0;
-  const hint = $("#deepHint"); hint.textContent = "Qidirilmoqda… 0 s";
-  const tick = setInterval(() => { if (!deepWorker) return clearInterval(tick); hint.textContent = `Qidirilmoqda… ${Math.round((performance.now() - t0) / 1000)} s / ${sec} s`; }, 500);
+  $("#deep").textContent = "To'xtatish"; const t0 = performance.now(); let lastShown = 0, improved = 0;
+  const hint = $("#deepHint"); hint.textContent = (auto ? "Avtomatik qidiruv… " : "Qidirilmoqda… ") + "0 s";
+  deepTick = setInterval(() => { if (!deepWorker) return clearInterval(deepTick); hint.textContent = `${auto ? "Avtomatik qidiruv" : "Qidirilmoqda"}… ${Math.round((performance.now() - t0) / 1000)} s / ${sec} s` + (improved ? ` · ${improved} marta yaxshilandi` : ""); }, 500);
+  // faqat hozirgi rejadan YAXSHIROQ natija ekranga chiqadi
+  const better = p => !plan || p.leftVol < (plan.leftVol ?? Infinity) - 1e-9;
   deepWorker.onmessage = e => {
     const d = e.data;
-    if (d.progress) { if (performance.now() - lastShown > 700) { lastShown = performance.now(); plan = d.plan; showPlan(); } toast(`${d.runs}-urinish: ${d.left} dona sig'madi (${fmt(d.leftM3, 1)} m³)`); }
-    if (d.done) { plan = d.plan; showPlan(); deepWorker.terminate(); deepWorker = null; $("#deep").textContent = "Chuqur qidiruv"; clearInterval(tick); hint.textContent = `Tugadi: ${d.plan.runs} variant sinaldi, ${Math.round(d.plan.ms / 1000)} s. Eng yaxshisi: ${d.plan.left.length} dona sig'madi.`; toast(`Chuqur qidiruv tugadi — ${d.plan.runs} variant`); }
+    if (d.progress && better(d.plan)) { improved++; if (performance.now() - lastShown > 700) { lastShown = performance.now(); plan = d.plan; showPlan(); } }
+    if (d.done) {
+      if (better(d.plan)) { plan = d.plan; showPlan(); }
+      stopDeep(`Tugadi: ${d.plan.runs} variant sinaldi (${Math.round(d.plan.ms / 1000)} s)${improved ? ", natija yaxshilandi" : ", birinchi reja eng yaxshisi ekan"}. Sig'madi: ${plan.left.length} dona, ${fmt(plan.left.reduce((s, p) => s + p.L * p.W * p.H, 0) / 1e6, 1)} m³.`);
+    }
   };
-  deepWorker.onerror = err => { toast("Xato: " + err.message); deepWorker.terminate(); deepWorker = null; $("#deep").textContent = "Chuqur qidiruv"; clearInterval(tick); };
+  deepWorker.onerror = err => stopDeep("Xato: " + err.message);
   deepWorker.postMessage({ cargo: cargo.map(({ img, imgs, ...c }) => c), fleet, pins, budget: sec * 1000 });
-};
+}
 function resultRows() {
   const rows = [["Fura", "Yuk", "Uzunlik sm", "Eni sm", "Balandlik sm", "kg", "Old tomondan m", "Chapdan m", "Qavat", "Burilgan"]];
   plan.trucks.forEach(tr => tr.placed.forEach(p => rows.push([tr.label, p.name, p.L, p.W, p.H, +p.kg.toFixed(1), +(p.x / 100).toFixed(2), +(p.y / 100).toFixed(2), 1 + Math.round(p.z / p.H), p.rot ? "ha" : ""])));
@@ -1208,6 +1253,141 @@ $("#dlRes").onclick = () => {
   XLSX.utils.book_append_sheet(wb, ws3, "Har bir dona (joyi)");
   XLSX.writeFile(wb, "fura-rejasi.xlsx");
   toast("Agar fayl tushmasa, 'Nusxalash' tugmasini ishlating");
+};
+
+// ---------- AI yordamchi (claude.ai artifact'da, ko'ruvchining Claude obunasi orqali) ----------
+let aiSample = null, aiCtl = null, aiUndoState = null;
+const AI_ERR = { not_granted: "AI'ga ruxsat berilmadi.", sampling_disabled: "Bu akkauntda AI o'chirilgan.", rate_limited: "Juda ko'p so'rov — birozdan keyin qayta urinib ko'ring.", session_expired: "Claude'ga qayta kiring.", refused: "AI bu so'rovni bajarmadi — matnni o'zgartiring.", invalid_json: "AI javobini o'qib bo'lmadi — qayta urinib ko'ring yoki matnni qisqartiring.", prompt_too_large: "Matn juda uzun — qisqartiring.", image_rejected: "Rasmni o'qib bo'lmadi — boshqa rasm tanlang.", cancelled: "To'xtatildi." };
+const aiErr = e => AI_ERR[e?.code] || "AI xatosi: " + (e?.message || e?.code || e);
+(async () => {
+  if (!window.claude?.use) return;
+  try {
+    const s = await claude.use("sample"); if (!s) return;
+    aiSample = s; $("#aiPanel").hidden = false;
+    const lim = await s.limits().catch(() => null);
+    $("#aiImgWrap").hidden = !lim?.images;
+    if (!lim?.tools) $("#aiTabCmd").hidden = true;
+  } catch (e) { /* AI yo'q — panel yashirin qoladi */ }
+})();
+$("#aiTabRead").onclick = () => { $("#aiReadBox").hidden = false; $("#aiCmdBox").hidden = true; $("#aiTabRead").classList.add("active"); $("#aiTabCmd").classList.remove("active"); };
+$("#aiTabCmd").onclick = () => { $("#aiReadBox").hidden = true; $("#aiCmdBox").hidden = false; $("#aiTabCmd").classList.add("active"); $("#aiTabRead").classList.remove("active"); };
+$("#aiStop").onclick = () => aiCtl?.abort();
+
+const AI_READ_PROMPT = `Siz yuk logistikasi yordamchisisiz (O'zbekiston, Xitoydan fura bilan yuk). Quyidagi matn va/yoki rasm(lar)dan YUKLARNI va FURALARNI ajrating.
+Faqat bitta JSON obyekt qaytaring, boshqa matn yo'q:
+{"items":[{"name":string,"qty":number,"L":number|null,"W":number|null,"H":number|null,"kg_each":number|null,"kg_total":number|null,"m3_total":number|null,"stack":boolean,"note":string}],
+ "trucks":[{"name":string,"m3":number|null,"t":number|null,"count":number}],
+ "notes":string}
+Qoidalar:
+- L, W, H — bitta joyning o'lchami SANTIMETRDA (metrda berilgan bo'lsa ×100). Noma'lum bo'lsa null.
+- qty — joy (mesta, paddon, quti) soni; noma'lum bo'lsa 1.
+- "куб" = m³ (m3_total — shu yukning jami hajmi). "кг" = kg, "т"/"тонна" = ×1000 kg.
+- kg_each — bir joyning og'irligi; faqat jami berilgan bo'lsa kg_total.
+- stack — ustiga boshqa yuk qo'yish mumkinmi; noma'lum bo'lsa true; mebel, shisha, "ustiga qo'yilmasin" bo'lsa false.
+- Fura/mashina haqidagi qatorlar (masalan "фура 80 куб 28.5 т") — trucks ga, items ga EMAS. Bir xil fura bir necha marta bo'lsa count.
+- Yig'indi/TOTAL qatorlarini yuk sifatida qo'shmang.
+- name — qisqa, asl tilda (masalan "Радиатор (чегарада)").
+- Ishonchingiz komil bo'lmagan joyni note'da yozing; notes — umumiy izoh (o'zbekcha, 1-2 gap).
+Ma'lumot:
+`;
+$("#aiRead").onclick = async () => {
+  if (!aiSample) return;
+  const text = $("#aiText").value.trim(), files = $("#aiImg").files;
+  if (!text && !files?.length) return toast("Matn kiriting yoki rasm tanlang");
+  aiCtl = new AbortController(); $("#aiRead").disabled = true; $("#aiStop").hidden = false;
+  const out = $("#aiOut"), prev = $("#aiPreview"); out.textContent = "AI o'ylayapti… (birinchi marta ruxsat so'raydi)"; prev.innerHTML = "";
+  try {
+    const opts = { signal: aiCtl.signal, onText: () => { out.textContent = "AI yozyapti…"; } };
+    if (files?.length) opts.images = files;
+    const res = await aiSample.json(AI_READ_PROMPT + (text || "(faqat rasm)"), opts);
+    const items = Array.isArray(res?.items) ? res.items : [], trucks = Array.isArray(res?.trucks) ? res.trucks : [];
+    out.textContent = (res?.notes ? String(res.notes) + "\n" : "") + `${items.length} xil yuk, ${trucks.length} xil fura topildi. Tekshirib, qo'shing:`;
+    renderAiPreview(items, trucks);
+  } catch (e) { out.textContent = aiErr(e); }
+  finally { $("#aiRead").disabled = false; $("#aiStop").hidden = true; }
+};
+const n0 = v => { const x = Number(v); return isFinite(x) && x > 0 ? x : 0; };
+function aiItemToCargo(it) {
+  const qty = Math.max(1, Math.round(n0(it.qty) || 1)), L = n0(it.L), W = n0(it.W), H = n0(it.H);
+  const kgTot = n0(it.kg_total) || n0(it.kg_each) * qty, name = String(it.name || "AI yuk").slice(0, 80);
+  if (L && W && H) return { name, L: Math.round(L), W: Math.round(W), H: Math.round(H), kg: kgTot / qty, qty, stack: it.stack !== false, extra: true };
+  const vol = n0(it.m3_total); if (!vol) return null;
+  const s = Math.round(Math.cbrt(vol / qty) * 100);
+  return { name: name + " (o'lchamsiz)", L: s, W: s, H: s, kg: kgTot / qty, qty, stack: it.stack !== false, extra: true };
+}
+function renderAiPreview(items, trucks) {
+  const box = $("#aiPreview"); box.innerHTML = "";
+  const rows = items.map(it => ({ it, c: aiItemToCargo(it), on: true }));
+  if (rows.length) {
+    const tb = el("tbody", {});
+    rows.forEach(r => {
+      const cb = el("input", { type: "checkbox" }); cb.checked = !!r.c; cb.disabled = !r.c; cb.onchange = () => r.on = cb.checked; r.on = !!r.c;
+      const must = el("input", { type: "checkbox", title: "Shart" }); must.onchange = () => r.must = must.checked;
+      tb.append(el("tr", {}, el("td", {}, cb), el("td", {}, String(r.it.name || "")), el("td", { class: "num" }, r.c ? r.c.qty : "—"),
+        el("td", { class: "num" }, r.c ? `${r.c.L}×${r.c.W}×${r.c.H}` : "o'lcham/kub yo'q"), el("td", { class: "num" }, r.c ? fmt(r.c.L * r.c.W * r.c.H * r.c.qty / 1e6, 2) : ""),
+        el("td", { class: "num" }, r.c ? fmt(r.c.kg * r.c.qty, 0) : ""), el("td", {}, must), el("td", { class: "hint" }, String(r.it.note || ""))));
+    });
+    box.append(el("div", { class: "tscroll", style: "margin-top:8px" }, el("table", {}, el("thead", {}, el("tr", {}, el("th", {}, ""), el("th", {}, "Yuk"), el("th", { class: "num" }, "Dona"), el("th", { class: "num" }, "O'lcham sm"), el("th", { class: "num" }, "m³"), el("th", { class: "num" }, "kg"), el("th", {}, "Shart"), el("th", {}, "Izoh"))), tb)),
+      el("button", { class: "primary", style: "width:auto;font-size:16px;padding:6px 16px;margin-top:8px", onclick: () => {
+        const add = rows.filter(r => r.on && r.c); add.forEach(r => addCargo({ ...r.c, pri: r.must ? 1 : 2 }));
+        pins = {}; renderCargo(); run(); toast(add.length + " xil yuk qo'shildi"); box.innerHTML = ""; $("#aiOut").textContent = "";
+      } }, "Belgilanganlarni qo'shish"));
+  }
+  const tr = trucks.filter(t => n0(t.m3) || n0(t.t));
+  if (tr.length) {
+    box.append(el("p", { class: "hint", style: "margin:10px 0 4px" }, "Furalar: " + tr.map(t => `${t.name || "fura"} — ${t.m3 || "?"} m³ / ${t.t || "?"} t × ${t.count || 1}`).join("; ")),
+      el("button", { onclick: () => {
+        fleet = tr.map(t => { const W = 245, H = t.m3 && t.m3 < 45 ? 230 : 240, m3 = n0(t.m3) || 80; return { name: `${String(t.name || "Fura").slice(0, 30)} ${m3} m³ / ${n0(t.t) || "?"} t`, L: Math.round(m3 * 1e6 / (W * H)), W, H, kg: (n0(t.t) || 20) * 1000, count: Math.max(1, Math.round(n0(t.count) || 1)) }; });
+        pins = {}; renderFleet(); run(); toast("Furalar AI ma'lumotiga almashtirildi");
+      } }, "Furalarni shunga almashtirish"));
+  }
+}
+
+// Buyruq: AI sahifaning funksiyalarini chaqiradi
+function aiSnapshot() { return JSON.stringify({ cargo: cargo.map(({ img, imgs, ...c }) => c), fleet, pins }); }
+function aiCargoView() {
+  return cargo.map((c, i) => { const w = whereIs(i); return { i, name: c.name, qty: c.qty, size_cm: `${c.L}x${c.W}x${c.H}`, m3: +(c.L * c.W * c.H * c.qty / 1e6).toFixed(2), kg: Math.round(c.kg * c.qty), stack: c.stack, status: c.pri === 3 ? "qolsin" : c.pri === 1 ? "shart" : "oddiy", extra: !!c.extra, where: Object.entries(w).map(([k, n]) => (k === "left" ? "sig'madi" : k === "skip" ? "qolsin" : (+k + 1) + "-fura") + ":" + n).join(",") }; });
+}
+function aiSummary() {
+  if (!plan) return "reja yo'q";
+  return { trucks: plan.trucks.map((t, k) => ({ fura: k + 1, name: t.label, dona: t.placed.length, hajm_pct: Math.round(t.vol / (t.truck.L * t.truck.W * t.truck.H) * 100), t: +(t.kg / 1000).toFixed(2), sigim_t: t.truck.kg / 1000 })),
+    sigmadi: { dona: plan.left.length, m3: +(plan.left.reduce((s, p) => s + p.L * p.W * p.H, 0) / 1e6).toFixed(1), t: +(plan.left.reduce((s, p) => s + p.kg, 0) / 1000).toFixed(2) },
+    qolsin: { dona: (plan.skipped || []).length, m3: +((plan.skipped || []).reduce((s, p) => s + p.L * p.W * p.H, 0) / 1e6).toFixed(1) } };
+}
+const idxList = v => (Array.isArray(v) ? v : [v]).map(Number).filter(i => Number.isInteger(i) && i >= 0 && i < cargo.length);
+const AI_TOOLS = [
+  { name: "get_state", description: "Joriy yuk ro'yxati (i — indeks, qty, size_cm, m3, kg, stack, status: oddiy/shart/qolsin, where — qaysi furada), furalar va reja natijasi. Avval shuni chaqiring.",
+    execute: () => ({ cargo: aiCargoView(), fleet: fleet.map((t, k) => ({ k, name: t.name, m3: +truckVol(t).toFixed(1), t: t.kg / 1000, count: t.count })), result: aiSummary() }) },
+  { name: "set_status", description: "Yuk turlarining holatini o'zgartiradi: 'shart' (albatta yuklansin, birinchi), 'oddiy', 'qolsin' (bu reysda yuklanmaydi). Indekslar get_state dagi i.",
+    inputSchema: { type: "object", properties: { indices: { type: "array", items: { type: "integer" } }, status: { type: "string", enum: ["shart", "oddiy", "qolsin"] } }, required: ["indices", "status"] },
+    execute: ({ indices, status }) => { const ids = idxList(indices), p = { shart: 1, oddiy: 2, qolsin: 3 }[String(status)]; if (!p) throw new Error("status noto'g'ri"); ids.forEach(i => cargo[i].pri = p); pins = {}; return `${ids.length} ta yuk turi: ${status}`; } },
+  { name: "assign_truck", description: "Yuk turining qty donasini aniq furaga biriktiradi (truck — 1 dan boshlab). qty berilmasa — hammasi.",
+    inputSchema: { type: "object", properties: { index: { type: "integer" }, truck: { type: "integer" }, qty: { type: "integer" } }, required: ["index", "truck"] },
+    execute: ({ index, truck, qty }) => { const i = idxList(index)[0], k = Number(truck) - 1, nTr = fleet.reduce((s, t) => s + t.count, 0); if (i == null) throw new Error("index noto'g'ri"); if (!(k >= 0 && k < nTr)) throw new Error("bunday fura yo'q, jami " + nTr); const q = Math.min(cargo[i].qty, Math.max(1, Math.round(Number(qty) || cargo[i].qty))); const p = pins[i] = pins[i] || {}; const already = Object.entries(p).filter(([kk]) => +kk !== k).reduce((s, [, v]) => s + v, 0); p[k] = Math.min(q, cargo[i].qty - already); if (cargo[i].pri === 3) cargo[i].pri = 2; return `${cargo[i].name}: ${p[k]} dona → ${k + 1}-fura`; } },
+  { name: "set_trucks", description: "Fura parkini almashtiradi. Har fura: m3 (hajm), t (ko'tarish, tonna), count (nechta).",
+    inputSchema: { type: "object", properties: { trucks: { type: "array", items: { type: "object", properties: { name: { type: "string" }, m3: { type: "number" }, t: { type: "number" }, count: { type: "integer" } }, required: ["m3", "t"] } } }, required: ["trucks"] },
+    execute: ({ trucks }) => { const list = (Array.isArray(trucks) ? trucks : []).filter(t => n0(t.m3) && n0(t.t)); if (!list.length) throw new Error("fura yo'q"); fleet = list.map(t => { const W = 245, H = n0(t.m3) < 45 ? 230 : 240; return { name: `${String(t.name || "Fura").slice(0, 30)} ${n0(t.m3)} m³ / ${n0(t.t)} t`, L: Math.round(n0(t.m3) * 1e6 / (W * H)), W, H, kg: n0(t.t) * 1000, count: Math.max(1, Math.round(n0(t.count) || 1)) }; }); pins = {}; return `${fleet.length} xil fura o'rnatildi`; } },
+  { name: "add_cargo", description: "Yangi yuk qo'shadi (o'lcham noma'lum bo'lsa jami m3 va kg bilan).",
+    inputSchema: { type: "object", properties: { name: { type: "string" }, qty: { type: "integer" }, m3_total: { type: "number" }, kg_total: { type: "number" }, must: { type: "boolean" }, stack: { type: "boolean" } }, required: ["name", "m3_total", "kg_total"] },
+    execute: ({ name, qty, m3_total, kg_total, must, stack }) => { const c = aiItemToCargo({ name, qty, m3_total, kg_total, stack }); if (!c) throw new Error("m3_total kerak"); addCargo({ ...c, pri: must ? 1 : 2 }); return `${c.name} qo'shildi`; } },
+  { name: "recalculate", description: "O'zgarishlardan keyin rejani qayta hisoblaydi (~3 s) va natijani qaytaradi: har fura hajm %, tonna, sig'magan va qoldirilgan yuk.",
+    execute: () => { renderFleet(); renderCargo(); run(); return aiSummary(); } },
+];
+$("#aiDo").onclick = async () => {
+  if (!aiSample) return;
+  const cmd = $("#aiCmd").value.trim(); if (!cmd) return toast("Buyruq yozing");
+  aiUndoState = aiSnapshot(); aiCtl = new AbortController(); $("#aiDo").disabled = true;
+  const out = $("#aiOut"); out.textContent = "AI ishlayapti…";
+  try {
+    const { text } = await aiSample(`Siz fura yuklash rejasi sahifasini boshqaruvchi yordamchisiz. Foydalanuvchi buyrug'ini sahifa funksiyalari (tools) orqali bajaring: avval get_state, keyin kerakli o'zgarishlar, oxirida recalculate. Yuk nomlarini get_state ro'yxatidan aniq toping; noaniq bo'lsa o'zgartirmang, savol bilan javob bering. Oxirida o'zbek tilida 2-4 gapda nima qilganingizni va natijani (har fura %, tonna, sig'magan) yozing.\n\nBuyruq: ${cmd}`,
+      { signal: aiCtl.signal, tools: AI_TOOLS, modelTier: "default", onText: ({ text }) => { out.textContent = text; } });
+    out.textContent = text; $("#aiUndo").hidden = false; renderFleet(); renderCargo(); if (plan) showPlan(); saveState();
+  } catch (e) { out.textContent = (e?.text ? e.text + "\n\n" : "") + aiErr(e); $("#aiUndo").hidden = false; renderFleet(); renderCargo(); }
+  finally { $("#aiDo").disabled = false; }
+};
+$("#aiUndo").onclick = () => {
+  if (!aiUndoState) return; const s = JSON.parse(aiUndoState); cargo = s.cargo; fleet = s.fleet; pins = s.pins;
+  renderFleet(); renderCargo(); run(); $("#aiUndo").hidden = true; $("#aiOut").textContent = "Bekor qilindi."; aiUndoState = null;
 };
 
 // ---------- Boshlang'ich holat ----------

@@ -196,6 +196,13 @@ details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
       <div id="fleet"></div>
       <div class="sum" id="fleetSum"></div>
       <p class="hint" style="margin:8px 0 0">Furalar yuqoridan pastga tartibda to'ldiriladi. Kub va tonnani kargo aytgandek yozing; aniq ichki o'lcham ma'lum bo'lsa "o'lchamlar" ni oching.</p>
+      <div class="truck" style="margin:10px 0 0">
+        <div class="fields" style="grid-template-columns:1fr 1fr">
+          <label class="f">Qolishi mumkin bo'lgan og'irlik, t<input type="number" id="kgAllow" step="0.1" min="0" placeholder="masalan 4.7"></label>
+          <label class="f">Yonboshiga qo'yiladigan karton, ≤ kg<input type="number" id="tipKg" step="5" min="0" value="60"></label>
+        </div>
+        <p class="hint" style="margin:6px 0 0">Og'irlik yozilsa: shu tonnagacha qoldirib, qolgan HAJMni iloji boricha kamaytiradi (zich og'ir yuk qoladi, hajmdor yengil yuk yuklanadi). Yonboshiga: shu og'irlikkacha kartonlar fura balandligiga mos tomoniga buriladi; 0 — burilmaydi.</p>
+      </div>
     </section>
 
     <section class="panel">
@@ -298,6 +305,7 @@ const SAMPLE = [
 ];
 let cargo = [], fleet = [], plan = null, activeTruck = -1; // -1 = barcha furalar
 let pins = {}; // qo'lda ko'chirish: yuk turi (ci) -> { fura raqami: dona }
+var KG_ALLOW = null, TIP_MAX_KG = 60; // sozlamalar (algoritm o'qiydi; Worker'ga ham uzatiladi)
 
 // ---------- Yordamchi ----------
 const $ = s => document.querySelector(s);
@@ -883,9 +891,23 @@ function packTruck(truck, items, order, strategy = "ep", mix = false, rng = null
 function buildPlan(BUDGET = 3000, MAX_GRASP = 40, onImprove = null) {
   let items = []; let id = 1;
   const skipped = [];
+  // Yengil kartonlarni (≤ TIP_KG kg, ustiga yuk qo'yiladigan) yonboshiga ham qo'yish mumkin: balandlik sifatida
+  // shunday tomonini tanlaymiz-ki, ustun fura balandligini eng to'liq to'ldirsin (240 sm ga 3×78 yaxshi, 2×100 yomon).
+  const hMin = Math.min(...fleet.map(t => t.H)), TIP_KG = typeof TIP_MAX_KG === "number" ? TIP_MAX_KG : 60;
+  const orient = c => {
+    if (!c.stack || c.kg > TIP_KG || c.extra) return [c.L, c.W, c.H];
+    let best = [c.L, c.W, c.H], bestF = -1;
+    for (const [a, b, h] of [[c.L, c.W, c.H], [c.L, c.H, c.W], [c.W, c.H, c.L]]) {
+      if (h > hMin) continue;
+      const f = Math.floor(hMin / h) * h / hMin + (h === c.H ? 0.005 : 0);      // asl holat ozgina afzal
+      if (f > bestF) { bestF = f; best = [Math.max(a, b), Math.min(a, b), h]; }
+    }
+    return best;
+  };
   cargo.forEach((c, ci) => {
     const pinList = []; for (const [k, q] of Object.entries(pins[ci] || {})) for (let j = 0; j < q; j++) pinList.push(+k);
-    for (let i = 0; i < c.qty; i++) { const it = { id: id++, name: c.name, L: c.L, W: c.W, H: c.H, kg: c.kg, stack: c.stack, pri: c.pri || 2, color: c.color, ci, pin: pinList[i] ?? null }; (c.pri === 3 ? skipped : items).push(it); }
+    const [L, W, H] = orient(c);
+    for (let i = 0; i < c.qty; i++) { const it = { id: id++, name: c.name, L, W, H, kg: c.kg, stack: c.stack, pri: c.pri || 2, color: c.color, ci, pin: pinList[i] ?? null, tipped: H !== c.H }; (c.pri === 3 ? skipped : items).push(it); }
   });
   // Ustunlarni bir necha tartibda joylab, eng ko'p sig'dirganini olamiz
   // Hammasi sig'masa, qolib ketadigani yengil-hajmdor yuk bo'lishi kerak (og'irlik sig'imi bo'sh qolmasin) —
@@ -938,7 +960,12 @@ function buildPlan(BUDGET = 3000, MAX_GRASP = 40, onImprove = null) {
     // + kichik jarima: furalar og'irligi bir-biridan farq qilsa (teng ulushga nisbatan) — teng yuklangan reja afzal
     const capAll = allTrucks.reduce((s, x) => s + x.kg, 0) || 1, loadAll = trucks.reduce((s, r) => s + r.kg, 0);
     const imbalance = trucks.reduce((s, r) => s + Math.abs(r.kg - loadAll * r.truck.kg / capAll), 0) / (totK || 1);
-    const leftVol = rest.reduce((s, p) => s + p.L * p.W * p.H / totV + p.kg / totK + (p.pri === 1 ? 1000 : 0), 0) + 0.02 * imbalance;
+    // Agar "qolishi mumkin bo'lgan og'irlik" (kgAllow) berilgan bo'lsa: asosiy maqsad — qolgan HAJM minimal,
+    // og'irlik faqat shu chegaradan oshsa jarima. Aks holda hajm va og'irlik teng.
+    const leftKg = rest.reduce((s, p) => s + p.kg, 0), leftV = rest.reduce((s, p) => s + p.L * p.W * p.H, 0);
+    const kgAllow = typeof KG_ALLOW === "number" && KG_ALLOW > 0 ? KG_ALLOW : null;
+    const leftVol = rest.reduce((s, p) => s + (p.pri === 1 ? 1000 : 0), 0) + 0.02 * imbalance +
+      (kgAllow == null ? leftV / totV + leftKg / totK : leftV / totV + 5 * Math.max(0, leftKg - kgAllow) / totK);
     const cand = { trucks, left: rest, leftVol, skipped, combo: { strategy, mix, ord, spread } };
     if (!rng) { top.push(cand); top.sort((a, b) => a.leftVol - b.leftVol); if (top.length > 3) top.length = 3; }
     if (!bestPlan || leftVol < bestPlan.leftVol) {
@@ -1173,6 +1200,10 @@ function run() {
   toast(plan.left.length ? `${plan.left.length} dona sig'madi` : `Hammasi sig'di — ${plan.trucks.filter(t => t.placed.length).length} fura` + ` (${((performance.now() - t0) / 1000).toFixed(1)} s)`);
 }
 $("#run").onclick = run;
+function readSettings() { const a = parseFloat($("#kgAllow").value), t = parseFloat($("#tipKg").value); KG_ALLOW = a > 0 ? a * 1000 : null; TIP_MAX_KG = t >= 0 ? t : 60; }
+$("#kgAllow").onchange = $("#tipKg").onchange = () => { readSettings(); try { localStorage.setItem("fura-sozlama", JSON.stringify({ a: $("#kgAllow").value, t: $("#tipKg").value })); } catch (e) {} run(); autoDeep(); };
+try { const s = JSON.parse(localStorage.getItem("fura-sozlama") || "null"); if (s) { $("#kgAllow").value = s.a ?? ""; $("#tipKg").value = s.t ?? 60; } } catch (e) {}
+readSettings();
 // ---------- Chuqur qidiruv: algoritm alohida oqimda (Web Worker) uzoq ishlaydi ----------
 let deepWorker = null;
 function algoSource() {
@@ -1191,7 +1222,7 @@ function autoDeep() { if (cargo.length && fleet.length) setTimeout(() => { if (!
 function startDeep(sec, auto = false) {
   if (deepWorker) return;
   if (!cargo.length || !fleet.length) return toast("Avval yuk va fura kiriting");
-  const src = `let cargo=[],fleet=[],pins={};\n${algoSource()}\nonmessage=e=>{cargo=e.data.cargo;fleet=e.data.fleet;pins=e.data.pins;const strip=p=>({trucks:p.trucks.map(t=>({truck:t.truck,label:t.label,strategy:t.strategy,placed:t.placed,left:[],kg:t.kg,vol:t.vol,floor:t.floor,cx:t.cx,maxX:t.maxX})),left:p.left,skipped:p.skipped,leftVol:p.leftVol,ms:p.ms,graspRuns:p.graspRuns,runs:p.runs});const plan=buildPlan(e.data.budget,100000,i=>postMessage({progress:true,ms:i.ms,runs:i.runs,left:i.left,leftM3:i.leftM3,plan:strip(i.plan)}));postMessage({done:true,plan:strip(plan)});};`;
+  const src = `let cargo=[],fleet=[],pins={};var KG_ALLOW=null,TIP_MAX_KG=60;\n${algoSource()}\nonmessage=e=>{cargo=e.data.cargo;fleet=e.data.fleet;pins=e.data.pins;KG_ALLOW=e.data.kgAllow;TIP_MAX_KG=e.data.tipKg;const strip=p=>({trucks:p.trucks.map(t=>({truck:t.truck,label:t.label,strategy:t.strategy,placed:t.placed,left:[],kg:t.kg,vol:t.vol,floor:t.floor,cx:t.cx,maxX:t.maxX})),left:p.left,skipped:p.skipped,leftVol:p.leftVol,ms:p.ms,graspRuns:p.graspRuns,runs:p.runs});const plan=buildPlan(e.data.budget,100000,i=>postMessage({progress:true,ms:i.ms,runs:i.runs,left:i.left,leftM3:i.leftM3,plan:strip(i.plan)}));postMessage({done:true,plan:strip(plan)});};`;
   const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
   try { deepWorker = new Worker(url); } catch (e) { return toast("Brauzer Worker'ni qo'llamadi: " + e.message); }
   $("#deep").textContent = "To'xtatish"; const t0 = performance.now(); let lastShown = 0, improved = 0;
@@ -1208,7 +1239,7 @@ function startDeep(sec, auto = false) {
     }
   };
   deepWorker.onerror = err => stopDeep("Xato: " + err.message);
-  deepWorker.postMessage({ cargo: cargo.map(({ img, imgs, ...c }) => c), fleet, pins, budget: sec * 1000 });
+  deepWorker.postMessage({ cargo: cargo.map(({ img, imgs, ...c }) => c), fleet, pins, budget: sec * 1000, kgAllow: KG_ALLOW, tipKg: TIP_MAX_KG });
 }
 function resultRows() {
   const rows = [["Fura", "Yuk", "Uzunlik sm", "Eni sm", "Balandlik sm", "kg", "Old tomondan m", "Chapdan m", "Qavat", "Burilgan"]];

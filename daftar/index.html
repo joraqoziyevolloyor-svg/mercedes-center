@@ -1072,7 +1072,7 @@ $('themeBtn').onclick=()=>{const n=curTheme()==='dark'?'light':'dark';document.d
 try{const t=localStorage.getItem('dk-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}
 paintTheme();
 let wasDesk=isDesk();window.addEventListener('resize',()=>{const d=isDesk();if(d!==wasDesk){wasDesk=d;render()}});
-{const h=(location.hash||'').slice(1);view=VIEWS[h]?h:'bosh'}
+{const h=(location.hash||'').slice(1);view=VIEWS[h]?h:'kassa'}
 boot();
 </script>
 </body>

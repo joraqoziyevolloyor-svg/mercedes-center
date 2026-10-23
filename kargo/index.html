@@ -198,7 +198,7 @@ details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
       <p class="hint" style="margin:8px 0 0">Furalar yuqoridan pastga tartibda to'ldiriladi. Kub va tonnani kargo aytgandek yozing; aniq ichki o'lcham ma'lum bo'lsa "o'lchamlar" ni oching.</p>
       <div class="truck" style="margin:10px 0 0">
         <div class="fields" style="grid-template-columns:1fr 1fr">
-          <label class="f">Qolishi mumkin bo'lgan og'irlik, t<input type="number" id="kgAllow" step="0.1" min="0" placeholder="masalan 4.7"></label>
+          <label class="f">Qolishi mumkin bo'lgan og'irlik, t<input type="number" id="kgAllow" step="0.1" min="0" value="4.7" placeholder="bo'sh — hajm va og'irlik teng"></label>
           <label class="f">Yonboshiga qo'yiladigan karton, ≤ kg<input type="number" id="tipKg" step="5" min="0" value="60"></label>
         </div>
         <p class="hint" style="margin:6px 0 0">Og'irlik yozilsa: shu tonnagacha qoldirib, qolgan HAJMni iloji boricha kamaytiradi (zich og'ir yuk qoladi, hajmdor yengil yuk yuklanadi). Yonboshiga: shu og'irlikkacha kartonlar fura balandligiga mos tomoniga buriladi; 0 — burilmaydi.</p>
@@ -723,7 +723,7 @@ function supportRatio(box, cand, kg = null) {
   return area / (box.L * box.W);
 }
 function dropZ(e, grid) { let z = 0; for (const p of grid[Math.floor(e.x / CELL)] || []) if (e.x >= p.x && e.x < p.x + p.L && e.y >= p.y && e.y < p.y + p.W && p.z + p.H <= e.z + 0.5) z = Math.max(z, p.z + p.H); return z; }
-function packBoxes(truck, boxes, seed = []) {
+function packBoxes(truck, boxes, seed = [], cap = 600) {
   // seed — allaqachon joylangan qutilar (ikkinchi o'tish uchun): ularning atrofidagi bo'sh nuqtalardan boshlaymiz
   const placed = seed.slice(), left = [], grid = {}; let eps = [{ x: 0, y: 0, z: 0 }], kg = seed.reduce((s, p) => s + p.kg, 0);
   for (const pb of seed) for (const i of cellsOf(pb)) (grid[i] = grid[i] || []).push(pb);
@@ -740,22 +740,25 @@ function packBoxes(truck, boxes, seed = []) {
     const fkey = it.L + "|" + it.W + "|" + it.H + "|" + it.stack;
     if (failed.has(fkey)) { left.push(it); continue; }
     let best = null;
-    const ors = it.L === it.W ? [[it.L, it.W]] : [[it.L, it.W], [it.W, it.L]];
+    // burish: odatda faqat tagida (L↔W); yengil karton (tipOK) — 6 xil holatda (yonboshiga, tik)
+    const ors = it.tipOK
+      ? [[it.L, it.W, it.H], [it.W, it.L, it.H], [it.L, it.H, it.W], [it.H, it.L, it.W], [it.W, it.H, it.L], [it.H, it.W, it.L]].filter((o, i, a) => a.findIndex(q => q[0] === o[0] && q[1] === o[1] && q[2] === o[2]) === i)
+      : it.L === it.W ? [[it.L, it.W, it.H]] : [[it.L, it.W, it.H], [it.W, it.L, it.H]];
     for (const ep of eps) {
       if (best && ep.z * 1e6 + ep.x * 1e3 + ep.y >= best.score) break;
-      for (const [L, W] of ors) {
-        const box = { x: ep.x, y: ep.y, z: ep.z, L, W, H: it.H };
-        if (box.x + L > truck.L + 0.01 || box.y + W > truck.W + 0.01 || box.z + it.H > truck.H + 0.01) continue;
+      for (const [L, W, Hh] of ors) {
+        const box = { x: ep.x, y: ep.y, z: ep.z, L, W, H: Hh };
+        if (box.x + L > truck.L + 0.01 || box.y + W > truck.W + 0.01 || box.z + Hh > truck.H + 0.01) continue;
         const cand = near(grid, box); let bad = false;
         for (const p of cand) if (overlaps(box, p)) { bad = true; break; }
         if (bad || supportRatio(box, cand, it.kg) < 0.7) continue;
-        const score = box.z * 1e6 + box.x * 1e3 + box.y + (L !== it.L ? 0.5 : 0);
+        const score = box.z * 1e6 + box.x * 1e3 + box.y + (L !== it.L ? 0.5 : 0) + (Hh !== it.H ? 0.7 : 0);
         if (!best || score < best.score) best = { ...box, score, ep };
       }
     }
     if (!best) { failed.add(fkey); left.push(it); continue; }
     failed.clear();
-    const pb = { ...it, x: best.x, y: best.y, z: best.z, L: best.L, W: best.W, rot: best.L !== it.L };
+    const pb = { ...it, x: best.x, y: best.y, z: best.z, L: best.L, W: best.W, H: best.H, rot: best.L !== it.L, tipped: it.tipped || best.H !== it.H };
     placed.push(pb); for (const i of cellsOf(pb)) (grid[i] = grid[i] || []).push(pb);
     kg += it.kg;
     const fresh = [{ x: pb.x + pb.L, y: pb.y, z: pb.z }, { x: pb.x, y: pb.y + pb.W, z: pb.z }, { x: pb.x, y: pb.y, z: pb.z + pb.H }];
@@ -763,7 +766,7 @@ function packBoxes(truck, boxes, seed = []) {
     eps = eps.filter(e => e !== best.ep).concat(fresh).filter(e => e.x < truck.L && e.y < truck.W && e.z < truck.H && !inside(e));
     eps.sort((a, b) => a.z - b.z || a.x - b.x || a.y - b.y);
     eps = eps.filter((e, i) => !i || e.x !== eps[i - 1].x || e.y !== eps[i - 1].y || e.z !== eps[i - 1].z);
-    if (eps.length > 600) eps.length = 600; // eng pastki/oldingi 600 nuqta yetarli — tezlik uchun
+    if (eps.length > cap) eps.length = cap; // eng pastki/oldingi nuqtalar yetarli — tezlik uchun
   }
   return { placed: placed.filter(p => !seed.includes(p)), left, kg };
 }
@@ -892,10 +895,73 @@ function packTruck(truck, items, order, strategy = "ep", mix = false, rng = null
     for (const p of r2.placed) placed.push(p);
     left = r2.left.map(({ pinned, ...it }) => it);
   }
+  return truckStats(truck, placed, left);
+}
+// Fura natijasi: og'irlik, hajm, pol, og'irlik markazi — doim joylangan qutilardan qayta hisoblanadi
+function truckStats(truck, placed, left) {
+  const kg = placed.reduce((s, p) => s + p.kg, 0);
   const vol = placed.reduce((s, p) => s + p.L * p.W * p.H, 0), floor = placed.filter(p => p.z === 0).reduce((s, p) => s + p.L * p.W, 0);
-  const cx = r.kg ? placed.reduce((s, p) => s + p.kg * (p.x + p.L / 2), 0) / r.kg : truck.L / 2;
+  const cx = kg ? placed.reduce((s, p) => s + p.kg * (p.x + p.L / 2), 0) / kg : truck.L / 2;
   const maxX = placed.reduce((m, p) => Math.max(m, p.x + p.L), 0);
-  return { truck, placed, left, kg: r.kg, vol, floor, cx, maxX };
+  return { truck, placed, left, kg, vol, floor, cx, maxX };
+}
+// Yakuniy bosqich: sig'magan yuklarni BIRMA-BIR, kattasidan boshlab, hamma furalardagi bo'shliqlarga sinab ko'ramiz
+// (yengil kartonlar 6 xil holatda). Fura og'irlik chegarasi saqlanadi; qo'lda biriktirilgan yuk faqat o'z furasiga.
+function fillGaps(plan) {
+  let rest = plan.left.slice();
+  plan.trucks.forEach((tr, k) => {
+    if (!rest.length) return;
+    const mine = rest.filter(p => p.pin == null || p.pin === k).map(p => ({ ...p, pinned: p.pin != null }))
+      .sort((a, b) => (b.pinned - a.pinned) || (a.pri - b.pri) || b.L * b.W * b.H - a.L * a.W * a.H);
+    if (!mine.length) return;
+    const r = packBoxes(tr.truck, mine, tr.placed, 3000);
+    if (!r.placed.length) return;
+    const ids = new Set(r.placed.map(p => p.id));
+    const placed = tr.placed.concat(r.placed.map(({ pinned, ...p }) => p));
+    Object.assign(tr, truckStats(tr.truck, placed, tr.left));
+    rest = rest.filter(p => !ids.has(p.id));
+  });
+  plan.left = rest;
+  return plan;
+}
+// Almashtirish: og'irlik chegarasi to'lgan furadan zich OG'IR yukni (tepasida hech narsa yo'q, "Shart" emas, qo'lda
+// biriktirilmagan) chiqarib, bo'shagan og'irlik va joyga yengil hajmdor yuklarni birma-bir joylaymiz.
+// Qabul: qolgan hajm kamaysa va qolgan og'irlik kgAllow dan oshmasa. Vaqt chegarasigacha takrorlanadi.
+function swapImprove(plan, kgAllow, deadline) {
+  const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
+  const lv = l => l.reduce((s, p) => s + p.L * p.W * p.H, 0), lk = l => l.reduce((s, p) => s + p.kg, 0);
+  const tried = new Set(); let swaps = 0;
+  while (now() < deadline) {
+    // nomzod: eng zich (kg/m³) og'ir yuk, faqat og'irlik deyarli to'lgan furalarda
+    let cand = null;
+    plan.trucks.forEach((tr, k) => {
+      if (tr.kg < tr.truck.kg * 0.97) return;
+      for (const a of tr.placed) {
+        if (tried.has(a.id) || a.pin != null || a.pri === 1 || a.kg < 40) continue;
+        const d = a.kg / (a.L * a.W * a.H / 1e6);
+        if (d < 140) continue;
+        const covered = tr.placed.some(p => p !== a && Math.abs(p.z - (a.z + a.H)) < 0.5 && Math.min(a.x + a.L, p.x + p.L) > Math.max(a.x, p.x) && Math.min(a.y + a.W, p.y + p.W) > Math.max(a.y, p.y));
+        if (covered) continue;
+        if (!cand || d > cand.d) cand = { k, a, d };
+      }
+    });
+    if (!cand) break;
+    tried.add(cand.a.id);
+    const tr = plan.trucks[cand.k];
+    const base = tr.placed.filter(p => p !== cand.a), pool = plan.left.concat([cand.a]);
+    if (kgAllow != null && lk(plan.left) + cand.a.kg - 0 > kgAllow + 1e6) continue;
+    const mine = pool.filter(p => p.id !== cand.a.id && (p.pin == null || p.pin === cand.k)).map(p => ({ ...p, pinned: p.pin != null }))
+      .sort((a, b) => (b.pinned - a.pinned) || (a.pri - b.pri) || (a.kg / (a.L * a.W * a.H)) - (b.kg / (b.L * b.W * b.H)));   // yengil-hajmdorlar birinchi
+    const r = packBoxes(tr.truck, mine, base, 3000);
+    const ids = new Set(r.placed.map(p => p.id));
+    const newLeft = pool.filter(p => !ids.has(p.id));
+    const ok = lv(newLeft) < lv(plan.left) - 1e4 && (kgAllow == null ? lk(newLeft) <= lk(plan.left) + 50 : lk(newLeft) <= kgAllow) && !newLeft.some(p => p.pri === 1);
+    if (!ok) continue;
+    Object.assign(tr, truckStats(tr.truck, base.concat(r.placed.map(({ pinned, ...p }) => p)), tr.left));
+    plan.left = newLeft; swaps++;
+  }
+  plan.swaps = swaps;
+  return plan;
 }
 function buildPlan(BUDGET = 3000, MAX_GRASP = 40, onImprove = null) {
   let items = []; let id = 1;
@@ -916,7 +982,8 @@ function buildPlan(BUDGET = 3000, MAX_GRASP = 40, onImprove = null) {
   cargo.forEach((c, ci) => {
     const pinList = []; for (const [k, q] of Object.entries(pins[ci] || {})) for (let j = 0; j < q; j++) pinList.push(+k);
     const [L, W, H] = orient(c);
-    for (let i = 0; i < c.qty; i++) { const it = { id: id++, name: c.name, L, W, H, kg: c.kg, stack: c.stack, pri: c.pri || 2, color: c.color, ci, pin: pinList[i] ?? null, tipped: H !== c.H }; (c.pri === 3 ? skipped : items).push(it); }
+    const tipOK = c.stack && c.kg <= TIP_KG && !c.extra && TIP_KG > 0;
+    for (let i = 0; i < c.qty; i++) { const it = { id: id++, name: c.name, L, W, H, kg: c.kg, stack: c.stack, pri: c.pri || 2, color: c.color, ci, pin: pinList[i] ?? null, tipped: H !== c.H, tipOK }; (c.pri === 3 ? skipped : items).push(it); }
   });
   // Ustunlarni bir necha tartibda joylab, eng ko'p sig'dirganini olamiz
   // Hammasi sig'masa, qolib ketadigani yengil-hajmdor yuk bo'lishi kerak (og'irlik sig'imi bo'sh qolmasin) —
@@ -983,6 +1050,8 @@ function buildPlan(BUDGET = 3000, MAX_GRASP = 40, onImprove = null) {
     }
     if (!rest.length) break;
   }
+  fillGaps(bestPlan);
+  if (typeof KG_ALLOW === "number" && KG_ALLOW > 0) swapImprove(bestPlan, KG_ALLOW, now() + Math.min(Math.max(1500, BUDGET * 0.3), 15000));
   bestPlan.ms = Math.round(now() - t0); bestPlan.graspRuns = graspRuns; bestPlan.runs = combos.length + graspRuns;
   return bestPlan;
 }
@@ -1211,7 +1280,7 @@ function run() {
 $("#run").onclick = run;
 function readSettings() { const a = parseFloat($("#kgAllow").value), t = parseFloat($("#tipKg").value); KG_ALLOW = a > 0 ? a * 1000 : null; TIP_MAX_KG = t >= 0 ? t : 60; }
 $("#kgAllow").onchange = $("#tipKg").onchange = () => { readSettings(); try { localStorage.setItem("fura-sozlama", JSON.stringify({ a: $("#kgAllow").value, t: $("#tipKg").value })); } catch (e) {} run(); autoDeep(); };
-try { const s = JSON.parse(localStorage.getItem("fura-sozlama") || "null"); if (s) { $("#kgAllow").value = s.a ?? ""; $("#tipKg").value = s.t ?? 60; } } catch (e) {}
+try { const s = JSON.parse(localStorage.getItem("fura-sozlama") || "null"); if (s) { if (s.a) $("#kgAllow").value = s.a; $("#tipKg").value = s.t ?? 60; } } catch (e) {}
 readSettings();
 // ---------- Chuqur qidiruv: algoritm alohida oqimda (Web Worker) uzoq ishlaydi ----------
 let deepWorker = null;

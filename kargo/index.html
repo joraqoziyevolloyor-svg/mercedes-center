@@ -179,7 +179,11 @@ details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
 
     <section class="panel">
       <button class="primary" id="run">Hisoblash</button>
-      <p class="hint" style="margin:8px 0 0;text-align:center">Excel yuklanganda yoki fura o'zgarganda avtomatik qayta hisoblanadi.</p>
+      <div class="row" style="margin-top:8px;flex-wrap:nowrap">
+        <button id="deep" style="flex:1">Chuqur qidiruv</button>
+        <select id="deepSec" title="Qancha vaqt qidirsin"><option value="15">15 s</option><option value="30" selected>30 s</option><option value="60">60 s</option><option value="120">2 daqiqa</option></select>
+      </div>
+      <p class="hint" style="margin:8px 0 0;text-align:center" id="deepHint">Oddiy hisob — 3 soniya, ~15 variant. Chuqur qidiruv — yuzlab variantni sinab, eng yaxshisini oladi; sahifa qotmaydi.</p>
     </section>
   </div>
 
@@ -851,7 +855,7 @@ function packTruck(truck, items, order, strategy = "ep", mix = false, rng = null
   const maxX = placed.reduce((m, p) => Math.max(m, p.x + p.L), 0);
   return { truck, placed, left, kg: r.kg, vol, floor, cx, maxX };
 }
-function buildPlan() {
+function buildPlan(BUDGET = 3000, MAX_GRASP = 40, onImprove = null) {
   let items = []; let id = 1;
   const skipped = [];
   cargo.forEach((c, ci) => {
@@ -877,17 +881,17 @@ function buildPlan() {
   const heavy = new Set();
   cargo.forEach((c, ci) => { if (!(pins[ci] && Object.keys(pins[ci]).length) && c.pri !== 3 && c.kg * c.qty > 0.25 * maxKg && allTrucks.length > 1) heavy.add(ci); });
   let bestPlan = null;
-  const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now()), t0 = now(), BUDGET = 3000; // ms
+  const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now()), t0 = now();
   // Strategiyalar: devor qurish / ekstremal nuqtalar × oddiy / aralash ustunlar × tartiblar; vaqt chegarasida eng yaxshisi qoladi.
   // Deterministik kombinatsiyalardan so'ng, vaqt qolsa, eng yaxshi kombinatsiyaning tasodifiy variantlari (GRASP) sinaladi.
   const combos = [];
   for (const mix of [false, true]) for (const ord of orders.slice(0, 4)) combos.push({ strategy: "wall", mix, ord });
   for (const ord of orders.slice(0, 2)) combos.push({ strategy: "ep", mix: true, ord });
-  let seed = 1, graspRuns = 0;
+  let seed = 1, graspRuns = 0; const top = []; // eng yaxshi 3 kombinatsiya — GRASP ular atrofida qidiradi
   for (let ci = 0; ; ci++) {
     let strategy, mix, ord, rng = null;
     if (ci < combos.length) ({ strategy, mix, ord } = combos[ci]);
-    else { if (!bestPlan?.combo || now() - t0 > BUDGET || graspRuns >= 40) break; ({ strategy, mix, ord } = bestPlan.combo); rng = makeRng(seed++); graspRuns++; }
+    else { if (!top.length || now() - t0 > BUDGET || graspRuns >= MAX_GRASP) break; rng = makeRng(seed++); ({ strategy, mix, ord } = top[Math.floor(rng() * Math.min(top.length, 1 + graspRuns % 3))].combo); graspRuns++; }
     if (bestPlan && now() - t0 > BUDGET && !rng) break;
     let rest = items.slice(); const trucks = []; let k = 0;
     for (const t of fleet) for (let i = 0; i < t.count; i++, k++) {
@@ -904,10 +908,15 @@ function buildPlan() {
     // ulush tufayli kechiktirilgan og'ir yuklar oxirgi furada ham sig'masa — "sig'madi"
     // Mezon: qolgan hajm ulushi + qolgan og'irlik ulushi (ikkalasi ham kam bo'lsin); "Shart" yuk qolsa — eng yomon
     const leftVol = rest.reduce((s, p) => s + p.L * p.W * p.H / totV + p.kg / totK + (p.pri === 1 ? 1000 : 0), 0);
-    if (!bestPlan || leftVol < bestPlan.leftVol) bestPlan = { trucks, left: rest, leftVol, skipped, combo: { strategy, mix, ord } };
+    const cand = { trucks, left: rest, leftVol, skipped, combo: { strategy, mix, ord } };
+    if (!rng) { top.push(cand); top.sort((a, b) => a.leftVol - b.leftVol); if (top.length > 3) top.length = 3; }
+    if (!bestPlan || leftVol < bestPlan.leftVol) {
+      bestPlan = cand; if (rng) top[0] = cand;
+      if (onImprove) onImprove({ ms: Math.round(now() - t0), runs: ci + 1, grasp: graspRuns, left: rest.length, leftM3: rest.reduce((s, p) => s + p.L * p.W * p.H, 0) / 1e6, plan: bestPlan });
+    }
     if (!rest.length) break;
   }
-  bestPlan.ms = Math.round(now() - t0); bestPlan.graspRuns = graspRuns;
+  bestPlan.ms = Math.round(now() - t0); bestPlan.graspRuns = graspRuns; bestPlan.runs = combos.length + graspRuns;
   return bestPlan;
 }
 
@@ -1132,6 +1141,30 @@ function run() {
   toast(plan.left.length ? `${plan.left.length} dona sig'madi` : `Hammasi sig'di — ${plan.trucks.filter(t => t.placed.length).length} fura` + ` (${((performance.now() - t0) / 1000).toFixed(1)} s)`);
 }
 $("#run").onclick = run;
+// ---------- Chuqur qidiruv: algoritm alohida oqimda (Web Worker) uzoq ishlaydi ----------
+let deepWorker = null;
+function algoSource() {
+  const s = [...document.scripts].map(x => x.textContent).find(t => t.includes("function buildPlan("));
+  return s.slice(s.indexOf("function overlaps"), s.indexOf("// ---------- 3D"));
+}
+$("#deep").onclick = () => {
+  if (deepWorker) { deepWorker.terminate(); deepWorker = null; $("#deep").textContent = "Chuqur qidiruv"; toast("To'xtatildi"); return; }
+  if (!cargo.length || !fleet.length) return toast("Avval yuk va fura kiriting");
+  const sec = +$("#deepSec").value;
+  const src = `let cargo=[],fleet=[],pins={};\n${algoSource()}\nonmessage=e=>{cargo=e.data.cargo;fleet=e.data.fleet;pins=e.data.pins;const strip=p=>({trucks:p.trucks.map(t=>({truck:t.truck,label:t.label,strategy:t.strategy,placed:t.placed,left:[],kg:t.kg,vol:t.vol,floor:t.floor,cx:t.cx,maxX:t.maxX})),left:p.left,skipped:p.skipped,leftVol:p.leftVol,ms:p.ms,graspRuns:p.graspRuns,runs:p.runs});const plan=buildPlan(e.data.budget,100000,i=>postMessage({progress:true,ms:i.ms,runs:i.runs,left:i.left,leftM3:i.leftM3,plan:strip(i.plan)}));postMessage({done:true,plan:strip(plan)});};`;
+  const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+  try { deepWorker = new Worker(url); } catch (e) { return toast("Brauzer Worker'ni qo'llamadi: " + e.message); }
+  $("#deep").textContent = "To'xtatish"; const t0 = performance.now(); let lastShown = 0;
+  const hint = $("#deepHint"); hint.textContent = "Qidirilmoqda… 0 s";
+  const tick = setInterval(() => { if (!deepWorker) return clearInterval(tick); hint.textContent = `Qidirilmoqda… ${Math.round((performance.now() - t0) / 1000)} s / ${sec} s`; }, 500);
+  deepWorker.onmessage = e => {
+    const d = e.data;
+    if (d.progress) { if (performance.now() - lastShown > 700) { lastShown = performance.now(); plan = d.plan; showPlan(); } toast(`${d.runs}-urinish: ${d.left} dona sig'madi (${fmt(d.leftM3, 1)} m³)`); }
+    if (d.done) { plan = d.plan; showPlan(); deepWorker.terminate(); deepWorker = null; $("#deep").textContent = "Chuqur qidiruv"; clearInterval(tick); hint.textContent = `Tugadi: ${d.plan.runs} variant sinaldi, ${Math.round(d.plan.ms / 1000)} s. Eng yaxshisi: ${d.plan.left.length} dona sig'madi.`; toast(`Chuqur qidiruv tugadi — ${d.plan.runs} variant`); }
+  };
+  deepWorker.onerror = err => { toast("Xato: " + err.message); deepWorker.terminate(); deepWorker = null; $("#deep").textContent = "Chuqur qidiruv"; clearInterval(tick); };
+  deepWorker.postMessage({ cargo: cargo.map(({ img, imgs, ...c }) => c), fleet, pins, budget: sec * 1000 });
+};
 function resultRows() {
   const rows = [["Fura", "Yuk", "Uzunlik sm", "Eni sm", "Balandlik sm", "kg", "Old tomondan m", "Chapdan m", "Qavat", "Burilgan"]];
   plan.trucks.forEach(tr => tr.placed.forEach(p => rows.push([tr.label, p.name, p.L, p.W, p.H, +p.kg.toFixed(1), +(p.x / 100).toFixed(2), +(p.y / 100).toFixed(2), 1 + Math.round(p.z / p.H), p.rot ? "ha" : ""])));

@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>TN VED kodlari — Mercedes Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: customs ledger — progress strip, controls, then one card per product: code choice up front, deliveries behind "Batafsil" */
+:root {
+  --bg: #f4f6f8; --surface: #ffffff; --ink: #18222d; --muted: #5d6b7a; --line: #dbe1e7;
+  --accent: #1d5c8a; --accent-soft: #e3eef6;
+  --bad: #b3261e; --bad-soft: #fbe3e1; --warn: #8a5a00; --warn-soft: #fdf0cf; --ok: #2f6b45; --ok-soft: #e2f1e7;
+  --f-body: "Golos Text", "Segoe UI", system-ui, sans-serif; --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11171d; --surface: #182029; --ink: #e4e9ee; --muted: #93a1af; --line: #2b3641;
+  --accent: #7db7e3; --accent-soft: #1d3346;
+  --bad: #ff8a80; --bad-soft: #3d1f1d; --warn: #f2c25b; --warn-soft: #3a2f14; --ok: #8fd1a6; --ok-soft: #1c3326; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #11171d; --surface: #182029; --ink: #e4e9ee; --muted: #93a1af; --line: #2b3641;
+  --accent: #7db7e3; --accent-soft: #1d3346;
+  --bad: #ff8a80; --bad-soft: #3d1f1d; --warn: #f2c25b; --warn-soft: #3a2f14; --ok: #8fd1a6; --ok-soft: #1c3326; color-scheme: dark }
+*, *::before, *::after { box-sizing: border-box; }
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.45; }
+.login { min-height: 80vh; display: grid; place-items: center; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.login form { width: min(380px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 24px; display: grid; gap: 12px; }
+.login h1 { font-size: 1.35rem; }
+.login input { font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+.login .err { color: var(--bad); min-height: 1.2em; font-size: 0.9rem; }
+.topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.wrap { max-width: 1680px; margin: 0 auto; padding-block: 24px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 18px; }
+h1 { font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2.1rem); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.lede { margin: 6px 0 0; color: var(--muted); max-width: 72ch; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 2px; }
+.stat b { font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.stat span { color: var(--muted); font-size: 0.85rem; }
+.stat.bad b { color: var(--bad); } .stat.ok b { color: var(--ok); }
+.progress { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 8px; }
+.progress .row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; font-variant-numeric: tabular-nums; }
+.progress .big { font-weight: 700; font-size: 1.05rem; }
+.bar { height: 10px; background: var(--bad-soft); border-radius: 999px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--ok); width: 0; transition: width .3s; }
+.dl { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+button { font: inherit; cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .55; }
+.btn { background: var(--accent); color: var(--surface); border: 0; border-radius: 8px; padding: 9px 14px; font-weight: 600; }
+.btn.ghost { background: var(--accent-soft); color: var(--accent); }
+.btn.sm { padding: 5px 10px; font-size: 0.85rem; font-weight: 500; }
+.btn:focus-visible, .chip:focus-visible, .opt:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.note { color: var(--muted); font-size: 0.85rem; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+#q { flex: 1 1 240px; min-width: 0; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+#year { font: inherit; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 999px; padding: 6px 12px; font-size: 0.88rem; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.chip b { font-variant-numeric: tabular-nums; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.85rem; color: var(--muted); }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; }
+.list { display: grid; gap: 10px; }
+.g { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.g.todo { border-left: 4px solid var(--bad); }
+.g.done { border-left: 4px solid var(--ok); }
+.ghead { padding: 12px 14px; display: grid; grid-template-columns: 1fr auto; gap: 8px 14px; align-items: start; }
+.gname { font-weight: 600; min-width: 0; }
+.gname small { display: block; font-weight: 400; color: var(--muted); font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+.side { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.count { font-variant-numeric: tabular-nums; font-weight: 700; background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.pill { font-size: 0.8rem; font-weight: 600; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.pill.todo { background: var(--bad-soft); color: var(--bad); }
+.pill.done { background: var(--ok-soft); color: var(--ok); }
+.pill.auto { background: var(--accent-soft); color: var(--accent); }
+.pick { grid-column: 1 / -1; display: grid; gap: 8px; }
+.pick .lbl { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.opts { display: flex; flex-wrap: wrap; gap: 8px; }
+.opt { display: inline-flex; gap: 8px; align-items: center; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 8px; padding: 7px 11px; font-family: var(--f-mono); font-size: 0.86rem; }
+.opt small { font-family: var(--f-body); color: var(--muted); }
+.opt.main { border-color: var(--ok); }
+.opt[aria-pressed="true"] { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+.opt[aria-pressed="true"] small { color: var(--surface); }
+.custom { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.custom input { font-family: var(--f-mono); font-size: 0.86rem; width: 13ch; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+.inside { border-top: 1px solid var(--line); padding: 12px 14px; display: grid; gap: 8px; }
+.inside .lbl { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.ihead { display: flex; flex-wrap: wrap; gap: 8px 14px; justify-content: space-between; align-items: center; }
+.ct { border: 1px solid var(--line); border-left: 4px solid var(--ok); border-radius: 8px; min-width: 0; }
+.ct.r { border-left-color: var(--bad); } .ct.y { border-left-color: var(--warn); }
+.cth { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 8px 10px; background: var(--bg); }
+.cth .mono { font-family: var(--f-mono); font-weight: 600; }
+.ct.r .cth .mono { color: var(--bad); } .ct.y .cth .mono { color: var(--warn); }
+.cth b { font-variant-numeric: tabular-nums; }
+.ct .tw { border-top: 1px solid var(--line); }
+.x { display: none; }
+body.show-extra .x { display: table-cell; }
+.cw { display: grid; gap: 6px; }
+.cwrow { border: 1px solid var(--line); border-left: 4px solid var(--ok); border-radius: 8px; padding: 7px 10px; display: grid; gap: 4px; background: var(--bg); min-width: 0; }
+.cwrow.r { border-left-color: var(--bad); } .cwrow.y { border-left-color: var(--warn); }
+.cwh { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.cwh .mono { font-family: var(--f-mono); font-weight: 600; }
+.cwrow.r .cwh .mono { color: var(--bad); } .cwrow.y .cwh .mono { color: var(--warn); }
+.cwh b { font-variant-numeric: tabular-nums; }
+.where { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.84rem; color: var(--muted); min-width: 0; }
+.where .wy b { color: var(--ink); font-weight: 600; }
+.where .wo { flex-basis: 100%; }
+.warnline { font-size: 0.84rem; color: var(--warn); background: var(--warn-soft); border-radius: 8px; padding: 6px 10px; }
+.msg { font-size: 0.84rem; color: var(--muted); min-height: 1.2em; }
+.tot { grid-column: 1 / -1; color: var(--muted); font-size: 0.85rem; font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.tw { overflow-x: auto; border-top: 1px solid var(--line); }
+table { border-collapse: collapse; width: 100%; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 7px 9px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; vertical-align: top; }
+th { background: var(--bg); color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+td.n { text-align: right; }
+td.hs { font-family: var(--f-mono); }
+td.tdw { white-space: normal; min-width: 200px; max-width: 340px; }
+tr.r2 td.hs, tr.r2 td.fl { background: var(--bad-soft); color: var(--bad); font-weight: 600; }
+tr.r1 td.hs, tr.r1 td.fl { background: var(--warn-soft); color: var(--warn); }
+tr.sum td { font-weight: 700; background: var(--bg); }
+.dup { color: var(--muted); font-style: italic; }
+.empty { padding: 30px; text-align: center; color: var(--muted); background: var(--surface); border-radius: 10px; border: 1px dashed var(--line); }
+#more { justify-self: center; }
+@media (max-width: 560px) { .ghead { grid-template-columns: 1fr; } .side { justify-content: flex-start; } }
+@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+</style>
+
+</head>
+<body>
+<div class="login" id="login" hidden>
+  <form id="loginForm">
+    <h1>TN VED kodlari</h1>
+    <p class="note">Mercedes Center ichki sahifasi. Kirish uchun parolni kiriting.</p>
+    <input id="parol" type="password" autocomplete="current-password" placeholder="Parol" required>
+    <button class="btn" type="submit" id="loginBtn">Kirish</button>
+    <div class="err" id="loginErr" role="alert"></div>
+  </form>
+</div>
+<div class="wrap" id="app" hidden>
+  <header class="topbar"><div>
+    <h1>Takroriy mahsulotlar va TN VED kodlari</h1>
+    <p class="lede">«ОБШИЙ INVOICE» arxividagi 2023–2025 invoyslari. Kodi har xil chiqqan mahsulotlarda to'g'ri kodni tanlang — tanlangan kod shu mahsulotning yagona kodi bo'lib qoladi va keyingi invoyslar shu kod bilan yoziladi.</p>
+  </div><button class="btn ghost sm" type="button" id="logout">Chiqish</button></header>
+
+  <section class="stats" id="stats" aria-label="Umumiy ko'rsatkichlar"></section>
+
+  <section class="progress" aria-label="Kod tanlash holati">
+    <div class="row"><span class="big" id="pText">Yuklanmoqda…</span><span class="note" id="pNote"></span></div>
+    <div class="bar" role="progressbar" aria-label="Tanlangan kodlar" aria-valuemin="0" id="pBar"><i id="pFill"></i></div>
+    <div class="row note"><span id="fText"></span><span id="dbNote"></span></div>
+  </section>
+
+  <section class="dl" aria-label="Fayllar">
+    <button class="btn" id="dlFinal" type="button">Yakuniy kodlar ro'yxati (CSV)</button>
+    <button class="btn ghost" id="dl1" type="button">Excel: Takroriy mahsulotlar – TN VED</button>
+    <button class="btn ghost" id="dl2" type="button">Excel: Arxiv tekshiruvi</button>
+    <span class="note" id="dlnote"></span>
+  </section>
+
+  <section class="controls" aria-label="Qidiruv va filtr">
+    <input id="q" type="search" placeholder="Qidirish: mahsulot, model, TN VED kodi, invoys…" autocomplete="off">
+    <select id="year" aria-label="Yil">
+      <option value="">Hamma yillar</option><option>2023</option><option>2024</option><option>2025</option>
+    </select>
+    <div class="chips" role="group" aria-label="Ko'rinish" id="chips">
+      <button class="chip" type="button" data-f="todo" aria-pressed="true">Tanlash kerak <b data-c="todo"></b></button>
+      <button class="chip" type="button" data-f="done" aria-pressed="false">Tanlanganlar <b data-c="done"></b></button>
+      <button class="chip" type="button" data-f="rep" aria-pressed="false">Hamma takroriylar <b data-c="rep"></b></button>
+      <button class="chip" type="button" data-f="one" aria-pressed="false">1 marta kelganlar <b data-c="one"></b></button>
+    </div>
+    <button class="btn ghost sm" type="button" id="allDetails" aria-pressed="false">Hammasida batafsilni ochish</button>
+  </section>
+
+  <div class="legend">
+    <span><i class="sw" style="background:var(--ok-soft);border:1px solid var(--ok)"></i>Ko'p ishlatilgan kod (taklif)</span>
+    <span><i class="sw" style="background:var(--bad-soft);border:1px solid var(--bad)"></i>Kod guruhi boshqa</span>
+    <span><i class="sw" style="background:var(--warn-soft);border:1px solid var(--warn)"></i>Faqat oxirgi 2 raqam farq qiladi</span>
+    <span id="shown"></span>
+  </div>
+
+  <main class="list" id="list"></main>
+  <button class="btn ghost" id="more" type="button" hidden>Yana ko'rsatish</button>
+</div>
+
+<script>
+const API = 'https://macbook-air-olloyor.tail3e738d.ts.net';
+let DATA = [], rep = [], multi = [], one = [];
+const fmt = (v, d) => v == null ? '' : Number(v).toLocaleString('ru-RU', { maximumFractionDigits: d == null ? 2 : d });
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// stable doc id per product (FNV-1a of the normalized product key)
+const gid = k => { let h = 0x811c9dc5; for (const ch of k) { h ^= ch.codePointAt(0); h = Math.imul(h, 0x01000193) >>> 0; } return 'g_' + h.toString(16).padStart(8, '0'); };
+const state = { f: 'todo', q: '', y: '', limit: 40, allOpen: false, open: new Set() };
+const choices = {};           // id -> {code, custom}
+let canWrite = false;
+const chosen = g => choices[g.id] && choices[g.id].code;
+const finalCode = g => g.multi ? (chosen(g) || '') : g.main;
+
+function setData(groups) {
+  DATA = groups; DATA.forEach((g, i) => { g.i = i; g.id = gid(g.key); });
+  rep = DATA.filter(g => g.n > 1); multi = rep.filter(g => g.multi); one = DATA.filter(g => g.n === 1);
+  document.getElementById('stats').innerHTML = [
+    [DATA.length, 'jami mahsulot (nomi bo\'yicha)'],
+    [rep.length, 'mahsulot bir martadan ko\'p kelgan'],
+    [rep.reduce((s, g) => s + g.n, 0), 'jami kelgan joylari'],
+    [multi.length, 'mahsulotda TN VED kodi har xil', 'bad'],
+  ].map(([b, s, c]) => `<div class="stat ${c || ''}"><b>${fmt(b, 0)}</b><span>${s}</span></div>`).join('');
+}
+function setChoices(list) {
+  for (const k of Object.keys(choices)) delete choices[k];
+  for (const c of list) choices[c.id] = { code: c.code, custom: !!c.custom };
+}
+
+// server (MacBook) with password token
+let token = ''; try { token = localStorage.getItem('tnved_token') || ''; } catch (e) {}
+class AuthError extends Error {}
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, { ...opts, headers: { ...(opts.body ? { 'Content-Type': 'application/json' } : {}), Authorization: 'Bearer ' + token, ...(opts.headers || {}) } });
+  if (res.status === 401) throw new AuthError('kirish kerak');
+  if (!res.ok) { let m = 'Server xatosi (' + res.status + ')'; try { m = (await res.json()).error || m; } catch (e) {} throw new Error(m); }
+  return res;
+}
+function showLogin(msg) {
+  token = ''; try { localStorage.removeItem('tnved_token'); } catch (e) {}
+  document.getElementById('app').hidden = true; document.getElementById('login').hidden = false;
+  document.getElementById('loginErr').textContent = msg || '';
+  document.getElementById('parol').focus();
+}
+
+function updateProgress() {
+  const done = multi.filter(chosen).length, left = multi.length - done;
+  const ready = DATA.filter(g => finalCode(g)).length;
+  document.getElementById('pText').textContent = `Tanlandi: ${done} / ${multi.length} · Qoldi: ${left}`;
+  document.getElementById('pNote').textContent = left ? 'Kodi har xil mahsulotlarda to\'g\'ri kodni tanlang' : 'Hamma kodlar tanlandi';
+  document.getElementById('pFill').style.width = (multi.length ? 100 * done / multi.length : 100) + '%';
+  const bar = document.getElementById('pBar'); bar.setAttribute('aria-valuemax', multi.length); bar.setAttribute('aria-valuenow', done);
+  document.getElementById('fText').textContent = `Yakuniy kodi aniq: ${ready} / ${DATA.length} mahsulot (${DATA.length - multi.length} tasi bitta kod bilan kelgan, ${done} tasi tanlangan)`;
+  const cnt = { todo: left, done, rep: rep.length, one: one.length };
+  document.querySelectorAll('[data-c]').forEach(b => b.textContent = cnt[b.dataset.c]);
+}
+
+function rowsOf(g) { return state.y ? g.rows.filter(r => r[1] === state.y) : g.rows; }
+function match(g) {
+  if (!state.q) return true;
+  const q = state.q.toLowerCase();
+  if (g.name.toLowerCase().includes(q) || (finalCode(g) || '').includes(q)) return true;
+  return g.rows.some(r => [r[0], r[2], r[3], r[4], r[12]].some(v => String(v || '').toLowerCase().includes(q)));
+}
+function table(g) {
+  const rs = rowsOf(g), fc = finalCode(g);
+  const head = ['Model', 'Yil', 'Invoys (blok)', 'Qayerdan', 'TN VED', 'Soni', 'Netto kg', 'Narx $', 'Birlik', 'Summa $', 'TN VED holati', 'Asl nomi (faylda)', 'Faylda'];
+  const body = rs.map(r => {
+    let cls = r[10], fl = r[11] || 'OK';
+    if (fc) { cls = r[4] === fc ? 0 : (r[4].slice(0, 8) === fc.slice(0, 8) ? 1 : 2); fl = r[4] === fc ? 'Tanlangan kod bilan bir xil' : `Tanlangan kod ${fc}, bu yerda ${r[4]}`; }
+    return `<tr class="r${cls}"><td>${esc(r[0])}</td><td>${r[1]}</td><td>${esc(r[2])}${r[13] ? `<div class="dup">${esc(r[13])}</div>` : ''}</td><td>${esc(r[3])}</td><td class="hs">${esc(r[4])}</td><td class="n">${fmt(r[5])}</td><td class="n">${fmt(r[6])}</td><td class="n">${fmt(r[7])}</td><td>${esc(r[8])}</td><td class="n">${fmt(r[9])}</td><td class="fl tdw">${esc(fl)}</td><td class="tdw">${esc(r[12])}</td><td>${esc(r[14])}</td></tr>`;
+  }).join('');
+  const sq = rs.reduce((s, r) => s + (r[5] || 0), 0), sk = rs.reduce((s, r) => s + (r[6] || 0), 0), su = rs.reduce((s, r) => s + (r[9] || 0), 0);
+  const sum = `<tr class="sum"><td colspan="5">Jami: ${rs.length} marta</td><td class="n">${fmt(sq)}</td><td class="n">${fmt(sk)}</td><td></td><td></td><td class="n">${fmt(su)}</td><td colspan="3">${g.multi ? 'Kodlar: ' + esc(g.codes.join(', ')) : 'Hamma joyda bir xil kod'}</td></tr>`;
+  return `<div class="tw"><table><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${body}${sum}</tbody></table></div>`;
+}
+// "where" summary for a set of rows: per year the invoices (×count), plus countries
+function whereHtml(rows) {
+  const byYear = {};
+  for (const r of rows) { const y = byYear[r[1]] = byYear[r[1]] || new Map(); y.set(r[2], (y.get(r[2]) || 0) + 1); }
+  const years = Object.keys(byYear).sort().map(y => `<span class="wy"><b>${y}:</b> ${[...byYear[y]].map(([inv, c]) => esc(inv) + (c > 1 ? ` ×${c}` : '')).join(', ')}</span>`).join('');
+  const oc = {}; for (const r of rows) { const o = r[3] || 'mamlakat yozilmagan'; oc[o] = (oc[o] || 0) + 1; }
+  const origins = Object.entries(oc).sort((a, b) => b[1] - a[1]).map(([o, c]) => `${esc(o)} ${c}`).join(' · ');
+  return `<div class="where">${years}<span class="wo">Qayerdan: ${origins}</span></div>`;
+}
+// inside view: every code with how many times and where, each with its own pick button
+function codeWhere(g) {
+  const codes = g.codes.map(c => c.split(' ')[0]), cur = chosen(g), dis = canWrite ? '' : 'disabled';
+  return `<div class="cw">${codes.map(code => {
+    const rs = g.rows.filter(r => r[4] === code);
+    const k = !g.multi || code === g.main ? 'main' : code.slice(0, 8) === g.main.slice(0, 8) ? 'y' : 'r';
+    const btn = !g.multi ? '<span class="pill auto">Yagona kod</span>'
+      : cur === code ? '<span class="pill done">Tanlangan</span>'
+      : `<button type="button" class="btn sm" data-act="pick" data-code="${esc(code)}" ${dis}>Shu kodni tanlash</button>`;
+    return `<div class="cwrow ${k}"><div class="cwh"><span class="mono">${esc(code)}</span><b>${rs.length} marta</b>${btn}</div>${whereHtml(rs)}</div>`;
+  }).join('')}</div>`;
+}
+// inside view: one table per code in the agreed layout; extra columns behind one toggle
+function codeTable(g, code, rs) {
+  const cur = chosen(g), dis = canWrite ? '' : 'disabled';
+  const k = !g.multi || code === g.main ? 'main' : code.slice(0, 8) === g.main.slice(0, 8) ? 'y' : 'r';
+  const btn = !g.multi ? '<span class="pill auto">Yagona kod</span>'
+    : cur === code ? '<span class="pill done">Tanlangan</span>'
+    : `<button type="button" class="btn sm" data-act="pick" data-code="${esc(code)}" ${dis}>Shu kodni tanlash</button>`;
+  const head = ['Mahsulot', 'Model', 'Yil', 'Invoys (blok)', 'Qayerdan', 'TN VED', 'Soni', 'Netto kg', 'Narx $', 'Birlik', 'Summa $'];
+  const xhead = ['Asl nomi (faylda)', 'Izoh', 'Faylda'];
+  const body = rs.map(r => `<tr><td>${esc(g.name)}</td><td>${esc(r[0])}</td><td>${r[1]}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td><td class="hs">${esc(r[4])}</td><td class="n">${fmt(r[5])}</td><td class="n">${fmt(r[6])}</td><td class="n">${fmt(r[7])}</td><td>${esc(r[8])}</td><td class="n">${fmt(r[9])}</td><td class="x tdw">${esc(r[12])}</td><td class="x tdw">${esc(r[13])}</td><td class="x">${esc(r[14])}</td></tr>`).join('');
+  const sq = rs.reduce((s, r) => s + (r[5] || 0), 0), sk = rs.reduce((s, r) => s + (r[6] || 0), 0), su = rs.reduce((s, r) => s + (r[9] || 0), 0);
+  const sum = `<tr class="sum"><td colspan="6">Jami: ${rs.length} marta</td><td class="n">${fmt(sq)}</td><td class="n">${fmt(sk)}</td><td></td><td></td><td class="n">${fmt(su)}</td><td class="x" colspan="3"></td></tr>`;
+  return `<div class="ct ${k}"><div class="cth"><span class="mono">${esc(code)}</span><b>${rs.length} marta</b>${btn}</div>
+    <div class="tw"><table><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}${xhead.map(h => `<th class="x">${h}</th>`).join('')}</tr></thead><tbody>${body}${sum}</tbody></table></div></div>`;
+}
+function insideHtml(g) {
+  const rs = rowsOf(g);
+  const codes = g.codes.map(c => c.split(' ')[0]).filter(code => rs.some(r => r[4] === code));
+  const ex = document.body.classList.contains('show-extra');
+  return `<div class="inside"><div class="ihead"><span class="lbl">Har bir kod necha marta va qayerlarda ishlatilgan</span>
+    <button type="button" class="btn ghost sm" data-act="extra" aria-pressed="${ex}">${ex ? 'Qo\'shimcha ma\'lumotni yashirish' : 'Qo\'shimcha ma\'lumotni ko\'rsatish'}</button></div>
+    ${codes.map(code => codeTable(g, code, rs.filter(r => r[4] === code))).join('')}</div>`;
+}
+function pickHtml(g) {
+  if (!g.multi) return `<div class="pick"><div class="lbl">Yagona kod</div><div class="opts"><span class="opt main" aria-pressed="true">${esc(g.main)} <small>${g.n} marta</small></span></div></div>`;
+  const cur = chosen(g), dis = canWrite ? '' : 'disabled';
+  const opts = g.codes.map(c => {
+    const code = c.split(' ')[0], n = (c.match(/\((\d+)\)/) || [])[1];
+    return `<button type="button" class="opt ${code === g.main ? 'main' : ''}" data-act="pick" data-code="${esc(code)}" aria-pressed="${cur === code}" ${dis}>${esc(code)} <small>${n} marta${code === g.main ? ' · ko\'p' : ''}</small></button>`;
+  }).join('');
+  const custom = choices[g.id] && choices[g.id].custom ? choices[g.id].code : '';
+  const diff4 = new Set(g.codes.map(c => c.slice(0, 4))).size > 1;
+  return `<div class="pick"><div class="lbl">To'g'ri kodni tanlang</div><div class="opts">${opts}</div>
+    <div class="custom"><input type="text" inputmode="numeric" maxlength="10" placeholder="Boshqa kod" id="c_${g.id}" value="${esc(custom)}" aria-label="Boshqa 10 xonali kod" ${dis}>
+    <button type="button" class="btn ghost sm" data-act="custom" ${dis}>Shu kodni saqlash</button>
+    ${cur ? `<button type="button" class="btn ghost sm" data-act="clear" ${dis}>Tanlovni bekor qilish</button>` : ''}</div>
+    ${diff4 ? '<div class="warnline">Diqqat: kodlar boshqa-boshqa tovar guruhiga tegishli (masalan benzin/dizel dvigatel). Bular aslida turli mahsulot bo\'lishi mumkin — tanlashdan oldin "Batafsil"ni ko\'ring.</div>' : ''}
+    <div class="msg" id="m_${g.id}"></div></div>`;
+}
+function cardHtml(g) {
+  const rs = rowsOf(g), cur = chosen(g);
+  const kg = rs.reduce((s, r) => s + (r[6] || 0), 0), usd = rs.reduce((s, r) => s + (r[9] || 0), 0);
+  const yrs = ['2023', '2024', '2025'].map(y => `${y}: ${g.rows.filter(r => r[1] === y).length}`).join(' · ');
+  const pill = !g.multi ? '<span class="pill auto">Bitta kod</span>' : cur ? `<span class="pill done">Tanlandi: ${esc(cur)}</span>` : '<span class="pill todo">Tanlanmagan</span>';
+  const open = state.allOpen || state.open.has(g.id);
+  return `<article class="g ${g.multi ? (cur ? 'done' : 'todo') : ''}" data-i="${g.i}">
+    <div class="ghead"><div class="gname">${esc(g.name)}<small>${yrs}</small></div>
+      <div class="side">${pill}<span class="count">${rs.length} marta</span></div>
+      ${pickHtml(g)}
+      <div class="tot"><span>Soni ${fmt(rs.reduce((s, r) => s + (r[5] || 0), 0), 0)} · Netto ${fmt(kg, 0)} kg · Summa $${fmt(usd, 0)}</span>
+        <button type="button" class="btn ghost sm" data-act="details" aria-expanded="${open}">${open ? 'Yopish' : 'Batafsil: qayerlarda ishlatilgan'}</button></div>
+    </div>${open ? insideHtml(g) : ''}</article>`;
+}
+function currentList() {
+  const src = state.f === 'todo' ? multi.filter(g => !chosen(g)) : state.f === 'done' ? multi.filter(chosen) : state.f === 'one' ? one : rep;
+  return src.filter(g => match(g) && rowsOf(g).length);
+}
+function render() {
+  updateProgress();
+  const list = currentList(), el = document.getElementById('list');
+  document.getElementById('shown').textContent = `Ko'rsatilmoqda: ${list.length} ta mahsulot`;
+  if (!list.length) {
+    el.innerHTML = `<div class="empty">${state.f === 'todo' && !state.q && !state.y ? 'Hamma kodlar tanlangan. "Tanlanganlar" bo\'limida tekshirib chiqishingiz mumkin.' : state.f === 'done' && !state.q ? 'Hali hech qaysi kod tanlanmagan. "Tanlash kerak" bo\'limidan boshlang.' : 'Bu filtr bo\'yicha mahsulot topilmadi. Qidiruvni yoki yilni o\'zgartiring.'}</div>`;
+    document.getElementById('more').hidden = true; return;
+  }
+  el.innerHTML = list.slice(0, state.limit).map(cardHtml).join('');
+  document.getElementById('more').hidden = list.length <= state.limit;
+}
+function rerenderCard(g, msg) {
+  const old = document.querySelector(`article.g[data-i="${g.i}"]`);
+  if (old) { old.outerHTML = cardHtml(g); if (msg) { const m = document.getElementById('m_' + g.id); if (m) m.textContent = msg; } }
+  updateProgress();
+}
+
+async function putChoice(g, payload) {
+  const res = await api('/api/tnved/choices/' + g.id, { method: 'PUT', body: JSON.stringify(payload) });
+  setChoices((await res.json()).choices);
+}
+async function saveChoice(g, code, custom) {
+  if (!canWrite) return;
+  const prev = choices[g.id];
+  choices[g.id] = { code, custom: !!custom };
+  rerenderCard(g, 'Saqlanmoqda…');
+  try {
+    await putChoice(g, { key: g.key, name: g.name, code, custom: !!custom, n: g.n, options: g.codes });
+    rerenderCard(g, `Saqlandi: ${code}. Bu mahsulot endi shu kod bilan yoziladi.`);
+  } catch (e) {
+    if (prev) choices[g.id] = prev; else delete choices[g.id];
+    if (e instanceof AuthError) return showLogin('Kirish muddati tugagan. Parolni qayta kiriting.');
+    rerenderCard(g, 'Saqlab bo\'lmadi: ' + e.message + '. Qayta urinib ko\'ring.');
+  }
+}
+async function clearChoice(g) {
+  if (!canWrite) return;
+  const prev = choices[g.id]; delete choices[g.id]; rerenderCard(g);
+  try { await putChoice(g, { code: null }); rerenderCard(g, 'Tanlov bekor qilindi.'); }
+  catch (e) { choices[g.id] = prev; if (e instanceof AuthError) return showLogin('Kirish muddati tugagan. Parolni qayta kiriting.'); rerenderCard(g, 'Bekor qilib bo\'lmadi, qayta urinib ko\'ring.'); }
+}
+
+document.getElementById('list').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const g = DATA[+b.closest('article.g').dataset.i];
+  const act = b.dataset.act;
+  if (act === 'extra') {
+    const on = document.body.classList.toggle('show-extra');
+    document.querySelectorAll('button[data-act="extra"]').forEach(x => { x.setAttribute('aria-pressed', String(on)); x.textContent = on ? 'Qo\'shimcha ma\'lumotni yashirish' : 'Qo\'shimcha ma\'lumotni ko\'rsatish'; });
+    return;
+  }
+  if (act === 'details') { state.open.has(g.id) ? state.open.delete(g.id) : state.open.add(g.id); if (state.allOpen && !state.open.has(g.id)) { state.allOpen = false; document.getElementById('allDetails').setAttribute('aria-pressed', 'false'); } rerenderCard(g); }
+  else if (act === 'pick') { if (chosen(g) !== b.dataset.code) saveChoice(g, b.dataset.code, false); }
+  else if (act === 'clear') clearChoice(g);
+  else if (act === 'custom') {
+    const v = (document.getElementById('c_' + g.id).value || '').replace(/\s/g, '');
+    const m = document.getElementById('m_' + g.id);
+    if (!/^\d{10}$/.test(v)) { if (m) m.textContent = 'TN VED kodi 10 ta raqamdan iborat bo\'lishi kerak.'; return; }
+    saveChoice(g, v, !g.codes.some(c => c.startsWith(v)));
+  }
+});
+let t; document.getElementById('q').addEventListener('input', e => { clearTimeout(t); t = setTimeout(() => { state.q = e.target.value.trim(); state.limit = 40; render(); }, 150); });
+document.getElementById('year').addEventListener('change', e => { state.y = e.target.value; render(); });
+document.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  state.f = b.dataset.f; state.limit = 40; render();
+}));
+document.getElementById('allDetails').addEventListener('click', e => {
+  state.allOpen = !state.allOpen; state.open.clear();
+  e.currentTarget.setAttribute('aria-pressed', String(state.allOpen));
+  e.currentTarget.textContent = state.allOpen ? 'Hammasida batafsilni yopish' : 'Hammasida batafsilni ochish';
+  render();
+});
+document.getElementById('more').addEventListener('click', () => { state.limit += 60; render(); });
+
+// start: token -> data + choices, otherwise password form
+async function boot() {
+  if (!token) return showLogin();
+  document.getElementById('login').hidden = true; document.getElementById('app').hidden = false;
+  document.getElementById('pText').textContent = 'Yuklanmoqda…';
+  try {
+    const [d, c] = await Promise.all([api('/api/tnved/data').then(r => r.json()), api('/api/tnved/choices').then(r => r.json())]);
+    setData(d.groups); setChoices(c.choices); canWrite = true;
+    document.getElementById('dbNote').textContent = 'Tanlovlar MacBook serverida saqlanadi va hamma qurilmada ko\'rinadi.';
+    render();
+  } catch (e) {
+    if (e instanceof AuthError) return showLogin('Kirish muddati tugagan. Parolni qayta kiriting.');
+    document.getElementById('pText').textContent = 'Server bilan bog\'lanib bo\'lmadi';
+    document.getElementById('pNote').textContent = 'MacBook yoqiq va internetga ulanganini tekshiring, keyin sahifani yangilang. (' + e.message + ')';
+  }
+}
+// refresh choices when the tab comes back (another device may have chosen)
+document.addEventListener('visibilitychange', async () => {
+  if (document.hidden || !token || !DATA.length) return;
+  try { setChoices((await (await api('/api/tnved/choices')).json()).choices); render(); } catch (e) { if (e instanceof AuthError) showLogin('Kirish muddati tugagan. Parolni qayta kiriting.'); }
+});
+document.getElementById('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = document.getElementById('loginBtn'), err = document.getElementById('loginErr');
+  btn.disabled = true; err.textContent = '';
+  try {
+    const res = await fetch(API + '/api/tnved/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parol: document.getElementById('parol').value }) });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) { err.textContent = d.error || ('Xato: ' + res.status); return; }
+    token = d.token; try { localStorage.setItem('tnved_token', token); } catch (e2) {}
+    document.getElementById('parol').value = '';
+    boot();
+  } catch (e2) { err.textContent = 'Server bilan bog\'lanib bo\'lmadi. MacBook yoqiqligini tekshiring.'; }
+  finally { btn.disabled = false; }
+});
+document.getElementById('logout').addEventListener('click', () => showLogin('Chiqdingiz.'));
+
+// downloads (ordinary browser download)
+const note = document.getElementById('dlnote');
+function offer(name, blob) {
+  const a = document.createElement('a'), u = URL.createObjectURL(blob);
+  a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(u), 5000);
+  note.textContent = 'Yuklab olindi: ' + name;
+}
+const files = { dl1: [1, 'Takroriy mahsulotlar - TN VED.xlsx'], dl2: [2, 'OBSHIY INVOICE - tekshiruv.xlsx'] };
+for (const id of Object.keys(files)) document.getElementById(id).addEventListener('click', async () => {
+  const [n, name] = files[id];
+  try { note.textContent = 'Fayl tayyorlanmoqda…'; offer(name, await (await api('/api/tnved/file/' + n)).blob()); }
+  catch (e) { if (e instanceof AuthError) return showLogin('Kirish muddati tugagan. Parolni qayta kiriting.'); note.textContent = 'Yuklab bo\'lmadi: ' + e.message; }
+});
+document.getElementById('dlFinal').addEventListener('click', () => {
+  const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const lines = [['Mahsulot', 'Yakuniy TN VED', 'Holat', 'Necha marta', 'Arxivdagi kodlar', 'Jami soni', 'Jami netto kg', 'Jami summa USD'].map(q).join(';')];
+  for (const g of DATA) {
+    const fc = finalCode(g), st = !g.multi ? 'bitta kod' : fc ? (choices[g.id].custom ? 'tanlandi (yangi kod)' : 'tanlandi') : 'TANLANMAGAN';
+    lines.push([g.name, fc, st, g.n, g.codes.join(', '), g.q, g.kg, g.usd].map(q).join(';'));
+  }
+  offer('Yakuniy TN VED kodlari.csv', new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+});
+boot();
+</script>
+</body>
+</html>

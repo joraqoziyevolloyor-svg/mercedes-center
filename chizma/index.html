@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="robots" content="noindex, nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hayotim">
+<title>Hayotim · yozuv</title>
+<style>
+:root{--paper:#fbfaf6;--ink:#1d1d1b;--soft:#6b6b66;--rule:#e3e1d9;--acc:#9a2f1f;--ok:#2f6b3f;--fs:"Helvetica Neue","Segoe UI",system-ui,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--paper);color:var(--ink);font-family:var(--fs);-webkit-font-smoothing:antialiased}
+.kir{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px}
+.kir form{width:100%;max-width:360px}
+.kir h1{font-family:"Charter","Iowan Old Style",Georgia,serif;font-weight:400;font-size:40px;margin:0 0 6px}
+.kir p{color:var(--soft);font-size:14px;margin:0 0 28px;line-height:1.5}
+.kir input{width:100%;font:inherit;font-size:22px;letter-spacing:.2em;padding:14px 16px;border:1px solid var(--rule);border-radius:12px;background:#fff;outline:none;color:var(--ink)}
+.kir input:focus{border-color:var(--ink)}
+.kir button{width:100%;margin-top:12px;font:inherit;font-size:16px;padding:14px;border:0;border-radius:12px;background:var(--ink);color:#fff;cursor:pointer}
+.kir button[disabled]{opacity:.5}
+.kir .e{min-height:22px;margin-top:14px;font-size:14px;color:var(--acc)}
+.sync{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 10px;font-size:12px;color:var(--soft);white-space:nowrap}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
+.sync.ish i{background:#d9822b}.sync.yoq{color:var(--acc)}.sync.yoq i{background:var(--acc)}
+</style>
+</head>
+<body>
+<div class="kir" id="kir">
+  <form id="f" autocomplete="off">
+    <h1>Hayotim</h1>
+    <p>Yozuv va chizma. Hammasi MacBook'da saqlanadi — bu qurilmada hech narsa qolmaydi.</p>
+    <input id="kod" type="password" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Kod" aria-label="Kod">
+    <button id="b" type="submit">Kirish</button>
+    <div class="e" id="e" role="alert"></div>
+  </form>
+</div>
+<div id="ilova"></div>
+<script src="chizma-modul.js?v=3"></script>
+<script>
+'use strict';
+var KOPRIK = 'https://hayot-kopriki.joraqoziyevolloyor.workers.dev';
+var SALT = 'hayotim-chizma-v1', ITER = 310000, PART = 120000;
+var KEY = null;
+var $ = function (id) { return document.getElementById(id); };
+
+/* --- shifr: kod → kalit (PBKDF2), har so'rov AES-GCM; Mac'dagi xizmat bilan bir xil --- */
+function b64u(buf) { var s = '', b = new Uint8Array(buf); for (var i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function unb64u(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+var GZ = typeof CompressionStream === 'function' && typeof DecompressionStream === 'function';
+function pipe(u, stream) { return new Response(new Blob([u]).stream().pipeThrough(stream)).arrayBuffer().then(function (a) { return new Uint8Array(a); }); }
+function derive(code) {
+  var enc = new TextEncoder();
+  return crypto.subtle.importKey('raw', enc.encode(code), 'PBKDF2', false, ['deriveKey']).then(function (k) {
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: enc.encode(SALT), iterations: ITER, hash: 'SHA-256' }, k, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  });
+}
+function seal(obj) {
+  var raw = new TextEncoder().encode(JSON.stringify(obj));
+  return (GZ ? pipe(raw, new CompressionStream('gzip')) : Promise.resolve(raw)).then(function (data) {
+    var pt = new Uint8Array(data.length + 1); pt[0] = GZ ? 1 : 0; pt.set(data, 1);
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    return crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, KEY, pt).then(function (ct) { var out = new Uint8Array(12 + ct.byteLength); out.set(iv); out.set(new Uint8Array(ct), 12); return 'hy1 ' + b64u(out); });
+  });
+}
+function unseal(s) {
+  var raw = unb64u(s.slice(4));
+  return crypto.subtle.decrypt({ name: 'AES-GCM', iv: raw.subarray(0, 12) }, KEY, raw.subarray(12)).then(function (pt) {
+    pt = new Uint8Array(pt); var body = pt.subarray(1);
+    return (pt[0] === 1 ? pipe(body, new DecompressionStream('gzip')) : Promise.resolve(body)).then(function (u) { return JSON.parse(new TextDecoder().decode(u)); });
+  });
+}
+var WHY = { kod: 'Kod noto\'g\'ri', qulf: 'Ko\'p marta noto\'g\'ri kod terildi — 15 daqiqa kuting', sozlanmagan: 'MacBook\'da kod hali qo\'yilmagan', sorov: 'So\'rov buzilgan', xato: 'MacBook\'da xato' };
+function api(op, data) {
+  var q = data || {}; q.op = op; q.ts = Date.now(); q.n = b64u(crypto.getRandomValues(new Uint8Array(12)));
+  return seal(q).then(function (body) {
+    if (body.length > 390000) throw new Error('Bo\'lak juda katta');
+    return fetch(KOPRIK + '/app', { method: 'POST', headers: { 'content-type': 'text/plain' }, body: body });
+  }, function (e) { throw e; }).then(function (r) {
+    if (r.status === 503) throw new Error('MacBook ulanmagan');
+    if (r.status === 504) throw new Error('MacBook javob bermadi');
+    if (!r.ok) throw new Error('Ko\'prik xatosi ' + r.status);
+    return r.text();
+  }, function () { throw new Error('Internet yo\'q'); }).then(function (t) {
+    if (t.indexOf('hr0 ') === 0) { var e = new Error(WHY[t.slice(4)] || 'Rad etildi'); e.hard = true; throw e; }
+    if (t.indexOf('hr1 ') !== 0) throw new Error('Javob noto\'g\'ri');
+    return unseal(t);
+  }).then(function (r) { if (!r.ok) throw new Error(r.e === 'eski' ? 'Soat noto\'g\'ri' : 'MacBook rad etdi: ' + r.e); return r; });
+}
+
+/* --- saqlash: faqat o'zgargan bo'laklar ketadi; MacBook ulanmasa — xotirada kutadi va qayta urinadi --- */
+var store = (function () {
+  var snap = {}, pend = {}, busy = false, timer = 0, retry = 0, last = 0;
+  var badge = document.createElement('span'); badge.className = 'sync'; badge.innerHTML = '<i></i><span>MacBook</span>';
+  function show(cls, txt) { badge.className = 'sync' + (cls ? ' ' + cls : ''); badge.lastChild.textContent = txt; }
+  function hhmm(t) { var d = new Date(t); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+  function metaOf(d) { return { name: d.name, project: d.project, paper: d.paper, layers: d.layers, active: d.active, updated: d.updated }; }
+  function chunks(list) { var out = [], cur = [], size = 0; list.forEach(function (s) { var n = JSON.stringify(s).length; if (cur.length && size + n > PART) { out.push(cur); cur = []; size = 0; } cur.push(s); size += n; }); if (cur.length) out.push(cur); return out; }
+  function syncDoc(d) {
+    var sn = snap[d.id] || (snap[d.id] = { meta: '', shapes: {} }), m = JSON.stringify(metaOf(d)), now = {}, up = [], rm = [];
+    d.shapes.forEach(function (s) { var j = JSON.stringify(s); now[s.id] = j; if (sn.shapes[s.id] !== j) up.push(s); });
+    Object.keys(sn.shapes).forEach(function (id) { if (!(id in now)) rm.push(id); });
+    var p = Promise.resolve();
+    if (sn.meta !== m) p = p.then(function () { return api('meta', { id: d.id, meta: metaOf(d) }); }).then(function () { sn.meta = m; });
+    for (var i = 0; i < rm.length; i += 2000) (function (ids) { p = p.then(function () { return api('remove', { id: d.id, ids: ids }); }).then(function () { ids.forEach(function (x) { delete sn.shapes[x]; }); }); })(rm.slice(i, i + 2000));
+    chunks(up).forEach(function (part) { p = p.then(function () { return api('upsert', { id: d.id, shapes: part }); }).then(function () { part.forEach(function (s) { sn.shapes[s.id] = now[s.id]; }); }); });
+    return p;
+  }
+  function run() {
+    if (busy) return; var ids = Object.keys(pend); if (!ids.length) return;
+    busy = true; show('ish', 'Saqlanmoqda…');
+    var d = pend[ids[0]]; delete pend[ids[0]];
+    syncDoc(d).then(function () { busy = false; retry = 0; last = Date.now(); if (Object.keys(pend).length) run(); else show('', 'MacBook\'da · ' + hhmm(last)); },
+      function (e) { busy = false; if (!pend[d.id]) pend[d.id] = d; show('yoq', 'Saqlanmadi — ' + e.message); clearTimeout(timer); timer = setTimeout(run, Math.min(30000, 3000 * ++retry)); });
+  }
+  window.addEventListener('beforeunload', function (e) { if (busy || Object.keys(pend).length) { e.preventDefault(); e.returnValue = 'Hali MacBook\'ga saqlanmagan yozuv bor'; } });
+  window.addEventListener('online', run);
+  return {
+    badge: badge,
+    dirty: function (d) { pend[d.id] = d; clearTimeout(timer); timer = setTimeout(run, 1200); if (!busy) show('ish', 'O\'zgarish bor…'); },
+    open: function (d) {
+      var shapes = [], meta = null;
+      function step(from) { return api('get', { id: d.id, from: from }).then(function (r) { if (r.meta) meta = r.meta; shapes = shapes.concat(r.shapes); return r.next == null ? null : step(r.next); }); }
+      return step(0).then(function () {
+        for (var k in meta) if (k !== 'id') d[k] = meta[k];
+        d.shapes = shapes; var sn = { meta: JSON.stringify(metaOf(d)), shapes: {} }; shapes.forEach(function (s) { sn.shapes[s.id] = JSON.stringify(s); }); snap[d.id] = sn;
+        if (!d.layers || !d.layers.length) { var b = Chizma.blank('', ''); d.layers = b.layers; d.active = b.active; }
+        return d;
+      });
+    },
+    del: function (d) { delete pend[d.id]; delete snap[d.id]; api('del', { id: d.id }).then(function () { show('', 'O\'chirildi · ' + hhmm(Date.now())); }, function (e) { show('yoq', 'O\'chirilmadi — ' + e.message); }); }
+  };
+})();
+
+/* --- kirish --- */
+$('f').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  var code = $('kod').value; if (!code) return;
+  $('b').disabled = true; $('b').textContent = 'Tekshirilmoqda…'; $('e').textContent = '';
+  derive(code).then(function (k) { KEY = k; $('kod').value = ''; return api('ping'); }).then(function () { return api('list'); }).then(function (r) {
+    var docs = r.docs, first = docs[0];
+    var go = function (cur) { $('kir').remove(); Chizma.mount($('ilova'), { store: store, docs: docs, cur: cur, full: true }); };
+    if (!first) return go(null);
+    return store.open(first).then(go);
+  }).catch(function (e) {
+    KEY = null; $('b').disabled = false; $('b').textContent = 'Kirish'; $('e').textContent = e.message || 'Kirib bo\'lmadi'; $('kod').focus();
+  });
+});
+if (!window.crypto || !crypto.subtle) { $('e').textContent = 'Bu brauzer shifrlashni bilmaydi — Safari yoki Chrome\'ni yangilang'; $('b').disabled = true; }
+</script>
+</body>
+</html>

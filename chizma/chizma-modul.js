@@ -34,10 +34,10 @@
   var FREE = [['pen', 'Ruchka', 'P'], ['mark', 'Marker', 'M'], ['erase', 'O\'chirg\'ich', 'E'], ['sel', 'Tanlash', 'V']];
   var CAD = [['line', 'Chiziq', 'L'], ['rect', 'To\'rtburchak', 'R'], ['circle', 'Aylana', 'C'], ['dim', 'O\'lcham', 'D'], ['text', 'Matn', 'T']];
   var HINT = {
-    pen: 'Qalam bilan yozing yoki chizing. Barmoq bilan suring, ikki barmoq bilan yaqinlashtiring.',
+    pen: 'Qalam bilan yozing. Chiziq oxirida qalamni to\'xtatib tursangiz — to\'g\'ri chiziq bo\'ladi. Ikki barmoq bilan bir tegish — orqaga.',
     mark: 'Marker — muhim joyni bo\'yab qo\'yish uchun.',
     erase: 'Tekkan chiziq butunligicha o\'chadi.',
-    sel: 'Bosib tanlang, sudrab suring. Bo\'sh joydan sudrasangiz — ramka bilan tanlash.',
+    sel: 'Bosib tanlang yoki atrofini aylantirib chizing. Tanlanganini suring; tepasida — rang, nusxa, o\'chirish.',
     line: 'Nuqtani bosing. Keyingisini bosing yoki uzunlikni yozib Enter. Esc — tugatish.',
     rect: 'Ikki burchakni bosing. Yoki o\'lchamni yozing: 8x5 va Enter.',
     circle: 'Markaz, keyin radius. Yoki radiusni yozib Enter.',
@@ -167,6 +167,7 @@
     '.cz-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.cz .cz-add{font-size:13px;padding:8px 12px;border:1px solid var(--c-rule);border-radius:8px;background:#fff}.cz .cz-add.del{color:#9a2f1f}' +
     '.cz-ti{position:absolute;font:16px var(--fs,system-ui,sans-serif);padding:5px 8px;border:1px solid var(--c-ink);border-radius:6px;min-width:180px;z-index:6;background:#fff}' +
     '.cz-help{margin:10px 2px 0;font-size:12px;color:var(--c-soft);line-height:1.6}' +
+    '.cz-sb{top:0;left:0;padding:3px;gap:0}.cz-sb .cz-dot{width:30px}.cz-sb .tx{height:40px;padding:0 12px;border-radius:9px;font-size:13px}.cz-sb .tx:hover{background:rgba(29,29,27,.06)}.cz-sb .tx.del{color:#9a2f1f}' +
     '.cz.full{position:fixed;inset:0;z-index:40;background:var(--c-paper)}.cz.full .cz-stage{height:100%;min-height:0;border:0;border-radius:0}.cz.full .cz-help{display:none}' +
     '@media (max-width:820px){.cz-tb{right:10px;max-width:calc(100% - 20px)}.cz-tr{top:auto;bottom:58px}.cz-menu{top:auto;bottom:108px}.cz-st{bottom:auto;top:auto;display:none}}';
   function ensureCss() { if (document.getElementById('cz-css')) return; var s = h('style', '', CSS); s.id = 'cz-css'; document.head.appendChild(s); }
@@ -197,7 +198,7 @@
     wrap.appendChild(stage);
     wrap.appendChild(h('p', 'cz-help', 'iPad: Apple Pencil bilan yozasiz, barmoq bilan surasiz, ikki barmoq bilan yaqinlashtirasiz — qalam tekkan zahoti barmoq chizmaydigan bo\'ladi (kaftingiz ekranga tegsa ham iz qolmaydi). Aniq chizma uchun: L — chiziq, R — to\'rtburchak, C — aylana, D — o\'lcham; yo\'nalishni ko\'rsatib uzunlikni yozasiz va Enter. Katta ekran tugmasi — butun ekranda ishlash.'));
     root.appendChild(wrap);
-    var ctx = cv.getContext('2d'), W = 1, H = 1, dpr = 1;
+    var ctx = cv.getContext('2d'), W = 1, H = 1, dpr = 1, bc = document.createElement('canvas'), bctx = bc.getContext('2d'), baseOk = false;
 
     function ib(parent, icon, title, fn, cls) { var b = h('button', cls || 'cz-b', icon); b.title = title; b.setAttribute('aria-label', title); b.onclick = function (e) { e.stopPropagation(); fn(b); wrap.focus({ preventScroll: true }); }; parent.appendChild(b); return b; }
     function sep(p) { var s = h('span', 'cz-sep'); p.appendChild(s); return s; }
@@ -224,6 +225,12 @@
     var pct = h('button', 'pct', '100%'); pct.title = '100% ga qaytarish'; pct.onclick = function () { zoomAt([W / 2, H / 2], 40 / st.z); }; zm.appendChild(pct);
     ib(zm, '<span style="font-size:20px">+</span>', 'Yaqinlashtirish', function () { zoomAt([W / 2, H / 2], 1.4); });
     ib(zm, IC.fit, 'Hammasini ko\'rsatish (F)', function () { fitF(); });
+    /* tanlanganlar ustida chiqadigan panel — iPad'da klaviatura yo'q, hamma amal shu yerda */
+    var sb = h('div', 'cz-fl cz-sb'); sb.style.display = 'none'; stage.appendChild(sb);
+    INK.forEach(function (c) { ib(sb, '<i style="background:' + c + '"></i>', 'Rangini o\'zgartirish', function () { act(function () { cur.shapes.forEach(function (s) { if (isSel(s)) s.c = c; }); }); }, 'cz-dot'); });
+    sep(sb);
+    ib(sb, 'Nusxa', 'Nusxa olish (⌘D)', function () { dupSel(); }, 'tx');
+    ib(sb, 'O\'chirish', 'O\'chirish (Delete)', function () { delSel(); }, 'tx del');
 
     function syncInk() {
       DOTS.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.c === st.ink)); });
@@ -276,8 +283,9 @@
 
     /* --- chizish --- */
     var raf = 0;
-    function req() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; draw(); }); }
-    function resize() { dpr = window.devicePixelRatio || 1; W = Math.max(1, cv.clientWidth); H = Math.max(1, cv.clientHeight); cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); draw(); }
+    function req() { baseOk = false; reqLite(); }
+    function reqLite() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; draw(); }); }
+    function resize() { dpr = window.devicePixelRatio || 1; W = Math.max(1, cv.clientWidth); H = Math.max(1, cv.clientHeight); cv.width = bc.width = Math.round(W * dpr); cv.height = bc.height = Math.round(H * dpr); baseOk = false; draw(); }
     function lines(step, col, vert, horiz) {
       ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.setLineDash([]); ctx.beginPath();
       if (vert) for (var x = Math.floor(wx(0) / step) * step; P([x, 0])[0] <= W; x += step) { var X = Math.round(P([x, 0])[0]) + 0.5; ctx.moveTo(X, 0); ctx.lineTo(X, H); }
@@ -296,19 +304,22 @@
       ctx.strokeStyle = col; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.setLineDash([]);
       if (p.length === 1) { var q = P(p[0]); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(q[0], q[1], Math.max(0.6, penW(s, p[0]) * st.z / 2), 0, Math.PI * 2); ctx.fill(); return; }
       /* bir xil qalinlikdagi bo'laklar bitta yo'l bo'lib chiziladi — iPad'da ham tez */
-      var bucket = -1, a = P(p[0]);
+      /* nuqtalar orasi egri chiziq bilan to'ldiriladi — tez yozganda ham burchak chiqmaydi */
+      var bucket = -1, a = P(p[0]), q = P(p[1]);
       ctx.beginPath(); ctx.moveTo(a[0], a[1]);
       for (var i = 1; i < p.length; i++) {
+        var nx = i < p.length - 1 ? P(p[i + 1]) : null, m = nx ? [(q[0] + nx[0]) / 2, (q[1] + nx[1]) / 2] : q;
         var w = Math.max(0.6, (penW(s, p[i - 1]) + penW(s, p[i])) / 2 * st.z), bk = Math.round(w * 4);
         if (bk !== bucket && bucket >= 0) { ctx.stroke(); ctx.beginPath(); ctx.moveTo(a[0], a[1]); }
-        bucket = bk; ctx.lineWidth = w; a = P(p[i]); ctx.lineTo(a[0], a[1]);
+        bucket = bk; ctx.lineWidth = w; ctx.quadraticCurveTo(q[0], q[1], m[0], m[1]); a = m; if (nx) q = nx;
       }
       ctx.stroke();
     }
+    function smooth(p) { var a = P(p[0]); ctx.moveTo(a[0], a[1]); for (var i = 1; i < p.length; i++) { var q = P(p[i]), n = i < p.length - 1 ? P(p[i + 1]) : q; ctx.quadraticCurveTo(q[0], q[1], (q[0] + n[0]) / 2, (q[1] + n[1]) / 2); } }
     function paint(s, col, hi, dash) {
       var a, b;
       if (s.t === 'pen') { inkStroke(s, hi ? HI : (s.c || col)); return; }
-      if (s.t === 'mark') { ctx.save(); ctx.globalAlpha = hi ? 0.6 : 0.32; ctx.globalCompositeOperation = 'multiply'; ctx.strokeStyle = hi ? HI : (s.c || col); ctx.lineWidth = Math.max(2, s.w * st.z); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.setLineDash([]); ctx.beginPath(); s.p.forEach(function (p, i) { var q = P(p); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); ctx.stroke(); ctx.restore(); return; }
+      if (s.t === 'mark') { ctx.save(); ctx.globalAlpha = hi ? 0.6 : 0.32; ctx.globalCompositeOperation = 'multiply'; ctx.strokeStyle = hi ? HI : (s.c || col); ctx.lineWidth = Math.max(2, s.w * st.z); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.setLineDash([]); ctx.beginPath(); smooth(s.p); ctx.stroke(); ctx.restore(); return; }
       ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = hi ? 2.5 : 1.5; ctx.setLineDash(dash || []); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       if (s.t === 'line') { a = P(s.p[0]); b = P(s.p[1]); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
       else if (s.t === 'rect') { a = P(s.p[0]); b = P(s.p[1]); ctx.strokeRect(a[0], a[1], b[0] - a[0], b[1] - a[1]); }
@@ -333,11 +344,16 @@
       ctx.restore();
     }
     function draw() {
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = '#fffefa'; ctx.fillRect(0, 0, W, H);
-      paper();
-      cur.shapes.forEach(function (s) { var l = lay(s.l); if (l && l.on && inView(s)) paint(s, isSel(s) ? HI : l.color, isSel(s)); });
+      if (!baseOk) {
+        var keep = ctx; ctx = bctx;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = '#fffefa'; ctx.fillRect(0, 0, W, H);
+        paper();
+        cur.shapes.forEach(function (s) { var l = lay(s.l); if (l && l.on && inView(s)) paint(s, isSel(s) ? HI : (s.c || l.color), isSel(s)); });
+        ctx = keep; baseOk = true;
+      }
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(bc, 0, 0); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       preview();
-      if (st.box) { var a = st.box.a, b = st.box.b; ctx.setLineDash([4, 3]); ctx.strokeStyle = HI; ctx.lineWidth = 1; ctx.fillStyle = 'rgba(217,130,43,.08)'; ctx.fillRect(a[0], a[1], b[0] - a[0], b[1] - a[1]); ctx.strokeRect(a[0], a[1], b[0] - a[0], b[1] - a[1]); }
+      if (st.lasso && st.lasso.length > 1) { ctx.setLineDash([5, 4]); ctx.strokeStyle = HI; ctx.lineWidth = 1.2; ctx.fillStyle = 'rgba(217,130,43,.07)'; ctx.beginPath(); st.lasso.forEach(function (q, i) { if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); ctx.closePath(); ctx.fill(); ctx.stroke(); }
       if (st.tool === 'erase' && st.m) { ctx.setLineDash([]); ctx.strokeStyle = 'rgba(29,29,27,.45)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(st.m[0], st.m[1], 10, 0, Math.PI * 2); ctx.stroke(); }
       if (st.w && !isFree(st.tool) && st.tool !== 'sel') {
         var q = P(st.w); ctx.setLineDash([]); ctx.lineWidth = 1.5; ctx.strokeStyle = '#2f6b3f'; ctx.beginPath();
@@ -348,6 +364,7 @@
         ctx.stroke();
       }
       pct.textContent = Math.round(st.z / 40 * 100) + '%';
+      placeSel();
     }
     function status() {
       var r = '', b = base();
@@ -367,6 +384,32 @@
     }
     function undoF() { if (!st.undo.length) return msg('Orqaga qaytadigan narsa yo\'q'); st.redo.push(JSON.stringify(cur.shapes)); cur.shapes = JSON.parse(st.undo.pop()); st.sel = []; renderLay(); changed(); }
     function redoF() { if (!st.redo.length) return msg('Oldinga qaytadigan narsa yo\'q'); st.undo.push(JSON.stringify(cur.shapes)); cur.shapes = JSON.parse(st.redo.pop()); st.sel = []; renderLay(); changed(); }
+    function placeSel() {
+      var list = st.sel.length && !(drag && drag.moved) && !st.lasso && st.tool === 'sel' ? cur.shapes.filter(isSel) : [];
+      if (!list.length) { sb.style.display = 'none'; return; }
+      var b = bboxAll(list), a = P([b[0], b[1]]), c = P([b[2], b[3]]); sb.style.display = 'flex';
+      var w = sb.offsetWidth, x = Math.max(8, Math.min(W - w - 8, (a[0] + c[0]) / 2 - w / 2)), y = a[1] - 58;
+      if (y < 64) y = Math.min(H - 56, c[1] + 12);
+      sb.style.transform = 'translate(' + Math.round(x) + 'px,' + Math.round(y) + 'px)';
+    }
+    function dupSel() {
+      if (!st.sel.length) return; var off = 24 / st.z, ids = [];
+      act(function () { cur.shapes.filter(isSel).forEach(function (s) { var c = JSON.parse(JSON.stringify(s)); c.id = uid(); c.p = c.p.map(function (p) { var r = [r3(p[0] + off), r3(p[1] + off)]; if (p.length > 2) r.push(p[2]); return r; }); cur.shapes.push(c); ids.push(c.id); }); });
+      st.sel = ids; renderLay(); req();
+    }
+    function inPoly(q, poly) { var x = q[0], y = q[1], ins = false; for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) { var a = poly[i], b = poly[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) ins = !ins; } return ins; }
+    function samples(s) {
+      if (s.t === 'pen' || s.t === 'mark') { var step = Math.max(1, Math.floor(s.p.length / 30)); return s.p.filter(function (_, i) { return i % step === 0; }); }
+      if (s.t === 'dim') return [s.p[0], s.p[1]];
+      if (s.t === 'text' || s.t === 'rect') { var b = bbOf(s); return [[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]]]; }
+      return keys(s).map(function (k) { return k[0]; });
+    }
+    /* chiziqni yengillashtirish: ko'z ilg'amaydigan ortiqcha nuqtalar tashlanadi — MacBook'ga kamroq ketadi */
+    function simplify(p, tol) {
+      if (p.length < 3) return p; var keep = new Uint8Array(p.length), stack = [[0, p.length - 1]]; keep[0] = keep[p.length - 1] = 1;
+      while (stack.length) { var r = stack.pop(), md = 0, mi = -1; for (var i = r[0] + 1; i < r[1]; i++) { var d = segDist(p[i], p[r[0]], p[r[1]]); if (d > md) { md = d; mi = i; } } if (md > tol) { keep[mi] = 1; stack.push([r[0], mi], [mi, r[1]]); } }
+      return p.filter(function (_, i) { return keep[i]; });
+    }
     function delSel() { if (!st.sel.length) return; act(function () { cur.shapes = cur.shapes.filter(function (s) { return !isSel(s); }); }); st.sel = []; renderLay(); }
 
     function setTool(t) {
@@ -437,12 +480,27 @@
     }
 
     /* --- qalam, barmoq, sichqoncha, trackpad --- */
-    var touch = {}, pinch = null, pan = null, drag = null, pend = null;
+    var touch = {}, pinch = null, pan = null, drag = null, pend = null, tap = null, holdT = 0, holdAt = null;
     function mpos(e) { var r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
     function pressure(e) { return e.pointerType === 'pen' ? (e.pressure || 0.5) : 0.5; }
     function inkPt(e) { var m = mpos(e), base = WID[st.wid][1] / st.z, f = e.pointerType === 'pen' ? 0.35 + 1.1 * pressure(e) : 1; return [r3(wx(m[0])), r3(wy(m[1])), Math.round(base * f * 10000) / 10000]; }
+    /* qalam chiziq oxirida ~0.55 s to'xtasa — chiziq to'g'rilanadi va qalam ortidan yuradi; 0°/45°/90° ga yaqin bo'lsa o'shanga tushadi */
+    function hold(m) {
+      if (holdAt && dist(m, holdAt) < 3) return; holdAt = m; clearTimeout(holdT);
+      holdT = setTimeout(function () {
+        var s = st.stroke; if (!s || s.straight || s.p.length < 3) return;
+        var a = s.p[0], b = s.p[s.p.length - 1]; if (dist(a, b) * st.z < 24) return;
+        var w = s.t === 'pen' ? Math.round(s.p.reduce(function (t, q) { return t + q[2]; }, 0) / s.p.length * 10000) / 10000 : 0;
+        var a2 = s.t === 'pen' ? [a[0], a[1], w] : [a[0], a[1]]; s.straight = true; s.p = [a2, straightEnd(a2, b, w)]; reqLite();
+      }, 550);
+    }
+    function straightEnd(a, b, w) {
+      var dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy), ang = Math.atan2(dy, dx), k = Math.round(ang / (Math.PI / 4)) * (Math.PI / 4);
+      if (Math.abs(ang - k) < 5 * Math.PI / 180) { dx = Math.cos(k) * L; dy = Math.sin(k) * L; }
+      var r = [r3(a[0] + dx), r3(a[1] + dy)]; if (a.length > 2) r.push(w || a[2]); return r;
+    }
     function startPinch() { var ids = Object.keys(touch), a = touch[ids[0]], b = touch[ids[1]]; pinch = { d: dist(a, b) || 1, c: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], z: st.z, ox: st.ox, oy: st.oy }; }
-    function cancelGesture() { st.stroke = null; st.box = null; pend = null; if (drag && drag.moved) { cur.shapes = JSON.parse(drag.orig); st.undo.pop(); } drag = null; if (st.erase && st.erase.any) { cur.shapes = JSON.parse(st.erase.orig); st.undo.pop(); } st.erase = null; req(); }
+    function cancelGesture() { clearTimeout(holdT); st.stroke = null; st.lasso = null; pend = null; if (drag && drag.moved) { cur.shapes = JSON.parse(drag.orig); st.undo.pop(); } drag = null; if (st.erase && st.erase.any) { cur.shapes = JSON.parse(st.erase.orig); st.undo.pop(); } st.erase = null; req(); }
     cv.addEventListener('pointerdown', function (e) {
       wrap.focus({ preventScroll: true }); e.preventDefault();
       var m = mpos(e), type = e.pointerType;
@@ -451,6 +509,8 @@
         if (st.penDown) return; /* yozayotganda kaft tegsa — e'tibor berilmaydi */
         touch[e.pointerId] = m;
         var n = Object.keys(touch).length;
+        if (n === 1) tap = { t: Date.now(), n: 1, moved: false, at: {} }; else if (tap) tap.n = Math.max(tap.n, n);
+        if (tap) tap.at[e.pointerId] = m;
         if (n >= 2) { cancelGesture(); pan = null; startPinch(); return; }
         if (!st.finger) { pan = { m: m, ox: st.ox, oy: st.oy }; return; }
       }
@@ -461,13 +521,13 @@
       var t = st.tool;
       if (t === 'pen' || t === 'mark') {
         var L = lay(cur.active); if (!L.on || L.lock) return msg('«' + L.name + '» qatlami ' + (L.lock ? 'qulflangan' : 'yashirin') + ' — boshqa qatlamni tanlang');
-        var q = inkPt(e); st.stroke = t === 'pen' ? { t: 'pen', p: [q], c: st.ink } : { t: 'mark', p: [[q[0], q[1]]], c: st.ink, w: Math.round(WID[st.wid][1] * 5 / st.z * 1000) / 1000 }; req(); return;
+        var q = inkPt(e); st.stroke = t === 'pen' ? { t: 'pen', p: [q], c: st.ink } : { t: 'mark', p: [[q[0], q[1]]], c: st.ink, w: Math.round(WID[st.wid][1] * 5 / st.z * 1000) / 1000 }; hold(m); reqLite(); return;
       }
       if (t === 'erase') { st.erase = { orig: JSON.stringify(cur.shapes), any: false }; eraseAt(m); req(); return; }
       if (t === 'sel') {
         var s = hit(m); st.w = [wx(m[0]), wy(m[1])];
         if (s) { if (e.shiftKey) st.sel = isSel(s) ? st.sel.filter(function (id) { return id !== s.id; }) : st.sel.concat(s.id); else if (!isSel(s)) st.sel = [s.id]; drag = { from: snapPt(m, null, true).w, orig: JSON.stringify(cur.shapes), moved: false }; }
-        else { if (!e.shiftKey) st.sel = []; st.box = { a: m, b: m }; }
+        else { if (!e.shiftKey) st.sel = []; st.lasso = [m]; }
         renderLay(); req(); return;
       }
       var sp = snapPt(m, base()); st.w = sp.w; st.k = sp.k;
@@ -480,17 +540,19 @@
       if (type === 'touch') {
         if (!touch[e.pointerId]) return;
         touch[e.pointerId] = m;
+        if (tap && tap.at[e.pointerId] && dist(m, tap.at[e.pointerId]) > 12) tap.moved = true;
         if (pinch) { var ids = Object.keys(touch); if (ids.length < 2) return; var a = touch[ids[0]], b = touch[ids[1]], c = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], nz = clampZ(pinch.z * dist(a, b) / pinch.d); st.ox = c[0] - (pinch.c[0] - pinch.ox) / pinch.z * nz; st.oy = c[1] - (pinch.c[1] - pinch.oy) / pinch.z * nz; st.z = nz; req(); return; }
       }
       if (pan) { st.ox = pan.ox + m[0] - pan.m[0]; st.oy = pan.oy + m[1] - pan.m[1]; req(); return; }
       st.m = m;
       if (st.stroke) {
         var evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e]; if (!evs.length) evs = [e];
-        evs.forEach(function (ev) { var q = inkPt(ev), l = st.stroke.p[st.stroke.p.length - 1]; if (dist(q, l) * st.z > 1.2) st.stroke.p.push(st.stroke.t === 'pen' ? q : [q[0], q[1]]); });
-        req(); return;
+        if (st.stroke.straight) { var e0 = st.stroke.p[0], q0 = inkPt(e), w0 = e0.length > 2 ? e0[2] : 0; st.stroke.p = [e0, straightEnd(e0, q0, w0)]; reqLite(); return; }
+        evs.forEach(function (ev) { var q = inkPt(ev), l = st.stroke.p[st.stroke.p.length - 1]; if (dist(q, l) * st.z > 1.2) { if (st.stroke.t === 'pen') { q[2] = Math.round((l[2] * 0.6 + q[2] * 0.4) * 10000) / 10000; st.stroke.p.push(q); } else st.stroke.p.push([q[0], q[1]]); } });
+        hold(m); reqLite(); return;
       }
       if (st.erase) { eraseAt(m); req(); return; }
-      if (st.box) { st.box.b = m; req(); return; }
+      if (st.lasso) { var lq = st.lasso[st.lasso.length - 1]; if (dist(m, lq) > 3) st.lasso.push(m); reqLite(); return; }
       if (drag) {
         sp = snapPt(m, drag.from, true); st.w = sp.w; st.k = sp.k;
         var dx = sp.w[0] - drag.from[0], dy = sp.w[1] - drag.from[1];
@@ -500,27 +562,32 @@
         }
       } else if (st.tool === 'sel' || isFree(st.tool)) { st.w = [wx(m[0]), wy(m[1])]; st.k = ''; }
       else { sp = snapPt(m, base()); st.w = sp.w; st.k = sp.k; }
-      status(); req();
+      status(); if (drag) req(); else reqLite();
     });
     function up(e) {
       if (e.pointerType === 'pen') st.penDown = false;
-      if (e.pointerType === 'touch') { if (!touch[e.pointerId]) return; delete touch[e.pointerId]; if (pinch) { if (Object.keys(touch).length < 2) { pinch = null; var rest = Object.keys(touch); pan = rest.length && !st.finger ? { m: touch[rest[0]], ox: st.ox, oy: st.oy } : null; } return; } }
+      if (e.pointerType === 'touch') {
+        if (!touch[e.pointerId]) return; delete touch[e.pointerId];
+        /* ikki barmoq bilan bir tegish — orqaga, uch barmoq — oldinga (Goodnotes'dagi kabi) */
+        if (!Object.keys(touch).length && tap) { var tp = tap; tap = null; if (!tp.moved && Date.now() - tp.t < 350 && tp.n >= 2) { pan = null; pinch = null; if (tp.n === 2) undoF(); else redoF(); return; } }
+        if (pinch) { if (Object.keys(touch).length < 2) { pinch = null; var rest = Object.keys(touch); pan = rest.length && !st.finger ? { m: touch[rest[0]], ox: st.ox, oy: st.oy } : null; } return; } }
       if (pan) { pan = null; return; }
       if (pend) { var w = pend; pend = null; click(w); }
-      if (st.stroke) { var s = st.stroke; st.stroke = null; addS(s.t, s.p, s.t === 'pen' ? { c: s.c } : { c: s.c, w: s.w }); req(); }
+      clearTimeout(holdT);
+      if (st.stroke) { var s = st.stroke, pp = s.straight ? s.p : simplify(s.p, 0.35 / st.z); st.stroke = null; addS(s.t, pp, s.t === 'pen' ? { c: s.c } : { c: s.c, w: s.w }); req(); }
       if (st.erase) { var any = st.erase.any; st.erase = null; if (any) changed(); }
-      if (st.box) {
-        var a = st.box.a, b = st.box.b; st.box = null;
-        if (Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) > 4) {
-          var x1 = wx(Math.min(a[0], b[0])), x2 = wx(Math.max(a[0], b[0])), y1 = wy(Math.min(a[1], b[1])), y2 = wy(Math.max(a[1], b[1]));
-          cur.shapes.forEach(function (s) { if (!editable(s) || isSel(s)) return; var q = bbOf(s); if (q[0] >= x1 && q[2] <= x2 && q[1] >= y1 && q[3] <= y2) st.sel.push(s.id); });
-        }
+      if (st.lasso) {
+        var poly = st.lasso; st.lasso = null;
+        if (poly.length > 3) cur.shapes.forEach(function (s) {
+          if (!editable(s) || isSel(s)) return; var sm = samples(s), inside = sm.filter(function (q) { return inPoly(P(q), poly); }).length;
+          if (sm.length && inside / sm.length >= ((s.t === 'pen' || s.t === 'mark') ? 0.6 : 1)) st.sel.push(s.id);
+        });
         renderLay(); req();
       }
       if (drag) { if (drag.moved) changed(); drag = null; }
     }
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
-    cv.addEventListener('pointerleave', function (e) { if (e.pointerType !== 'touch' && !drag && !st.stroke && !st.box && !pan && !st.erase) { st.m = null; st.w = null; status(); req(); } });
+    cv.addEventListener('pointerleave', function (e) { if (e.pointerType !== 'touch' && !drag && !st.stroke && !st.lasso && !pan && !st.erase) { st.m = null; st.w = null; status(); reqLite(); } });
     cv.addEventListener('contextmenu', function (e) { e.preventDefault(); });
     cv.addEventListener('dblclick', function (e) { if (st.tool !== 'sel') return; var s = hit(mpos(e)); if (s && s.t === 'text') askText(s.p[0], s); });
     /* iPad Safari'da sahifa o'zi kattalashib ketmasin */
@@ -538,6 +605,7 @@
       var k = e.key, mod = e.metaKey || e.ctrlKey, low = k.toLowerCase();
       if (mod && low === 'z') { e.preventDefault(); if (e.shiftKey) redoF(); else undoF(); return; }
       if (mod && low === 'y') { e.preventDefault(); redoF(); return; }
+      if (mod && low === 'd') { e.preventDefault(); dupSel(); return; }
       if (mod && low === 'a') { e.preventDefault(); setTool('sel'); st.sel = cur.shapes.filter(editable).map(function (s) { return s.id; }); renderLay(); req(); return; }
       if (mod) return;
       if (k === 'F8') { e.preventDefault(); toggle('ortho', 'Orto'); return; }
@@ -635,7 +703,7 @@
       if (note) { k = Math.min(aw / bw, ah / bh); sc = 0; }
       else { sc = [1, 2, 5, 10, 20, 25, 50, 75, 100, 200, 250, 500, 1000, 2000, 5000, 10000].filter(function (s) { return bw * 1000 / s <= aw && bh * 1000 / s <= ah; })[0] || 20000; k = 1000 / sc; }
       var ox = M + 4 + (aw - bw * k) / 2 - bb[0] * k, oy = M + 4 + (note ? TBH : 0) + (ah - bh * k) / 2 - bb[1] * k;
-      var body = list.map(function (s) { return svgOf(s, k, ox, oy, lay(s.l).color); }).join('');
+      var body = list.map(function (s) { return svgOf(s, k, ox, oy, s.c || lay(s.l).color); }).join('');
       var t = function (x, y, sz, s, c) { return '<text x="' + x + '" y="' + y + '" font-size="' + sz + '" fill="' + (c || '#1d1d1b') + '" font-family="Helvetica, Arial, sans-serif">' + esc(s) + '</text>'; }, frame, ty = PH - M - TBH;
       if (note) frame = t(M, M + 4, 4, cur.name) + t(PW - M - 22, M + 4, 3, today(), '#6b6b66');
       else frame = '<rect x="' + M + '" y="' + M + '" width="' + (PW - 2 * M) + '" height="' + (PH - 2 * M) + '" fill="none" stroke="#1d1d1b" stroke-width="0.5"/>' +

@@ -1,0 +1,18 @@
+LICENSE — people models pp_m1 … pp_f5, pp_s1, pp_s2 (.json) and pp_anim.json  (39-odam2, 2026-11)
+=====================================================================================================
+
+1. Base bodies + eyes: Blender Foundation / Blender Studio "Human Base Meshes" asset bundle v1.4.1
+   https://download.blender.org/demo/asset-bundles/human-base-meshes/human-base-meshes-bundle-v1.4.1.zip
+   Licence: CC0 1.0 (public domain) — commercial use, modification and redistribution without attribution allowed.
+   Used objects: GEO-body_male_realistic, GEO-body_female_realistic (and their eye spheres). Only the .blend data file
+   was used (no add-ons, no scripts from the bundle).
+
+2. Everything else is our own work (39-odam2/src/build_people.py, people.json, clips.py, sheet.py):
+   body shaping and face variation, hair volumes (parametric lofts, no external hair assets), garments (offset shells
+   with loose hems and fold noise, hoodie hood loft), sneakers (parametric sole + upper lofts), the 21-bone skeleton and
+   automatic weights, all textures (procedural: value noise painted in numpy from baked position/normal/material-id
+   maps — colour atlas, roughness, tangent-space normal map, eye texture), and the 14 animation clips (pp_anim.json,
+   authored procedurally in clips.py on the m1 rig — identical to 28-odam/models/pp_anim.json).
+
+No other third-party data, textures, fonts or downloads were used. Result: CC0 base + own work => may be used in the
+project without restriction.

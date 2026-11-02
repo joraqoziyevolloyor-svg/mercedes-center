@@ -1,0 +1,17 @@
+{
+  "_izoh": "Kameralar reja koordinatalarida (metr): x,y — reja, z — poldan balandlik, yaw — reja burchagi (0 = +x, 90 = +y), pitch — pastga qarash (gradus), hfov — gorizontal ko'rish burchagi. floorPts (ixtiyoriy): haqiqiy kalibrovka — 4 ta pol nuqtasi {u,v (0..1 kadrda), x,y (reja)} → gomografiya. alignPitch (ixtiyoriy): kamera tik pastga qaragan bo'lsa (pitch > 45°) true — 3D landmarklar pitch bo'yicha gravitatsiyaga to'g'rilanadi; poseTilt — shu burilish burchagi (pitch dan farq qilsa).",
+  "floor": 1,
+  "kameralar": [
+    {"id": "K1", "nom": "Kardio (yugurish yo'lakchalari)", "x": 37.2, "y": 9.8, "z": 2.8, "yaw": 0,   "pitch": 22, "hfov": 60, "video": "dl/treadmill/treadmill.mp4"},
+    {"id": "K2", "nom": "Shtanga / skameykalar",            "x": 10.3, "y": 8.5, "z": 2.9, "yaw": 225, "pitch": 60, "hfov": 65, "video": "dl/benchpress/benchpress.mp4", "alignPitch": true, "poseTilt": 88},
+    {"id": "K3", "nom": "Qabulxona / turniket (kirish)",    "x": 36.6, "y": 6.3, "z": 2.9, "yaw": 240, "pitch": 24, "hfov": 70, "video": "dl/walk/walk.mp4", "kirish": true},
+    {"id": "K4", "nom": "Zal (umumiy)",                     "x": 5.5,  "y": 13.0,"z": 3.3, "yaw": 338, "pitch": 20, "hfov": 75, "video": "dl/floor/floor.mp4"}
+  ],
+  "videolar": [
+    {"nom": "Yugurish (treadmill)", "src": "dl/treadmill/treadmill.mp4"},
+    {"nom": "Jim (bench press)",    "src": "dl/benchpress/benchpress.mp4"},
+    {"nom": "Zalda yurish",         "src": "dl/walk/walk.mp4"},
+    {"nom": "Polda mashq / yotish", "src": "dl/floor/floor.mp4"},
+    {"nom": "Yerda yotgan odam",    "src": "dl/lying/lying.mp4"}
+  ]
+}

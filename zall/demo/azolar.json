@@ -1,0 +1,18 @@
+{
+  "_izoh": "DEMO ma'lumot. Haqiqiy a'zolik va sotuvlar Bito POS dan keladi (webhook / API). Shaxs turniketdan (karta/QR) aniqlanadi — yuz tanish ishlatilmaydi.",
+  "azolar": [
+    {"id": "A-1021", "ism": "Aziz Karimov",    "holat": "active",  "tugash": "2026-12-15"},
+    {"id": "A-1044", "ism": "Dilnoza Rashidova","holat": "expired", "tugash": "2026-10-12"},
+    {"id": "A-1050", "ism": "Jasur Toshmatov", "holat": "active",  "tugash": "2026-11-30"},
+    {"id": "A-1073", "ism": "Malika Yusupova", "holat": "active",  "tugash": "2027-01-05"},
+    {"id": "A-1088", "ism": "Bobur Alimov",    "holat": "expired", "tugash": "2026-10-28"},
+    {"id": "A-1102", "ism": "Nilufar Saidova", "holat": "active",  "tugash": "2026-11-20"}
+  ],
+  "kirish_navbati": ["A-1021", "A-1044", "A-1050", "A-1088", "A-1073", "A-1102"],
+  "bar_sotuvlar_demo": [
+    {"mahsulot": "Protein kokteyl", "narx": 35000},
+    {"mahsulot": "Suv 0.5 l",       "narx": 5000},
+    {"mahsulot": "Energetik bar",   "narx": 18000},
+    {"mahsulot": "Izotonik 0.5 l",  "narx": 15000}
+  ]
+}

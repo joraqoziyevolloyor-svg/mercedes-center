@@ -8,6 +8,6 @@ const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:b.slice(0,16),iterat
 const html=new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:b.slice(16,28)},key,b.slice(28)));
 try{sessionStorage.setItem('zall-kod',kod);}catch(e){}document.open();document.write(html);document.close();}
 const f=document.getElementById('f'),x=document.getElementById('x');
-f.onsubmit=async e=>{e.preventDefault();x.textContent='Ochilmoqda…';try{await och(document.getElementById('k').value);}catch(er){x.textContent='Kod noto'g'ri';}};
+f.onsubmit=async e=>{e.preventDefault();x.textContent='Ochilmoqda…';try{await och(document.getElementById('k').value);}catch(er){x.textContent='Kod noto’g’ri';}};
 try{const s=sessionStorage.getItem('zall-kod');if(s)och(s).catch(()=>sessionStorage.removeItem('zall-kod'));}catch(e){}
 </script></body></html>

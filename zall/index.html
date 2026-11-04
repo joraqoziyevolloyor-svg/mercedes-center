@@ -1,14 +1,17 @@
 <!doctype html><html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ROADFIT zal</title><meta name="robots" content="noindex">
-<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#111;color:#eee;font:16px system-ui,sans-serif}form{display:flex;flex-direction:column;gap:12px;padding:28px;border:1px solid #333;border-radius:10px;background:#1a1a1a;min-width:260px}h1{font-size:18px;margin:0}input,button{font:inherit;padding:10px;border-radius:6px;border:1px solid #444;background:#0d0d0d;color:#eee}button{background:#8CC63F;color:#111;border:0;font-weight:600;cursor:pointer}#x{color:#e66;min-height:1.2em;font-size:14px}</style></head><body>
-<form id="f"><h1>ROADFIT zal loyihasi</h1><input id="k" name="zall-kod" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Kod" autocomplete="one-time-code" autocorrect="off" autocapitalize="off" spellcheck="false" style="-webkit-text-security:disc;text-security:disc;letter-spacing:4px" autofocus><button>Kirish</button><div id="x"></div></form>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#111;color:#eee;font:16px system-ui,sans-serif}form{display:flex;flex-direction:column;gap:12px;padding:28px;border:1px solid #333;border-radius:10px;background:#1a1a1a;min-width:260px}h1{font-size:18px;margin:0}input,button{font:inherit;padding:10px;border-radius:6px;border:1px solid #444;background:#0d0d0d;color:#eee}button{background:#8CC63F;color:#111;border:0;font-weight:600;cursor:pointer}button.ik{background:#0d0d0d;color:#eee;border:1px solid #444}#x{color:#e66;min-height:1.2em;font-size:14px}</style></head><body>
+<form id="f"><h1>ROADFIT zal loyihasi</h1><input id="k" name="zall-kod" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Kod" autocomplete="one-time-code" autocorrect="off" autocapitalize="off" spellcheck="false" style="-webkit-text-security:disc;text-security:disc;letter-spacing:4px" autofocus><button data-w="page">3D loyiha</button><button class="ik" data-w="hujjat">Hujjatlar va zal dasturi</button><div id="x"></div></form>
 <script>
 if(location.protocol==='http:'&&location.hostname!=='127.0.0.1'&&location.hostname!=='localhost')location.replace('https:'+location.href.slice(5));
-async function och(kod){const b=new Uint8Array(await (await fetch('page.enc?'+Date.now())).arrayBuffer());const te=new TextEncoder();
-const km=await crypto.subtle.importKey('raw',te.encode(kod),'PBKDF2',false,['deriveKey']);
+// files are AES-GCM encrypted with a PBKDF2 key from the code: salt(16) | iv(12) | ciphertext+tag
+async function dec(file,kod){const b=new Uint8Array(await (await fetch(file+'?'+Date.now())).arrayBuffer());
+const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(kod),'PBKDF2',false,['deriveKey']);
 const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:b.slice(0,16),iterations:200000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['decrypt']);
-const html=new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:b.slice(16,28)},key,b.slice(28)));
-try{sessionStorage.setItem('zall-kod',kod);}catch(e){}document.open();document.write(html);document.close();}
-const f=document.getElementById('f'),x=document.getElementById('x');
-f.onsubmit=async e=>{e.preventDefault();x.textContent='Ochilmoqda…';const v=document.getElementById('k').value.replace(/[^0-9]/g,'');if(!(window.crypto&&crypto.subtle)){x.textContent='Brauzer qo’llamaydi: https:// orqali oching';return;}try{await och(v);}catch(er){x.textContent=er&&er.name==='OperationError'?'Kod noto’g’ri':'Xato: '+(er&&er.message||er);}};
-try{const s=sessionStorage.getItem('zall-kod');if(s)och(s).catch(()=>sessionStorage.removeItem('zall-kod'));}catch(e){}
+return crypto.subtle.decrypt({name:'AES-GCM',iv:b.slice(16,28)},key,b.slice(28));}
+window.__zallOch=async(file,raw)=>{const kod=sessionStorage.getItem('zall-kod');const buf=await dec(file,kod);return raw?buf:new TextDecoder().decode(buf);};
+async function och(kod,w){const html=new TextDecoder().decode(await dec(w+'.enc',kod));try{sessionStorage.setItem('zall-kod',kod);}catch(e){}document.open();document.write(html);document.close();}
+const f=document.getElementById('f'),x=document.getElementById('x');let w='page';
+for(const b of f.querySelectorAll('button'))b.onclick=()=>{w=b.dataset.w;};
+f.onsubmit=async e=>{e.preventDefault();x.textContent='Ochilmoqda…';const v=document.getElementById('k').value.replace(/[^0-9]/g,'');if(!(window.crypto&&crypto.subtle)){x.textContent='Brauzer qo’llamaydi: https:// orqali oching';return;}try{await och(v,w);}catch(er){x.textContent=er&&er.name==='OperationError'?'Kod noto’g’ri':'Xato: '+(er&&er.message||er);}};
+try{const s=sessionStorage.getItem('zall-kod');if(s)och(s,location.hash==='#hujjatlar'?'hujjat':'page').catch(()=>sessionStorage.removeItem('zall-kod'));}catch(e){}
 </script></body></html>
